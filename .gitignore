@@ -1,0 +1,18 @@
+## MAC OS
+.DS_Store
+
+
+## PROJECT::GENERAL
+log
+*.log
+coverage
+rdoc
+pkg
+tmp
+*.svg
+
+## PROJECT::SPECIFIC
+chaos_detector.dump
+lib/*.bundle
+
+Gemfile.lock
