@@ -6,7 +6,7 @@ require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
 
 module ChaosDetector
   class DetectChaos < Thor
@@ -21,13 +21,14 @@ module ChaosDetector
     def playback
       ARGV.clear
       opts = ChaosDetector::Options.new
-      ChaosDetector::Utils.print_line("ChaosDetector::Navigator.playback with options: #{options}")
+      chaos_nav = ChaosDetector::Navigator.new(options: opts)
+      TCS::Utils::Util.print_line("ChaosDetector::Navigator.playback with options: #{options}")
       opts.frame_csv_path = options[:opt_frame_csv].sub(options[:opt_app_root], "")
       opts.app_root_path = options[:opt_app_root]
       opts.module_filter = options[:opt_module_filter]
-      ChaosDetector::Navigator.playback(options: opts)
+      chaos_nav.playback(options: opts)
 
-      atlas = ChaosDetector::Navigator.atlas
+      atlas = chaos_nav.atlas
       grapher = ChaosDetector::Grapher.new(atlas)
       grapher.build_graphs()
       true

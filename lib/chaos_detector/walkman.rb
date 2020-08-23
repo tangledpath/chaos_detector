@@ -3,7 +3,8 @@ require 'graph_theory/edge'
 require 'chaos_detector/chaos_graphs/function_node'
 require 'chaos_detector/options'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
+require 'tcs/utils/fs_util'
 require 'csv'
 
 
@@ -30,7 +31,7 @@ class ChaosDetector::Walkman
     @csv_path = nil
     @log_buffer = []
     autosave_csv
-    File.open(csv_path, "w") {|f| f.puts CSV_HEADER.join(",")}
+    init_file_with_header(csv_path)
   end
 
   # Play back CSV configured in Walkman options
@@ -87,7 +88,7 @@ class ChaosDetector::Walkman
   end
 
   def log(msg)
-    ChaosDetector::Utils.log(msg, subject: "Walkman")
+    TCS::Utils::Util.log(msg, subject: "Walkman")
   end
 
   def flush_csv
@@ -102,17 +103,22 @@ class ChaosDetector::Walkman
     end
   end
 
-  def write_frame(frame, action:)
+  def write_frame(frame, action:, frame_offset:nil)
     action = action
     csv_row = [action]
     csv_row.concat(frame_csv_fields(frame))
-    csv_row.concat(atlas_csv_fields)
+    csv_row.concat(atlas_csv_fields(frame_offset: frame_offset))
 
     @log_buffer << csv_row
     buffered_trigger
   end
 
   private
+
+    def atlas_csv_fields(frame_offset: nil)
+      [@atlas.stack_depth, @atlas.graph.nodes.length, @atlas.graph.edges.length, frame_offset]
+    end
+
     def csv_row_val(row, col_header)
       r = COL_INDEXES[col_header]
       if r.nil? || r < 0 || r > COL_COUNT
@@ -126,8 +132,9 @@ class ChaosDetector::Walkman
       [f.domain_name, f.mod_name, f.mod_type, f.fn_path, f.line_num, f.fn_name]
     end
 
-    def atlas_csv_fields
-      [@atlas.stack_depth, @atlas.graph.nodes.length, @atlas.graph.edges.length]
+    def init_file_with_header(filepath)
+      TCS::Utils::FSUtil::ensure_paths_to_file(filepath)
+      File.open(filepath, "w") {|f| f.puts CSV_HEADER.join(",")}
     end
 
     # Play back a single given row

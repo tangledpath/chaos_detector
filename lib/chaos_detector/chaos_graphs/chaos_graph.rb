@@ -73,7 +73,7 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
 
   private
     def log(msg)
-      ChaosDetector::Utils.log(msg, subject: "ChaosGraph")
+      TCS::Utils::Util.log(msg, subject: "ChaosGraph")
     end
 
     def measure_cyclomatic_complexity

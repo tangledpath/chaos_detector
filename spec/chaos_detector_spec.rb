@@ -4,7 +4,7 @@ require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
 require 'graph_theory/appraiser'
 
 require 'fixtures/Fubar'
@@ -16,55 +16,57 @@ describe "ChaosDetector" do
     let (:opts) {
       opts = ChaosDetector::Options.new
       opts.app_root_path = __dir__
-      opts.log_root_path = __dir__
+      opts.log_root_path = File.join(__dir__, 'tmp', 'chaos_logs')
       opts.path_domain_hash = { 'fixtures': 'FuDomain' }
       opts
     }
+
+    let (:chaos_nav) { ChaosDetector::Navigator.new(options: opts) }
 
     # a="#<Class:Authentication>"
     # b="#<Class:Person(id: integer, first"
     # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
     it "should undecorate module names" do
-      ChaosDetector::Navigator.undecorate_module_name(dec2).should eq("Person")
-      ChaosDetector::Navigator.undecorate_module_name(dec1).should eq("Authentication")
-      ChaosDetector::Navigator.undecorate_module_name(dec3).should eq("ChaosDetector::Node")
+      chaos_nav.undecorate_module_name(dec2).should eq("Person")
+      chaos_nav.undecorate_module_name(dec1).should eq("Authentication")
+      chaos_nav.undecorate_module_name(dec3).should eq("ChaosDetector::Node")
     end
 
     it "should record and graph" do
-      ChaosDetector::Navigator.record(options: opts)
+      chaos_nav.record()
       Foo.foo
       Fubar::Foo.foo
-      expect(ChaosDetector::Navigator.atlas).to_not be_nil
+      expect(chaos_nav.atlas).to_not be_nil
 
-      atlas = ChaosDetector::Navigator.stop
-      ChaosDetector::Utils.print_line ("Nodes: #{atlas.node_count}")
-      expect(atlas).to eq(ChaosDetector::Navigator.atlas)
+      atlas = chaos_nav.stop
+      TCS::Utils::Util.print_line ("Nodes: #{atlas.node_count}")
+      expect(atlas).to eq(chaos_nav.atlas)
       grapher = ChaosDetector::Grapher.new(atlas)
       grapher.build_graphs()
 
       atlas.graph.edges.each do |edge|
-        ChaosDetector::Utils.print_line "edge: #{edge}" if edge.src_node.is_root# =='root'
+        TCS::Utils::Util.print_line "edge: #{edge}" if edge.src_node.is_root# =='root'
       end
     end
 
     it "should graph theorize" do
-      ChaosDetector::Navigator.record(options: opts)
+      chaos_nav.record()
       Foo.foo
       Fubar::Foo.foo
-      atlas = ChaosDetector::Navigator.stop
+      atlas = chaos_nav.stop
 
       graph_metrics = GraphTheory::Appraiser.new(atlas.graph)
       graph_metrics.appraise
     end
 
     it "should save recording to walkman" do
-      ChaosDetector::Navigator.record(options: opts)
+      chaos_nav.record()
       Foo.foo
       Fubar::Foo.foo
-      _atlas = ChaosDetector::Navigator.stop
+      _atlas = chaos_nav.stop
 
-      expect(ChaosDetector::Navigator.walkman).to_not be_nil
-      walkman = ChaosDetector::Navigator.walkman
+      expect(chaos_nav.walkman).to_not be_nil
+      walkman = chaos_nav.walkman
       expect(walkman).to_not be_nil
       expect(walkman.csv_path).to_not be_nil
       expect(walkman.csv_path).to_not be_empty
@@ -72,25 +74,24 @@ describe "ChaosDetector" do
       expect(csv_content).to_not be_nil
       expect(csv_content).to_not be_empty
       csv_lines = csv_content.split
+      csv_lines = csv_content.split
+      puts csv_lines.length
+      puts '-' * 50
+      puts csv_lines
+      puts '-' * 50
       expect(csv_lines.length).to eq(13)
-      # csv_lines = csv_content.split
-      # puts csv_lines.length
-      # puts '-' * 50
-      # puts csv_lines
-      # puts '-' * 50
+
     end
 
     it "should playback from file" do
-      ChaosDetector::Navigator.record(options: opts)
+      chaos_nav.record()
       Foo.foo
       Fubar::Foo.foo
-      recorded_atlas = ChaosDetector::Navigator.stop
+      recorded_atlas = chaos_nav.stop
       expect(recorded_atlas).to_not be_nil
 
-      # TODO: instaantize Navigator class and whack this:
-      ChaosDetector::Navigator::atlas = nil
-      ChaosDetector::Navigator::options = nil
-      playback_atlas = ChaosDetector::Navigator.playback(options: opts)
+      playback_nav = ChaosDetector::Navigator.new(options: opts)
+      playback_atlas = playback_nav.playback()
       expect(playback_atlas).to_not be_nil
 
       # Playback should graph:
@@ -124,7 +125,7 @@ describe "ChaosDetector" do
 
   describe "Utils" do
     it "should self-test" do
-      ChaosDetector::Utils.test
+      TCS::Utils::Util.test
     end
   end
 end

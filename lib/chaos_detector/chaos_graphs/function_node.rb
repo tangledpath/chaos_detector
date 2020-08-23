@@ -95,7 +95,7 @@ class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
   def self.human_key(fn_path:nil, fn_name:nil, domain_name:nil)
     hkey = "["
     hkey << "(#{domain_name}) " unless domain_name.nil? || domain_name.empty?
-    hkey << fn_name unless fn_name.nil? || fn_name.empty?
+    hkey << ##{fn_name} unless fn_name.nil? || fn_name.empty?
     hkey << " '#{fn_path}'" unless fn_path.nil? || fn_path.empty?
     m << decorate(ROOT_NODE_NAME, clamp: :parens) if @is_root
     hkey << "]"

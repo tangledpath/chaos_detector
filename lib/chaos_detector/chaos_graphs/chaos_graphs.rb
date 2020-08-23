@@ -1,6 +1,6 @@
 require 'forwardable'
 require 'matrix'
-# require 'chaos_detector/utils'
+# require 'tcs/utils/util'
 require 'graph_theory/edge'
 require 'graph_theory/node'
 
