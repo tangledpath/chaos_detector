@@ -6,18 +6,17 @@ class ChaosDetector::ChaosGraphs::ModuleNode < GraphTheory::Node
   attr_reader :domain_name
   alias_method :mod_name, :name
 
-  def initialize(mod_name:, domain_name: nil, mod_type:nil)
-    super(name:mod_name)
+  def initialize(mod_name:, fn_node:, domain_name: nil, mod_type:nil)
+    super(name:mod_name, node_origin: fn_node)
     @mod_type = mod_type
-    @domain_name = domain_name
   end
 
   def ==(other)
-    self.mod_name == other.mod_name && self.mod_type == other.mod_type
+    self.mod_name == other.mod_name && self.mod_type == other.mod_type && self.domain_name == other.domain_name
   end
 
   def domain_name
-    # Maybe get from fn_node
+    node_origin.domain_name
   end
 
   def label

@@ -52,7 +52,7 @@ class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
     if mod_info
       add_module(mod_info)
     elsif Kernel.aught?mod_name
-      add_module_attrs(mod_name:mod_name, mod_type: mod_type)
+      add_module_attrs(mod_name:mod_name, mod_path: fn_path, mod_type: mod_type)
     end
   end
 
@@ -60,8 +60,8 @@ class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
     @mod_infos << mod_info if mod_info
   end
 
-  def add_module_attrs(mod_name:, mod_type:)
-    add_module(ChaosDetector::ChaosGraphs::ModInfo.new(mod_name:mod_name, mod_type: mod_type))
+  def add_module_attrs(mod_name:, mod_path:, mod_type:)
+    add_module(ChaosDetector::ChaosGraphs::ModInfo.new(mod_name:mod_name, mod_path: mod_path, mod_type: mod_type))
   end
 
   def ==(other)

@@ -1,19 +1,13 @@
-require 'forwardable'
 require 'graph_theory/graph_theory'
 class GraphTheory::Edge
-  extend Forwardable
-
-  FnCall = Struct.new(:fn_name, :line_num)
-  DEFAULT_FN = 'Root'.freeze
-
   attr_reader :src_node
   attr_reader :dep_node
-  def_instance_delegator :@src_node, :domain_name, :src_domain
-  def_instance_delegator :@dep_node, :domain_name, :dep_domain
+  attr_reader :reduce_cnt
 
-  def initialize(src_node, dep_node)
+  def initialize(src_node, dep_node, reduce_cnt: 1)
     @src_node = src_node
     @dep_node = dep_node
+    @reduce_cnt = reduce_cnt
   end
 
   def ==(other)
@@ -22,6 +16,8 @@ class GraphTheory::Edge
   end
 
   def to_s()
-    "[%s] -> [%s]" % [src_node.label, dep_node.label]
+    s = "[%s] -> [%s]" % [src_node.label, dep_node.label]
+    s << "(#{reduce_cnt})" if reduce_cnt > 1
+    s
   end
 end

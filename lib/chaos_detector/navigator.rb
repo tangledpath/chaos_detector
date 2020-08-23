@@ -24,7 +24,7 @@ class ChaosDetector::Navigator
   attr_reader :walkman
   attr_reader :stopped
 
-  def initialize(options: options)
+  def initialize(options:)
     raise ArgumentError, "#initialize requires options" if options.nil?
     @options = options
     @stopped = false
@@ -56,7 +56,7 @@ class ChaosDetector::Navigator
       if @stopped
         @trace.disable
         log("Tracing stoped; stopping immediately.")
-        break
+        next
       end
 
       if [:class, :end].include?tracepoint.event
