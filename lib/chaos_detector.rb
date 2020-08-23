@@ -1,6 +1,6 @@
-# require 'chaos_detector/navigator'
-# require 'chaos_detector/grapher'
-# require 'chaos_detector/options'
+require 'chaos_detector/navigator'
+require 'chaos_detector/grapher'
+require 'chaos_detector/options'
 
 module ChaosDetector
   # class << self

@@ -48,51 +48,34 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
     end
   end
 
-  def build_domain_edges
-    @domain_edges = group_edges do |src_node, dep_node|
-      [src_node.domain_name, dep_node.domain_name]
-    end
-  end
-
-  def build_module_edges
-    @module_edges = group_edges do |src_node, dep_node|
-      [src_node.mod_info_prime, dep_node.mod_info_prime]
-    end
-  end
-
-  def build_module_to_domain_edges
-    @module_domain_edges = group_edges do |src_node, dep_node|
-      [src_node.mod_info_prime, dep_node.domain_name]
-    end
-  end
-
-  def build_domain_to_module_edges
-    @domain_module_edges = group_edges do |src_node, dep_node|
-      [src_node.domain_name, dep_node.mod_info_prime]
-    end
-  end
-
-  def build_function_to_domain_edges
-    @function_domain_edges = group_edges do |src_node, dep_node|
-      [src_node, dep_node.domain_name]
-    end
-  end
-
-  def build_domain_to_function_edges
-    @domain_function_edges = group_edges do |src_node, dep_node|
-      [src_node.domain_name, dep_node]
-    end
+  def build_inferred_edges
+    edges = @function_graph.edges
+    @domain_edges = group_edges_by(edges, :domain_name, :domain_name)
+    @module_edges = group_edges_by(edges, :mod_info_prime, :mod_info_prime)
+    @module_domain_edges = group_edges_by(edges, :mod_info_prime, :domain_name)
+    @domain_module_edges = group_edges_by(edges, :domain_name, :mod_info_prime)
+    @function_domain_edges = group_edges_by(edges, nil, :domain_name)
+    @domain_function_edges = group_edges_by(edges, :domain_name, nil)
   end
 
   private
+    def self.group_edges_by(edges, src, dep)
+      group_edges(edges) do |src_node, dep_node|
+        [(src ? src_node.send(src) : src_node), (dep ? dep_node.send(dep) : dep_node)]
+      end
+    end
+
     def self.group_edges(edges)
       raise ArgumentError, "edges argument required" unless edges
       raise ArgumentError, "Block required" unless block_given?
 
-      edges \
-        .group_by { |e| yield(e.src_node, e.dep_node) } \
-        .map { |ee, g_edges| GraphTheory::Edge.new(ee[0], ee[1], reduce_cnt: g_edges.length) }
+      groupedges = edges.group_by { |e| yield(e.src_node, e.dep_node) }
+      groupedges.map do |src_dep_pair, g_edges|
+        raise "Pair should have two exactly items." unless src_dep_pair.length==2
+        GraphTheory::Edge.new(src_dep_pair.first, src_dep_pair.last, reduce_cnt: g_edges.length)
+      end
     end
+
     # Edges crossing domains:
     def self.edges_x_domains(edges)
       edges.select do |e|
@@ -189,12 +172,6 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
       end.to_h
     end
 
-    def appraise_edges
-      @edge_metrics = @function_graph.edges.map do |edge|
-        [edge, appraise_edge(edge)]
-      end.to_h
-    end
-
     # For each node, measure fan-in(Ca) and fan-out(Ce)
     # TODO: Make edges parameter and appraise from different aspects
     def appraise_node(node)
@@ -218,10 +195,6 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
 
       end
       node_matrix
-    end
-
-    # Calculate
-    def edge_metrics
     end
 
     # @return positive integer indicating distance in number of edges
