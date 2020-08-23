@@ -49,6 +49,7 @@ module ChaosDetector
         infer_module_nodes
         infer_edges
         prepare_root_nodes
+        self
         # @domain_graph = build_domain_graph(@domain_edges)
         # @module_graph = build_domain_graph(@module_edges)
       end

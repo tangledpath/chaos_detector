@@ -4,7 +4,7 @@ require 'thor'
 require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/graphing/grapher'
+require 'chaos_detector/graphing/directed'
 require 'chaos_detector/options'
 require 'tcs/refined_utils'
 using TCS::RefinedUtils
@@ -14,7 +14,7 @@ module ChaosDetector
     package_name "DetectChaos"
     desc "playback", "Loads dependencies saved by a previous test run"
     opts = ChaosDetector::Options.new
-    method_option :opt_frame_csv, :type => :string, :default => opts.path_with_root(:frame_csv_path) , :required => true
+    method_option :opt_frame_csv, :type => :string, :default => opts.path_with_log_root(:frame_csv_path) , :required => true
     method_option :opt_app_root, :type => :string, :default => opts.app_root_path, :required => true
     method_option :opt_module_filter, :type => :string, :default => 'ChaosDetector', :required => true
     # default_task :playback
@@ -24,13 +24,13 @@ module ChaosDetector
       opts = ChaosDetector::Options.new
       chaos_nav = ChaosDetector::Navigator.new(options: opts)
       log_msg("ChaosDetector::Navigator.playback with options: #{options}")
-      opts.frame_csv_path = options[:opt_frame_csv].sub(options[:opt_app_root], "")
+      opts.frame_csv_path = options[:opt_frame_csv] #.sub(options[:opt_app_root], "")
       opts.app_root_path = options[:opt_app_root]
       opts.module_filter = options[:opt_module_filter]
       chaos_nav.playback()
 
       atlas = chaos_nav.atlas
-      grapher = ChaosDetector::Graphing::Grapher.new(atlas)
+      grapher = ChaosDetector::Graphing::Directed.new(atlas)
       grapher.build_graphs()
       atlas
     end

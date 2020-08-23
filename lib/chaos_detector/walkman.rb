@@ -70,7 +70,7 @@ module ChaosDetector
     end
 
     def csv_path
-      @csv_path ||= File.join(@options.log_root_path, @options.frame_csv_path)
+      @csv_path ||= @options.path_with_log_root(:frame_csv_path)
     end
 
     def autosave_csv

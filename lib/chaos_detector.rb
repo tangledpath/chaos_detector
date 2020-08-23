@@ -1,5 +1,5 @@
 require 'chaos_detector/navigator'
-require 'chaos_detector/graphing/grapher'
+require 'chaos_detector/graphing/directed'
 require 'chaos_detector/options'
 
 # module ChaosDetector
@@ -22,7 +22,7 @@ require 'chaos_detector/options'
 #   #   def build_graphs
 #   #     raise "Atlas isn't present!  Call record first." if ChaosDetector::Navigator.atlas.nil?
 
-#   #     grapher = ChaosDetector::Graphing::Grapher.new(ChaosDetector::Navigator.atlas)
+#   #     grapher = ChaosDetector::Graphing::Directed.new(ChaosDetector::Navigator.atlas)
 #   #     grapher.build_graphs()
 #   #   end
 #   # end

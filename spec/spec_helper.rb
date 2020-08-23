@@ -1,13 +1,17 @@
 require 'rspec'
 require 'rspec/autorun'
 
-def tmp_dir
-  File.join(__dir__, 'tmp')
+def tmp_dirs
+  [
+    File.join(__dir__, 'tmp'),
+    File.join(__dir__, 'csv'),
+    File.join(__dir__, 'render')
+  ]
 end
 
 def whack_temp_files
-  puts "Cleaning temporary files from #{tmp_dir}..."
-  puts `rm -rfv #{tmp_dir}`
+  puts "Cleaning temporary files from: #{tmp_dirs.inspect}..."
+  puts `rm -rfv #{tmp_dirs.join(" ")}`
 end
 
 RSpec.configure do |config|

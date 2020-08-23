@@ -1,7 +1,8 @@
 require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/graphing/grapher'
+require 'chaos_detector/graphing/directed'
+require 'chaos_detector/graphing/graphs'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_graphs/chaos_graph'
 require 'tcs/refined_utils'
@@ -16,7 +17,7 @@ describe "ChaosDetector" do
   let (:opts) {
     opts = ChaosDetector::Options.new
     opts.app_root_path = __dir__
-    opts.log_root_path = File.join(__dir__, 'tmp', 'chaos_logs')
+    opts.log_root_path = File.join('tmp', 'chaos_logs')
     opts.path_domain_hash = { 'fixtures': 'FuDomain' }
     opts
   }
@@ -95,7 +96,7 @@ describe "ChaosDetector" do
       expect(playback_atlas).to_not be_nil
 
       # Playback should graph:
-      grapher = ChaosDetector::Graphing::Grapher.new()
+      grapher = ChaosDetector::Graphing::Directed.new()
       # grapher.build_graphs()
     end
   end
@@ -132,12 +133,12 @@ describe "ChaosDetector" do
     end
 
     it "domain graphs" do
-      grapher = ChaosDetector::Graphing::Grapher.new()
+      grapher = ChaosDetector::Graphing::Directed.new()
       grapher.create_directed_graph("domain-test")
 
       chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(atlas.graph)
       chaos_graph.infer_all
-      grapher.add_graph_nodes(chaos_graph.domain_nodes)
+      grapher.append_nodes(chaos_graph.domain_nodes)
       grapher.add_edges(chaos_graph.domain_edges)
 
       # grapher.add_nodes(atlas.nodes)
@@ -150,12 +151,12 @@ describe "ChaosDetector" do
     end
 
     it "module graphs" do
-      grapher = ChaosDetector::Graphing::Grapher.new()
+      grapher = ChaosDetector::Graphing::Directed.new()
       grapher.create_directed_graph("module-test")
 
       chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(atlas.graph)
       chaos_graph.infer_all
-      grapher.add_graph_nodes(chaos_graph.module_nodes)
+      grapher.append_nodes(chaos_graph.module_nodes)
 
       chaos_graph.module_nodes.each do |n|
         p("ModNode: #{decorate(n.label)}")
@@ -173,6 +174,27 @@ describe "ChaosDetector" do
       p(decorate(graph_fs))
       expect(graph_fs).to be
       expect(graph_fs.split.first).to eq("module-test.png")
+    end
+
+    it "graphs using graphs" do
+      chaos_nav.record()
+      Foo.foo
+      Fubarm::Foom.foom
+      recorded_atlas = chaos_nav.stop
+      expect(recorded_atlas).to_not be_nil
+
+      # Playback should graph:
+      graphs = ChaosDetector::Graphing::Graphs.new(options: opts)
+      expect(graphs.navigator).to_not be_nil
+
+      graphs.playback()
+      expect(graphs.atlas).to_not be_nil
+
+      graphs.render_mod_dep()
+      graph_fs = `ls module-dep.png`
+      p(decorate(graph_fs))
+      expect(graph_fs).to be
+      expect(graph_fs.split.first).to eq("module-dep.png")
     end
 
   end
