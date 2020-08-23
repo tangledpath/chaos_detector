@@ -13,9 +13,13 @@ module ChaosDetector
         @reduce_cnt = reduce_cnt
       end
 
+      def hash
+        [@src_node, @dep_node].hash
+      end
+
       def ==(other)
-        self.src == other.src &&
-        self.dep == other.dep
+        puts "Checking src and dep"
+        self.src_node == other.src_node && self.dep_node == other.dep_node
       end
 
       def to_s()
