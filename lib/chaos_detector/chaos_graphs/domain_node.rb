@@ -1,3 +1,4 @@
+require 'chaos_detector/graph_theory/node'
 
 # Domain node
 module ChaosDetector

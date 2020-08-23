@@ -10,6 +10,8 @@
 module ChaosDetector
   module Utils
     module CoreUtil
+      class AssertError < StandardError; end
+
       class << self
 
         def enum(*values)
@@ -46,16 +48,15 @@ module ChaosDetector
         end
 
         def with(obj)
-          raise ArgumentError("assert requires block") unless block_given?
+          raise ArgumentError("with requires block") unless block_given?
           yield obj if obj
         end
 
         def assert(expected_result=true, msg=nil, &block)
-          raise ArgumentError("assert requires block") unless block_given?
-
-          unless block.call==expected_result
-            # raise "Assertion failed.  #{msg}\n\t#{caller_locations(1,5)}"
-            raise "Assertion failed.  #{msg}\n\t#{block.source_location}"
+          if block.nil? && !expected_result
+            raise AssertError, "Assertion failed. #{msg}"
+          elsif !block.nil? && block.call!=expected_result
+            raise AssertError, "Assertion failed. #{msg}\n\t#{block.source_location}"
           end
         end
 

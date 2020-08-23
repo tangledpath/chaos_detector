@@ -2,7 +2,7 @@ require 'chaos_detector/utils/str_util'
 require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
-  module ChaosGraphs
+  module Stacker
     class ModInfo
         attr_reader :mod_name
         attr_reader :mod_path
@@ -22,8 +22,11 @@ module ChaosDetector
         end
 
         def to_s
-          p = ChaosDetector::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
-          "%s %s - %s" % [@mod_name, ChaosUtils.ChaosUtils::decorate(@mod_type, clamp: :bracket), p]
+          "(%s) %s - %s" % [
+            @mod_type.to_s[0].upcase,
+            ChaosDetector::Utils::StrUtil.humanize_module(@mod_name, sep_token: '::'),
+            ChaosDetector::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
+          ]
         end
     end
   end

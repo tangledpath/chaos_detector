@@ -1,4 +1,3 @@
-require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/graphing/directed'
@@ -9,7 +8,6 @@ require 'chaos_detector/chaos_utils'
 module ChaosDetector
   module Graphing
     class Graphs
-      attr_reader :atlas
       attr_reader :navigator
       attr_reader :chaos_graph
 
@@ -22,8 +20,8 @@ module ChaosDetector
       end
 
       def playback()
-        @atlas = @navigator.playback()
-        @chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(@atlas.graph)
+        fn_graph = @navigator.playback()
+        @chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(fn_graph)
         @chaos_graph.infer_all
       end
 
@@ -42,8 +40,6 @@ module ChaosDetector
         end
         dgraph.add_edges(chaos_graph.module_edges)
 
-        # dgraph.add_nodes(atlas.nodes)
-        # dgraph.add_nodes(atlas.nodes)
         dgraph.render_graph
 
       end

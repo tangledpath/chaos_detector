@@ -1,5 +1,5 @@
-require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
+require 'chaos_detector/tracker'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/graphing/directed'
 require 'chaos_detector/graphing/graphs'
@@ -21,9 +21,10 @@ describe "ChaosDetector" do
     opts
   }
 
+  let (:chaos_tracker) { ChaosDetector::Tracker.new(options: opts) }
   let (:chaos_nav) { ChaosDetector::Navigator.new(options: opts) }
 
-  describe "Navigator" do
+  describe "Tracker" do
     let (:dec1) { "#<Class:Authentication>"}
     let (:dec2) { "#<Class:Person(id: integer)>"}
     let (:dec3) { "#<ChaosDetector::Node:0x00007fdd5d2c6b08>"}
@@ -31,42 +32,26 @@ describe "ChaosDetector" do
     # b="#<Class:Person(id: integer, first"
     # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
     it "should undecorate module names" do
-      expect(chaos_nav.undecorate_module_name(dec2)).to eq("Person")
-      expect(chaos_nav.undecorate_module_name(dec1)).to eq("Authentication")
-      expect(chaos_nav.undecorate_module_name(dec3)).to eq("ChaosDetector::Node")
+      expect(chaos_tracker.undecorate_module_name(dec2)).to eq("Person")
+      expect(chaos_tracker.undecorate_module_name(dec1)).to eq("Authentication")
+      expect(chaos_tracker.undecorate_module_name(dec3)).to eq("ChaosDetector::Node")
     end
 
     it "should record" do
-      chaos_nav.record()
+      chaos_tracker.record()
       Foo.foo
       Fubarm::Foom.foom
-      expect(chaos_nav.atlas).to_not be_nil
-
-      atlas = chaos_nav.stop
-      puts ("Nodes: #{atlas.node_count}")
-      expect(atlas.node_count).to eq(6)
-
-      expect(atlas).to eq(chaos_nav.atlas)
-    end
-
-    it "should graph theorize" do
-      chaos_nav.record()
-      Foo.foo
-      Fubarm::Foom.foom
-      atlas = chaos_nav.stop
-
-      graph_metrics = ChaosDetector::GraphTheory::Appraiser.new(atlas.graph)
-      graph_metrics.appraise
+      chaos_tracker.stop
     end
 
     it "should save recording to walkman" do
-      chaos_nav.record()
+      chaos_tracker.record()
       Foo.foo
       Fubarm::Foom.foom
-      _atlas = chaos_nav.stop
+      chaos_tracker.stop
 
-      expect(chaos_nav.walkman).to_not be_nil
-      walkman = chaos_nav.walkman
+      expect(chaos_tracker.walkman).to_not be_nil
+      walkman = chaos_tracker.walkman
       expect(walkman).to_not be_nil
       expect(walkman.csv_path).to_not be_nil
       expect(walkman.csv_path).to_not be_empty
@@ -82,66 +67,40 @@ describe "ChaosDetector" do
       expect(csv_lines.length).to eq(13)
 
     end
-
-    it "should playback from file" do
-      chaos_nav.record()
-      Foo.foo
-      Fubarm::Foom.foom
-      recorded_atlas = chaos_nav.stop
-      expect(recorded_atlas).to_not be_nil
-
-      playback_nav = ChaosDetector::Navigator.new(options: opts)
-      playback_atlas = playback_nav.playback()
-      expect(playback_atlas).to_not be_nil
-
-      # Playback should graph:
-      grapher = ChaosDetector::Graphing::Directed.new()
-      # grapher.build_graphs()
-    end
   end
 
-  describe "Atlas" do
-    it "should do basic frame stacking" do
-      atlas = ChaosDetector::Atlas.new
-      frame1 = ChaosDetector::Stacker::Frame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', fn_path: 'foo/bar', fn_name: 'baz', fn_line: 2112)
-      frame2 = ChaosDetector::Stacker::Frame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', fn_path: 'foo/mepper', fn_name: 'blop', fn_line: 3112)
+  describe "Navigator" do
+    it "should playback from file" do
+      chaos_tracker.record()
+      Foo.foo
+      Fubarm::Foom.foom
+      chaos_tracker.stop
 
-      expect(atlas.stack_depth).to eq(0)
-
-      atlas.open_frame(frame1)
-      expect(atlas.stack_depth).to eq(1)
-
-      atlas.open_frame(frame2)
-      expect(atlas.stack_depth).to eq(2)
-
-      atlas.close_frame(frame2)
-      expect(atlas.stack_depth).to eq(1)
-
-      atlas.close_frame(frame1)
-      expect(atlas.stack_depth).to eq(0)
-
+      playback_nav = ChaosDetector::Navigator.new(options: opts)
+      playback_graph = playback_nav.playback()
+      expect(playback_graph).to_not be_nil
+      expect(playback_graph.nodes.length).to eq(6)
     end
   end
 
   describe "Grapher" do
-    let (:atlas) do
-      chaos_nav.record()
+    let (:graphing) do
+      chaos_tracker.record()
       Foo.foo
       Fubarm::Foom.foom
-      chaos_nav.stop
+      chaos_tracker.stop
+      chaos_nav.playback
     end
 
     it "domain graphs" do
       grapher = ChaosDetector::Graphing::Directed.new()
       grapher.create_directed_graph("domain-test")
 
-      chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(atlas.graph)
+      chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(graphing)
       chaos_graph.infer_all
       grapher.append_nodes(chaos_graph.domain_nodes)
       grapher.add_edges(chaos_graph.domain_edges)
 
-      # grapher.add_nodes(atlas.nodes)
-      # grapher.add_nodes(atlas.nodes)
       grapher.render_graph
       graph_fs = `ls domain-test.png`
       p(ChaosUtils::decorate(graph_fs))
@@ -153,7 +112,7 @@ describe "ChaosDetector" do
       grapher = ChaosDetector::Graphing::Directed.new()
       grapher.create_directed_graph("module-test")
 
-      chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(atlas.graph)
+      chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(graphing)
       chaos_graph.infer_all
       grapher.append_nodes(chaos_graph.module_nodes)
 
@@ -166,8 +125,6 @@ describe "ChaosDetector" do
       end
       grapher.add_edges(chaos_graph.module_edges)
 
-      # grapher.add_nodes(atlas.nodes)
-      # grapher.add_nodes(atlas.nodes)
       grapher.render_graph
       graph_fs = `ls module-test.png`
       p(ChaosUtils::decorate(graph_fs))
@@ -176,18 +133,18 @@ describe "ChaosDetector" do
     end
 
     it "graphs using graphs" do
-      chaos_nav.record()
+      chaos_tracker.record()
       Foo.foo
       Fubarm::Foom.foom
-      recorded_atlas = chaos_nav.stop
-      expect(recorded_atlas).to_not be_nil
+      graph = chaos_tracker.stop
+      expect(graph).to_not be_nil
 
       # Playback should graph:
       graphs = ChaosDetector::Graphing::Graphs.new(options: opts)
       expect(graphs.navigator).to_not be_nil
 
       graphs.playback()
-      expect(graphs.atlas).to_not be_nil
+      expect(graphs.chaos_graph).to_not be_nil
 
       graphs.render_mod_dep()
       graph_fs = `ls spec/render/module-dep.png`
