@@ -1,15 +1,15 @@
 require_relative 'fn_info'
 require_relative 'mod_info'
 require 'forwardable'
-require 'graph_theory/edge'
-require 'graph_theory/node'
+require 'chaos_detector/graph_theory/edge'
+require 'chaos_detector/graph_theory/node'
 
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   module ChaosGraphs
-    class FunctionNode < GraphTheory::Node
+    class FunctionNode < ChaosDetector::GraphTheory::Node
       extend Forwardable
       alias_method :fn_name, :name
       attr_accessor :domain_name
@@ -85,7 +85,7 @@ module ChaosDetector
       end
 
       def short_path
-        TCS::Utils::StrUtil.humanize_module(@fn_path, sep_token: '/')
+        ChaosDetector::Utils::StrUtil.humanize_module(@fn_path, sep_token: '/')
       end
 
       class << self

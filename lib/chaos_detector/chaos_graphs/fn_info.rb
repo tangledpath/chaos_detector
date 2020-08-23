@@ -1,10 +1,10 @@
 require_relative 'mod_info'
 require 'forwardable'
-require 'graph_theory/edge'
-require 'graph_theory/node'
+require 'chaos_detector/graph_theory/edge'
+require 'chaos_detector/graph_theory/node'
 
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   module ChaosGraphs

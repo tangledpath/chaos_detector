@@ -1,13 +1,13 @@
 require_relative 'mod_info'
 
-require 'tcs/utils/str_util'
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/utils/str_util'
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   module ChaosGraphs
     # Consider putting action/event in this class and naming it accordingly
-    class ModuleNode < GraphTheory::Node
+    class ModuleNode < ChaosDetector::GraphTheory::Node
       attr_reader :mod_type # :unknown, :module, :class
       attr_reader :mod_path # :unknown, :module, :class
       attr_reader :domain_name
@@ -35,7 +35,7 @@ module ChaosDetector
       end
 
       def short_path
-        TCS::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
+        ChaosDetector::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
       end
 
       def to_info

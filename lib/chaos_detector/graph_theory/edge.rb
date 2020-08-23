@@ -1,3 +1,4 @@
+module ChaosDetector
 module GraphTheory
   class Edge
     attr_reader :src_node
@@ -23,4 +24,5 @@ module GraphTheory
       s
     end
   end
+end
 end

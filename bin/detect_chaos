@@ -6,8 +6,8 @@ require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/graphing/directed'
 require 'chaos_detector/options'
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   class DetectChaos < Thor

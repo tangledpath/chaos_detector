@@ -6,8 +6,8 @@
 # naught?([])
 # module ChaosDetector
 
-# = TCS::Utils::CoreUtil::with
-module TCS
+# = ChaosDetector::Utils::CoreUtil::with
+module ChaosDetector
   module Utils
     module CoreUtil
       class << self
@@ -82,9 +82,9 @@ module TCS
         end
 
         # Built-in self-testing:
-        # TCS::Utils::CoreUtil.test
+        # ChaosDetector::Utils::CoreUtil.test
         def test
-          puts("Testing TCS::Utils::CoreUtil")
+          puts("Testing ChaosDetector::Utils::CoreUtil")
           assert(true, 'Naught detects blank string'){naught?("")}
           assert(true, 'Naught detects blank string with space'){naught?(" ")}
           assert(true, 'Naught detects int 0'){naught?(0)}

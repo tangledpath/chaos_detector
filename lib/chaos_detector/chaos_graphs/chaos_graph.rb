@@ -2,10 +2,10 @@ require_relative 'function_node'
 require_relative 'domain_node'
 require_relative 'module_node'
 
-require 'graph_theory/edge'
-require 'graph_theory/graph'
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/graph_theory/edge'
+require 'chaos_detector/graph_theory/graph'
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 # Encapsulate and aggregates graphs for dependency tracking
 #   * Function directed graph
@@ -57,13 +57,13 @@ module ChaosDetector
       ## Derive domain-level graph from function-based graph
       def build_domain_graph(edges)
         assert_state
-        @domain_graph ||= GraphTheory::Graph.new(root_node: root_node_domain, nodes: @domain_nodes, edges: edges)
+        @domain_graph ||= ChaosDetector::GraphTheory::Graph.new(root_node: root_node_domain, nodes: @domain_nodes, edges: edges)
       end
 
       ## Derive module-level graph from function-based graph
       def build_module_graph(edges: @module_edges)
         assert_state
-        @domain_graph ||= GraphTheory::Graph.new(root_node: root_node_module, nodes: @domain_nodes, edges: edges)
+        @domain_graph ||= ChaosDetector::GraphTheory::Graph.new(root_node: root_node_module, nodes: @domain_nodes, edges: edges)
       end
 
       private
@@ -177,8 +177,8 @@ module ChaosDetector
 
 
 
-            log("Creating #{src_dep_pair.first.class} edge with #{decorate_tuple(edge_src_node, edge_dep_node)}")
-            GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_cnt: g_edges.length)
+            log("Creating #{src_dep_pair.first.class} edge with #{decorate_pair(edge_src_node, edge_dep_node)}")
+            ChaosDetector::GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_cnt: g_edges.length)
           end
         end
 
@@ -206,7 +206,7 @@ module ChaosDetector
           assert_state
 
           # It is already a node:
-          return node_info if node_info.is_a?GraphTheory::Node
+          return node_info if node_info.is_a?ChaosDetector::GraphTheory::Node
 
 
           case node_type
