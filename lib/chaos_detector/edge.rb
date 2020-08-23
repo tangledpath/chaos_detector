@@ -48,7 +48,7 @@ module ChaosDetector
 
       buffy = []
 
-      buffy << ChaosDetector::Utils.decorate_pair(src_node, dep_node, clamp_style: :brace) if show_nodes
+      buffy << ChaosDetector::Utils.decorate_pair(src_node, dep_node, clamp: :brace) if show_nodes
 
       if show_fn_pairs && @fn_call_pairs.any?
         @fn_call_pairs.each do |f|

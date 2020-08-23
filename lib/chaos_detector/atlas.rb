@@ -16,8 +16,6 @@ class Atlas
   BASE_TOLERANCE = 1
 
   INDENT = " ".freeze
-  ROOT_NODE_NAME = "root".freeze
-
   attr_reader :root_node
   chaos_attr (:options) { ChaosDetector::Options.new }
   chaos_attr :nodes, []
@@ -37,6 +35,7 @@ class Atlas
       src_domain = edge.src_node&.domain_name
       dep_domain = edge.dep_node&.domain_name
 
+      log("Checking edge: #{edge} : #{src_domain && dep_domain && src_domain != dep_domain}")
       if src_domain && dep_domain && src_domain != dep_domain
         domain_edge = DomainEdge.new(src_domain, dep_domain)
         domain_edges[domain_edge] = domain_edges.fetch(domain_edge, 0) + 1
@@ -44,6 +43,10 @@ class Atlas
     end
 
     domain_edges
+  end
+
+  def log(msg)
+    ChaosDetector::Utils.log(msg, subject: "Atlas")
   end
 
 # TODO: x
@@ -77,7 +80,7 @@ class Atlas
 
   def reset
     stop
-    @root_node = ChaosDetector::Node.new(mod_name:ROOT_NODE_NAME, mod_path:"", domain_name:nil)
+    @root_node = ChaosDetector::Node.new(root: true)
     @md5 = Digest::MD5.new
     @nodes = []
     @edges = []

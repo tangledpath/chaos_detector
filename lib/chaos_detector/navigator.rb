@@ -49,7 +49,7 @@ class ChaosDetector::Navigator
         next if full_path_skip?(tracepoint.path)
         frame = frame_at_trace(tracepoint)
 
-        next unless frame.mod_name && !frame.mod_name&.start_with?("ChaosDetector")
+        next unless Kernel.ought?(frame.mod_name) && !frame.mod_name&.start_with?("ChaosDetector")
         # puts "FRame: #{frame}"
 
         # perform_frame_action(frame, action: tracepoint.event)
@@ -60,6 +60,8 @@ class ChaosDetector::Navigator
 
       @trace.enable
     end
+
+
 
     def perform_frame_action(frame, action:)
       if action == :call
@@ -110,7 +112,7 @@ class ChaosDetector::Navigator
     end
 
     def check_name(mod_nm)
-      !(ChaosDetector::Utils.naught?(mod_nm) || mod_nm.start_with?('#'))
+      Kernel.ought?(mod_nm) && !mod_nm.strip.start_with?('#')
     end
 
     def module_from_tracepoint(tp)
@@ -134,6 +136,7 @@ class ChaosDetector::Navigator
         end
 
       mod_path = localize_path(tp.path)
+      # Currently dealing with nil and empty modules at a higher level for tracking:
       ChaosDetector::ModInfo.new(mod_name, mod_path: mod_path, mod_type: mod_type)
     end
 

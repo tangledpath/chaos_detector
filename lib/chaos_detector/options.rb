@@ -8,4 +8,5 @@ class ChaosDetector::Options
   chaos_attr(:path_domain_hash)
   chaos_attr(:app_root_path)
   chaos_attr(:root_label, "App Container")
+  chaos_attr(:frame_csv_path, "chaos_frames.csv")
 end
