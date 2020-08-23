@@ -1,37 +1,43 @@
-require 'chaos_detector/stacker/stacker'
-require 'tcs/utils/util'
+require_relative 'frame'
 
-# Maintains stack of trace frames
-class ChaosDetector::Stacker::FrameStack
-  def initialize()
-    @stack = []
-  end
+require 'tcs/refined_utils'
+using TCS::RefinedUtils
 
-  def log(msg)
-    TCS::Utils::Util.log(msg, subject: "FrameStack")
-  end
 
-  def depth
-    @stack.length
-  end
+# Maintains all nodes and infers edges as stack calls are pushed and popped via Frames.
+module ChaosDetector
+  module Stacker
+    class FrameStack
+      def initialize()
+        @stack = []
+      end
 
-  def peek
-    @stack.first
-  end
+      def log(msg)
+        log_msg(msg, subject: "FrameStack")
+      end
 
-  def pop(frame)
-    raise ArgumentError, "Current Frame is required" if frame.nil?
-    @stack.index(frame).tap do |n_frame|
-      @stack.slice!(0..n_frame) unless n_frame.nil?
+      def depth
+        @stack.length
+      end
+
+      def peek
+        @stack.first
+      end
+
+      def pop(frame)
+        raise ArgumentError, "Current Frame is required" if frame.nil?
+        @stack.index(frame).tap do |n_frame|
+          @stack.slice!(0..n_frame) unless n_frame.nil?
+        end
+      end
+
+      def push(frame)
+        @stack.unshift(frame)
+      end
+
+      def to_s
+        "Frames: %d" % stack_depth
+      end
     end
   end
-
-  def push(frame)
-    @stack.unshift(frame)
-  end
-
-  def to_s
-    "Frames: %d" % stack_depth
-  end
-
 end

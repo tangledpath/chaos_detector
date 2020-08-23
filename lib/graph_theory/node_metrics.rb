@@ -1,4 +1,3 @@
-require 'graph_theory/graph_theory'
 module GraphTheory
   class NodeMetrics
     attr_accessor :afferent_couplings

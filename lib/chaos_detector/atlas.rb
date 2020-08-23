@@ -2,11 +2,13 @@ require 'forwardable'
 
 require 'graph_theory/edge'
 require 'graph_theory/graph'
-require 'chaos_detector/chaos_graphs/function_node'
-require 'chaos_detector/stacker/frame_stack'
-require 'chaos_detector/stacker/frame'
-require 'tcs/utils/util'
-require 'chaos_detector/atlas_metrics'
+require_relative 'chaos_graphs/function_node'
+require_relative 'stacker/frame_stack'
+require_relative 'stacker/frame'
+require_relative 'atlas_metrics'
+require 'tcs/refined_utils'
+
+using TCS::RefinedUtils
 
 # Maintains all nodes and edges as stack calls are pushed and popped via Frames.
 class ChaosDetector::Atlas
@@ -28,7 +30,7 @@ class ChaosDetector::Atlas
   end
 
   def log(msg)
-    TCS::Utils::Util.log(msg, subject: "Atlas")
+    log_msg(msg, subject: "Atlas")
   end
 
   def stop

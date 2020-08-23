@@ -1,3 +1,6 @@
+require 'tcs/refined_utils'
+using TCS::RefinedUtils
+
 class ChaosDetector::AtlasMetrics
   def initialize
     @push_count = 0

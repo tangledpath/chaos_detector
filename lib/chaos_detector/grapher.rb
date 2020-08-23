@@ -1,13 +1,14 @@
 require 'ruby-graphviz'
 
-require 'chaos_detector/atlas'
-require 'chaos_detector/options'
-require 'chaos_detector/stacker/frame'
-require 'tcs/utils/util'
+require_relative 'atlas'
+require_relative 'options'
+require_relative 'stacker/frame'
 require 'graph_theory/appraiser'
+require 'tcs/refined_utils'
+using TCS::RefinedUtils
 
 class ChaosDetector::Grapher
-  extend TCS::Utils::Util::ChaosAttr
+  extend TCS::Utils::CoreUtil::ChaosAttr
 
   CLR_BLACK='black'
   CLR_DARKRED = 'red4'
@@ -97,7 +98,7 @@ class ChaosDetector::Grapher
   end
 
   def log(msg)
-    TCS::Utils::Util.log(msg, subject: "Grapher")
+    log_msg(msg, subject: "Grapher")
   end
 
   # TODO: This has moved to chaos_graphs/....

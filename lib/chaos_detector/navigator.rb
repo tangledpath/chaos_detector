@@ -1,10 +1,11 @@
 require 'pathname'
-require 'chaos_detector/atlas'
-require 'chaos_detector/options'
-require 'chaos_detector/chaos_graphs/module_node'
-require 'chaos_detector/stacker/frame'
-require 'tcs/utils/util'
-require 'chaos_detector/walkman'
+require_relative 'atlas'
+require_relative 'options'
+require_relative 'chaos_graphs/module_node'
+require_relative 'stacker/frame'
+require_relative 'walkman'
+require 'tcs/refined_utils'
+using TCS::RefinedUtils
 
 # The main interface for intercepting tracepoints,
 # and converting them into recordable and playable
@@ -98,7 +99,7 @@ class ChaosDetector::Navigator
   # b="#<Class:Person(id: integer, first"
   # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
   def undecorate_module_name(mod_name)
-    return '' if TCS::Utils::Util.naught?(mod_name)
+    return '' if TCS::Utils::CoreUtil.naught?(mod_name)
     return mod_name unless mod_name.start_with?('#')
 
     plain_name = nil
@@ -111,7 +112,7 @@ class ChaosDetector::Navigator
       plain_name&.chomp!(':')
     end
 
-    # puts "!!!!!!!!!!!!!!!!!!!! #{mod_name} -> #{plain_name}" unless TCS::Utils::Util.naught?(plain_name)
+    # puts "!!!!!!!!!!!!!!!!!!!! #{mod_name} -> #{plain_name}" unless TCS::Utils::CoreUtil.naught?(plain_name)
     plain_name || mod_name
   end
 
@@ -169,7 +170,7 @@ class ChaosDetector::Navigator
         @atlas.graph.root_node.define_singleton_method(:label) { root_label }
       end
 
-      @app_root_path = TCS::Utils::Util.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
+      @app_root_path = TCS::Utils::CoreUtil.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
       @domain_hash = {}
       @options.path_domain_hash && options.path_domain_hash.each do |path, group|
         dpath = Pathname.new(path.to_s).cleanpath.to_s
@@ -203,7 +204,7 @@ class ChaosDetector::Navigator
     end
 
     def log(msg)
-      TCS::Utils::Util.log(msg, subject: "Navigator")
+      log_msg(msg, subject: "Navigator")
     end
 
     def domain_from_path(local_path:)

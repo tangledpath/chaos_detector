@@ -1,11 +1,13 @@
 require 'digest'
 require 'graph_theory/edge'
-require 'chaos_detector/chaos_graphs/function_node'
-require 'chaos_detector/options'
-require 'chaos_detector/stacker/frame'
-require 'tcs/utils/util'
+require_relative 'chaos_graphs/function_node'
+require_relative 'options'
+require_relative 'stacker/frame'
 require 'tcs/utils/fs_util'
 require 'csv'
+
+require 'tcs/refined_utils'
+using TCS::RefinedUtils
 
 
 # TODO: add traversal types to find depth, coupling in various ways (directory/package/namespace):
@@ -88,7 +90,7 @@ class ChaosDetector::Walkman
   end
 
   def log(msg)
-    TCS::Utils::Util.log(msg, subject: "Walkman")
+    log_msg(msg, subject: "Walkman")
   end
 
   def flush_csv

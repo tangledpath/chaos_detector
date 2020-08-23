@@ -2,16 +2,21 @@ require 'graph_theory/graph_theory'
 
 # Dependency Count total/normalized
 #
-class ChaosDetector::ChaosGraphs::DomainMetrics
-  attr_reader :dep_count
-  attr_reader :dep_count_norm
+module ChaosDetector
+  module ChaosGraphs
 
-  def initialize
-    @dep_count = 0
-    @dep_count_norm = 0.0
-  end
+    class DomainMetrics
+      attr_reader :dep_count
+      attr_reader :dep_count_norm
 
-  def to_s
+      def initialize
+        @dep_count = 0
+        @dep_count_norm = 0.0
+      end
 
+      def to_s
+
+      end
+    end
   end
 end
