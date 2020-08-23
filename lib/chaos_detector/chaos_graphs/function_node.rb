@@ -4,8 +4,7 @@ require 'forwardable'
 require 'chaos_detector/graph_theory/edge'
 require 'chaos_detector/graph_theory/node'
 
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module ChaosGraphs
@@ -40,7 +39,7 @@ module ChaosDetector
         # Add module info, if supplied:
         if mod_info
           add_module(mod_info)
-        elsif aught?mod_name
+        elsif ChaosUtils.aught?mod_name
           add_module_attrs(mod_name:mod_name, mod_path: fn_path, mod_type: mod_type)
         end
       end
@@ -59,10 +58,10 @@ module ChaosDetector
           && self.fn_path == other.fn_path \
           && self.domain_name != other.domain_name
 
-        self.domain_name == other.domain_name &&
-          self.fn_name == other.fn_name &&
-          self.fn_path == other.fn_path
-          # && (!match_line_num || self.line_num == other.line_num)
+        self.fn_path == other.fn_path &&
+          (self.fn_name == other.fn_name || self.fn_line == other.fn_line)
+
+          # && (!match_line_num || self.fn_line == other.fn_line)
       end
 
       def domain_name
@@ -79,7 +78,7 @@ module ChaosDetector
       end
 
       def label
-        m = decorate(super, clamp: :parens, suffix:' ')
+        m = ChaosUtils::decorate(super, clamp: :parens, suffix:' ')
         m << short_path
         m
       end

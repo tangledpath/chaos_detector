@@ -5,8 +5,7 @@ require 'chaos_detector/graphing/directed'
 require 'chaos_detector/graphing/graphs'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_graphs/chaos_graph'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 require 'chaos_detector/graph_theory/appraiser'
 
@@ -104,8 +103,8 @@ describe "ChaosDetector" do
   describe "Atlas" do
     it "should do basic frame stacking" do
       atlas = ChaosDetector::Atlas.new
-      frame1 = ChaosDetector::Stacker::Frame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', fn_path: 'foo/bar', fn_name: 'baz', line_num: 2112)
-      frame2 = ChaosDetector::Stacker::Frame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', fn_path: 'foo/mepper', fn_name: 'blop', line_num: 3112)
+      frame1 = ChaosDetector::Stacker::Frame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', fn_path: 'foo/bar', fn_name: 'baz', fn_line: 2112)
+      frame2 = ChaosDetector::Stacker::Frame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', fn_path: 'foo/mepper', fn_name: 'blop', fn_line: 3112)
 
       expect(atlas.stack_depth).to eq(0)
 
@@ -145,7 +144,7 @@ describe "ChaosDetector" do
       # grapher.add_nodes(atlas.nodes)
       grapher.render_graph
       graph_fs = `ls domain-test.png`
-      p(decorate(graph_fs))
+      p(ChaosUtils::decorate(graph_fs))
       expect(graph_fs).to be
       expect(graph_fs.split.first).to eq("domain-test.png")
     end
@@ -159,11 +158,11 @@ describe "ChaosDetector" do
       grapher.append_nodes(chaos_graph.module_nodes)
 
       chaos_graph.module_nodes.each do |n|
-        p("ModNode: #{decorate(n.label)}")
+        p("ModNode: #{ChaosUtils::decorate(n.label)}")
       end
 
       chaos_graph.module_edges.each do |e|
-        p("ModEdge: #{decorate(e.src_node.class)} -> #{decorate(e.dep_node.class)}")
+        p("ModEdge: #{ChaosUtils::decorate(e.src_node.class)} -> #{ChaosUtils::decorate(e.dep_node.class)}")
       end
       grapher.add_edges(chaos_graph.module_edges)
 
@@ -171,7 +170,7 @@ describe "ChaosDetector" do
       # grapher.add_nodes(atlas.nodes)
       grapher.render_graph
       graph_fs = `ls module-test.png`
-      p(decorate(graph_fs))
+      p(ChaosUtils::decorate(graph_fs))
       expect(graph_fs).to be
       expect(graph_fs.split.first).to eq("module-test.png")
     end
@@ -192,7 +191,7 @@ describe "ChaosDetector" do
 
       graphs.render_mod_dep()
       graph_fs = `ls spec/render/module-dep.png`
-      p(decorate(graph_fs))
+      p(ChaosUtils::decorate(graph_fs))
       expect(graph_fs).to be
       expect(graph_fs.split.first).to eq("spec/render/module-dep.png")
     end

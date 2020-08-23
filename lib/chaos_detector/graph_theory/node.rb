@@ -1,6 +1,5 @@
 require 'chaos_detector/utils/str_util'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
 module GraphTheory
@@ -12,7 +11,7 @@ module GraphTheory
     attr_accessor :node_origin
 
     def initialize(name: nil, root: false, node_origin: nil)
-      unless aught?(name) || root
+      unless ChaosUtils.aught?(name) || root
         raise ArgumentError, "Must have name or be root (name=#{name})"
       end
       @is_root = root
@@ -32,7 +31,7 @@ module GraphTheory
 
     def to_s(scope=nil)
       mod = ChaosDetector::Utils::StrUtil.humanize_module(self.class.name, max_segments:1)
-      decorate_pair(mod, name)
+      ChaosUtils::decorate_pair(mod, name)
     end
 
     def label

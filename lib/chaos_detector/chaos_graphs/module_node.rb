@@ -1,8 +1,7 @@
 require_relative 'mod_info'
 
 require 'chaos_detector/utils/str_util'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module ChaosGraphs
@@ -29,8 +28,8 @@ module ChaosDetector
 
       def label
         # Shorten long module paths:
-        m = decorate(super, clamp: :parens, suffix:' ')
-        m << decorate(@mod_type, clamp: :parens)
+        m = ChaosUtils::decorate(super, clamp: :parens, suffix:' ')
+        m << ChaosUtils::decorate(@mod_type, clamp: :parens)
         m << short_path
       end
 

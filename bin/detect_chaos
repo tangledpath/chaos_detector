@@ -6,8 +6,7 @@ require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/graphing/directed'
 require 'chaos_detector/options'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   class DetectChaos < Thor
@@ -23,7 +22,7 @@ module ChaosDetector
       ARGV.clear
       opts = ChaosDetector::Options.new
       chaos_nav = ChaosDetector::Navigator.new(options: opts)
-      log_msg("ChaosDetector::Navigator.playback with options: #{options}")
+      ChaosUtils::log_msg("ChaosDetector::Navigator.playback with options: #{options}")
       opts.frame_csv_path = options[:opt_frame_csv] #.sub(options[:opt_app_root], "")
       opts.app_root_path = options[:opt_app_root]
       opts.module_filter = options[:opt_module_filter]

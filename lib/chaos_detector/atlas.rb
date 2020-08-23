@@ -6,9 +6,7 @@ require_relative 'chaos_graphs/function_node'
 require_relative 'stacker/frame_stack'
 require_relative 'stacker/frame'
 require_relative 'atlas_metrics'
-require 'chaos_detector/refined_utils'
-
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 # Maintains all nodes and edges as stack calls are pushed and popped via Frames.
 module ChaosDetector
@@ -31,7 +29,7 @@ module ChaosDetector
     end
 
     def log(msg)
-      log_msg(msg, subject: "Atlas")
+      ChaosUtils::log_msg(msg, subject: "Atlas")
     end
 
     def stop
@@ -58,7 +56,7 @@ module ChaosDetector
 
       dep_node = node_for_frame(frame)
       prev_frame = @frame_stack.peek
-      if prev_frame == frame && aught?(frame.mod_name)
+      if prev_frame == frame && ChaosUtils.aught?(frame.mod_name)
         dep_node.add_module_attrs(mod_name:frame.mod_name, mod_path: frame.fn_path, mod_type: frame.mod_type)
       end
 

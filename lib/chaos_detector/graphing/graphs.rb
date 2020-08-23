@@ -4,8 +4,7 @@ require 'chaos_detector/stacker/frame'
 require 'chaos_detector/graphing/directed'
 require 'chaos_detector/options'
 require 'chaos_detector/utils/str_util'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module Graphing
@@ -35,11 +34,11 @@ module ChaosDetector
         dgraph.append_nodes(chaos_graph.module_nodes)
 
         chaos_graph.module_nodes.each do |n|
-          p("ModNode: #{decorate(n.label)}")
+          p("ModNode: #{ChaosUtils::decorate(n.label)}")
         end
 
         chaos_graph.module_edges.each do |e|
-          p("ModEdge: #{decorate(e.src_node.class)} -> #{decorate(e.dep_node.class)}")
+          p("ModEdge: #{ChaosUtils::decorate(e.src_node.class)} -> #{ChaosUtils::decorate(e.dep_node.class)}")
         end
         dgraph.add_edges(chaos_graph.module_edges)
 

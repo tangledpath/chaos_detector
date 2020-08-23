@@ -1,6 +1,5 @@
 require 'chaos_detector/utils/str_util'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module ChaosGraphs
@@ -10,7 +9,7 @@ module ChaosDetector
         attr_reader :mod_type
 
         def initialize(mod_name:, mod_path:, mod_type:nil)
-          raise ArgumentError, "mod_name is required" unless aught?(mod_name)
+          raise ArgumentError, "mod_name is required" unless ChaosUtils.aught?(mod_name)
           @mod_name = mod_name
           @mod_path = mod_path
           @mod_type = mod_type
@@ -24,7 +23,7 @@ module ChaosDetector
 
         def to_s
           p = ChaosDetector::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
-          "%s %s - %s" % [@mod_name, Kernel.decorate(@mod_type, clamp: :bracket), p]
+          "%s %s - %s" % [@mod_name, ChaosUtils.ChaosUtils::decorate(@mod_type, clamp: :bracket), p]
         end
     end
   end

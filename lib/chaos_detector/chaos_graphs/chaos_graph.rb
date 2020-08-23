@@ -4,8 +4,7 @@ require_relative 'module_node'
 
 require 'chaos_detector/graph_theory/edge'
 require 'chaos_detector/graph_theory/graph'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 # Encapsulate and aggregates graphs for dependency tracking
 #   * Function directed graph
@@ -78,15 +77,15 @@ module ChaosDetector
 
         def prepare_root_nodes
           assert_state(:inferred)
-          with(root_node_function()) do |fn_root_node|
+          ChaosUtils.with(root_node_function()) do |fn_root_node|
             @function_graph.nodes.unshift(fn_root_node) unless @function_graph.nodes.include?(fn_root_node)
           end
 
-          with(root_node_domain()) do |domain_root_node|
+          ChaosUtils.with(root_node_domain()) do |domain_root_node|
             @domain_nodes.unshift(domain_root_node) unless @domain_nodes.include?(domain_root_node)
           end
 
-          with(root_node_module()) do |mod_root_node|
+          ChaosUtils.with(root_node_module()) do |mod_root_node|
             @module_nodes.unshift(mod_root_node) unless @module_nodes.include?(mod_root_node)
           end
         end
@@ -124,7 +123,7 @@ module ChaosDetector
 
           grouped_nodes = @function_graph.nodes.group_by(&:mod_info_prime)
           mod_nodes = grouped_nodes.select do |mod_info, fn_nodes|
-            aught?(mod_info.mod_name)
+            ChaosUtils.aught?(mod_info.mod_name)
           end
 
           @module_nodes = mod_nodes.map do |mod_info, fn_nodes|
@@ -177,7 +176,7 @@ module ChaosDetector
 
 
 
-            log("Creating #{src_dep_pair.first.class} edge with #{decorate_pair(edge_src_node, edge_dep_node)}")
+            log("Creating #{src_dep_pair.first.class} edge with #{ChaosUtils::decorate_pair(edge_src_node, edge_dep_node)}")
             ChaosDetector::GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_cnt: g_edges.length)
           end
         end
@@ -185,8 +184,8 @@ module ChaosDetector
         def node_group_prop(node, node_type:)
           raise "node_type should be one of symbols in %s, actual value: %s (%s)" % [
             NODE_TYPES.inspect,
-            decorate(node_type),
-            decorate(node_type.class)
+            ChaosUtils::decorate(node_type),
+            ChaosUtils::decorate(node_type.class)
           ] unless NODE_TYPES.include?node_type
 
 
@@ -226,12 +225,12 @@ module ChaosDetector
             name = node_info.to_s
             @domain_nodes.find{|n| n.name == name} || root_node_domain
           else
-            raise "node_type should be one of #{NODE_TYPES.inspect}, actual value: #{decorate(node_type)}"
+            raise "node_type should be one of #{NODE_TYPES.inspect}, actual value: #{ChaosUtils::decorate(node_type)}"
           end
         end
 
         def log(msg)
-          log_msg(msg, subject: "ChaosGraph")
+          ChaosUtils::log_msg(msg, subject: "ChaosGraph")
         end
     end
   end

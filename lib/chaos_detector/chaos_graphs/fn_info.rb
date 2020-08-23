@@ -3,8 +3,7 @@ require 'forwardable'
 require 'chaos_detector/graph_theory/edge'
 require 'chaos_detector/graph_theory/node'
 
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module ChaosGraphs
@@ -28,7 +27,6 @@ module ChaosDetector
         self.domain_name == other.domain_name &&
           self.fn_name == other.fn_name &&
           self.fn_path == other.fn_path
-          # && (!match_line_num || self.line_num == other.line_num)
       end
     end
   end

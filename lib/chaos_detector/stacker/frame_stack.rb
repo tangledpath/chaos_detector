@@ -1,9 +1,6 @@
 require_relative 'frame'
 
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
-
-
+require 'chaos_detector/chaos_utils'
 # Maintains all nodes and infers edges as stack calls are pushed and popped via Frames.
 module ChaosDetector
   module Stacker
@@ -13,7 +10,7 @@ module ChaosDetector
       end
 
       def log(msg)
-        log_msg(msg, subject: "FrameStack")
+        ChaosUtils::log_msg(msg, subject: "FrameStack")
       end
 
       def depth
@@ -57,7 +54,7 @@ module ChaosDetector
 
       def inspect
         msg = "#{to_s}\n"
-        msg << decorate_tuple(@stack.map{|f| f.to_s}, join_str: " -> \n", indent_length: 2, clamp: :none)
+        msg << ChaosUtils::decorate_tuple(@stack.map{|f| f.to_s}, join_str: " -> \n", indent_length: 2, clamp: :none)
         msg
       end
 

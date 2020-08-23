@@ -1,5 +1,4 @@
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 # A single stack (tracepoint) frame
 module ChaosDetector
@@ -11,19 +10,19 @@ module ChaosDetector
       attr_reader :fn_path
       attr_reader :fn_name
       attr_reader :callee
-      attr_reader :line_num
+      attr_reader :fn_line
 
-      def initialize(mod_name: nil, mod_type: nil, fn_path: nil, domain_name:nil, fn_name:nil, line_num: nil, callee: nil)
-        raise ArgumentError, "fn_name is required" if naught?(fn_name)
+      def initialize(mod_name: nil, mod_type: nil, fn_path: nil, domain_name:nil, fn_name:nil, fn_line: nil, callee: nil)
+        raise ArgumentError, "fn_name is required" if ChaosUtils.naught?(fn_name)
           # raise ArgumentError, "fn_name is required"
 
             #{naught(:foo).parameters.values
             #{naught(:foo).parameters
 
           #   %s :: %s - %s" % [
-          #   decorate(domain_name),
-          #   decorate(fn_name),
-          #   decorate(fn_path)
+          #   ChaosUtils::decorate(domain_name),
+          #   ChaosUtils::decorate(fn_name),
+          #   ChaosUtils::decorate(fn_path)
           # ])
         #   raise ArgumentError, msg
         # end
@@ -34,7 +33,7 @@ module ChaosDetector
         @fn_path = fn_path
         @domain_name = domain_name
         @fn_name = fn_name
-        @line_num = line_num
+        @fn_line = fn_line
         @callee = callee
       end
 
@@ -53,13 +52,13 @@ module ChaosDetector
       end
 
       def to_s
-        hkey = decorate(@domain_name, clamp: :parens)
-        hkey << decorate(@mod_type.to_s[0].upcase, clamp: :angle, prefix: ' ')
-        hkey << decorate(@mod_name, clamp: :bracket, prefix: ' ')
-        hkey << decorate(@fn_name, clamp: :brace, prefix: ' -> ')
-        hkey << decorate(@callee, clamp: :parens, prefix: '/')
-        hkey << decorate(@fn_path, clamp: :none, prefix: ' ')
-        hkey << decorate(@line_num, clamp: :none, prefix: ':L')
+        hkey = ChaosUtils::decorate(@domain_name, clamp: :parens)
+        hkey << ChaosUtils::decorate(@mod_type.to_s[0].upcase, clamp: :angle, prefix: ' ')
+        hkey << ChaosUtils::decorate(@mod_name, clamp: :bracket, prefix: ' ')
+        hkey << ChaosUtils::decorate(@fn_name, clamp: :brace, prefix: ' -> ')
+        hkey << ChaosUtils::decorate(@callee, clamp: :parens, prefix: '/')
+        hkey << ChaosUtils::decorate(@fn_path, clamp: :none, prefix: ' ')
+        hkey << ChaosUtils::decorate(@fn_line, clamp: :none, prefix: ':L')
       end
     end
   end
