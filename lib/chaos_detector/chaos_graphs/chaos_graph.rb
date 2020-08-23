@@ -1,3 +1,9 @@
+require_relative 'function_node'
+require_relative 'domain_node'
+require_relative 'module_node'
+
+require 'graph_theory/edge'
+require 'graph_theory/graph'
 require 'tcs/refined_utils'
 using TCS::RefinedUtils
 
@@ -8,12 +14,24 @@ using TCS::RefinedUtils
 module ChaosDetector
   module ChaosGraphs
     class ChaosGraph
+      NODE_TYPES = [:function, :module, :domain].freeze
+      STATES = [:initialized, :inferred].freeze
+
       attr_reader :function_graph
+      attr_reader :domain_nodes
+      attr_reader :module_nodes
+
+      attr_reader :domain_edges
+      attr_reader :module_edges
+      attr_reader :module_domain_edges
+      attr_reader :domain_module_edges
+      attr_reader :function_domain_edges
+      attr_reader :domain_function_edges
 
       def initialize(function_graph)
         @function_graph = function_graph
         @domain_nodes = nil
-        @module_modes = nil
+        @module_nodes = nil
 
         @domain_edges = nil
         @module_edges = nil
@@ -25,81 +43,190 @@ module ChaosDetector
         # @domain_graph = nil
       end
 
-      def build_all
-        build_domain_nodes
-        build_module_nodes
-        build_inferred_edges
-        @domain_graph = build_domain_graph(@domain_edges)
-        @module_graph = build_domain_graph(@module_edges)
+      def infer_all
+        assert_state
+        infer_domain_nodes
+        infer_module_nodes
+        infer_edges
+        prepare_root_nodes
+        # @domain_graph = build_domain_graph(@domain_edges)
+        # @module_graph = build_domain_graph(@module_edges)
       end
 
       ## Derive domain-level graph from function-based graph
       def build_domain_graph(edges)
-        @domain_graph ||= Graph.new(root_node: root_node_domain, nodes: @domain_nodes, edges: edges)
+        assert_state
+        @domain_graph ||= GraphTheory::Graph.new(root_node: root_node_domain, nodes: @domain_nodes, edges: edges)
       end
 
       ## Derive module-level graph from function-based graph
       def build_module_graph(edges: @module_edges)
-        @domain_graph ||= Graph.new(root_node: root_node_module, nodes: @domain_nodes, edges: edges)
+        assert_state
+        @domain_graph ||= GraphTheory::Graph.new(root_node: root_node_module, nodes: @domain_nodes, edges: edges)
       end
 
       private
+        def assert_state(state=nil)
+          raise "function_graph.nodes isn't set!" unless function_graph&.nodes
+
+          if state == :inferred
+            raise "@domain_nodes isn't set; call #build" unless @domain_nodes
+            raise "@module_nodes isn't set; call #build" unless @module_nodes
+          end
+        end
+
+        def prepare_root_nodes
+          assert_state(:inferred)
+          with(root_node_function()) do |fn_root_node|
+            @function_graph.nodes.unshift(fn_root_node) unless @function_graph.nodes.include?(fn_root_node)
+          end
+
+          with(root_node_domain()) do |domain_root_node|
+            @domain_nodes.unshift(domain_root_node) unless @domain_nodes.include?(domain_root_node)
+          end
+
+          with(root_node_module()) do |mod_root_node|
+            @module_nodes.unshift(mod_root_node) unless @module_nodes.include?(mod_root_node)
+          end
+        end
+
         def root_node_function
-          raise "@graph.nodes isn't set!" unless @graph&.nodes
-          root_node = @graph.nodes.find(&:is_root)
+          assert_state
+          root_node = @function_graph.nodes.find(&:is_root)
           root_node || ChaosDetector::ChaosGraphs::FunctionNode.root_node
         end
 
         def root_node_domain
-          raise "@domain_nodes isn't set; call #build" unless @domain_nodes
+          assert_state(:inferred)
           root_node = @domain_nodes.find(&:is_root)
           root_node || ChaosDetector::ChaosGraphs::DomainNode.root_node
         end
 
         def root_node_module
-          raise "@module_nodes isn't set; call #build" unless @module_nodes
+          assert_state(:inferred)
+
           root_node = @module_nodes.find(&:is_root)
           root_node || ChaosDetector::ChaosGraphs::ModuleNode.root_node
+
         end
 
-        def build_domain_nodes
+        def infer_domain_nodes
+          assert_state
+
           @domain_nodes = @function_graph.nodes.group_by(&:domain_name).map do |dom_nm, fn_nodes|
-            ChaosDetector::ChaosGraphs::DomainNode.new(dom_name: dom_nm, fn_node_count: fn_nodes.length)
+            ChaosDetector::ChaosGraphs::DomainNode.new(domain_name: dom_nm, fn_node_count: fn_nodes.length)
           end
         end
 
-        def build_module_nodes
-          @module_nodes = @function_graph.nodes.group_by(&:mod_info_prime).map do |dom_nm, fn_nodes|
-            ChaosDetector::ChaosGraphs::ModuleNode.new(dom_name: dom_nm, fn_node_count: fn_nodes.length)
+        def infer_module_nodes
+          assert_state
+
+          grouped_nodes = @function_graph.nodes.group_by(&:mod_info_prime)
+          mod_nodes = grouped_nodes.select do |mod_info, fn_nodes|
+            aught?(mod_info.mod_name)
+          end
+
+          @module_nodes = mod_nodes.map do |mod_info, fn_nodes|
+            node_fn = fn_nodes.first
+            ChaosDetector::ChaosGraphs::ModuleNode.new(
+              mod_name: mod_info.mod_name,
+              mod_type: mod_info.mod_type,
+              mod_path: mod_info.mod_path,
+              domain_name: node_fn.domain_name,
+              fn_node_count: fn_nodes.length
+            )
           end
         end
 
-        def build_inferred_edges
+        def infer_edges
+          assert_state
+
           edges = @function_graph.edges
-          @domain_edges = group_edges_by(edges, :domain_name, :domain_name)
-          @module_edges = group_edges_by(edges, :mod_info_prime, :mod_info_prime)
-          @module_domain_edges = group_edges_by(edges, :mod_info_prime, :domain_name)
-          @domain_module_edges = group_edges_by(edges, :domain_name, :mod_info_prime)
-          @function_domain_edges = group_edges_by(edges, nil, :domain_name)
-          @domain_function_edges = group_edges_by(edges, :domain_name, nil)
+          @domain_edges = group_edges_by(edges, :domain, :domain)
+          @module_edges = group_edges_by(edges, :module, :module)
+          # @module_domain_edges = group_edges_by(edges, :mod_info_prime, :domain_name)
+          # @domain_module_edges = group_edges_by(edges, :domain_name, :mod_info_prime)
+          # @function_domain_edges = group_edges_by(edges, nil, :domain_name)
+          # @domain_function_edges = group_edges_by(edges, :domain_name, nil)
         end
 
+        def group_edges_by(edges, src, dep)
+          assert_state
+          raise ArgumentError, "edges argument required" unless edges
 
-        def self.group_edges_by(edges, src, dep)
-          group_edges(edges) do |src_node, dep_node|
-            [(src ? src_node.send(src) : src_node), (dep ? dep_node.send(dep) : dep_node)]
+          log("GROUPING EDGES by #{src} and #{dep}")
+
+          groupedges = edges.group_by do |e|
+            [
+              node_group_prop(e.src_node, node_type: src),
+              node_group_prop(e.dep_node, node_type: dep)
+            ]
+          end
+
+          valid_edges = groupedges.select do |src_dep_pair, g_edges|
+            src_dep_pair.all?
+          end
+
+          valid_edges.map do |src_dep_pair, g_edges|
+            raise "Pair should have two exactly items." unless src_dep_pair.length==2
+
+            log("Looking up pair: #{src_dep_pair.inspect}")
+            edge_src_node = lookup_node_by(node_type: src, node_info: src_dep_pair.first)
+            edge_dep_node = lookup_node_by(node_type: dep, node_info: src_dep_pair.last)
+
+
+
+            log("Creating #{src_dep_pair.first.class} edge with #{decorate_tuple(edge_src_node, edge_dep_node)}")
+            GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_cnt: g_edges.length)
           end
         end
 
-        def self.group_edges(edges)
-          raise ArgumentError, "edges argument required" unless edges
-          raise ArgumentError, "Block required" unless block_given?
+        def node_group_prop(node, node_type:)
+          raise "node_type should be one of symbols in %s, actual value: %s (%s)" % [
+            NODE_TYPES.inspect,
+            decorate(node_type),
+            decorate(node_type.class)
+          ] unless NODE_TYPES.include?node_type
 
-          groupedges = edges.group_by { |e| yield(e.src_node, e.dep_node) }
-          groupedges.map do |src_dep_pair, g_edges|
-            raise "Pair should have two exactly items." unless src_dep_pair.length==2
-            src_node, dep_node = src_dep_pair
-            GraphTheory::Edge.new(src_node, dep_node, reduce_cnt: g_edges.length)
+
+
+
+          case node_type
+            when :function
+              node.to_info
+            when :module
+              node.mod_info_prime
+            when :domain
+              node.domain_name
+          end
+        end
+
+        def lookup_node_by(node_type:, node_info:)
+          assert_state
+
+          # It is already a node:
+          return node_info if node_info.is_a?GraphTheory::Node
+
+
+          case node_type
+          when :function
+            # Look up by FnInfo
+            n = @function_graph.nodes.index(node_info)
+            n.nil? ? root_node_function : @function_graph.nodes[n]
+          when :module
+            log("MMMMM*****NMMM #{node_info.class}")
+            n = @module_nodes.index(node_info)
+            n.nil? ? root_node_module : @module_nodes[n]
+          when :domain
+            # Look up by Domain name
+            unless node_info.is_a? String
+              log("NodeInfo is something other than info or string type: class: (#{node_info.class}) = #{node_info.inspect}")
+            end
+
+            name = node_info.to_s
+            @domain_nodes.find{|n| n.name == name} || root_node_domain
+          else
+            raise "node_type should be one of #{NODE_TYPES.inspect}, actual value: #{decorate(node_type)}"
           end
         end
 

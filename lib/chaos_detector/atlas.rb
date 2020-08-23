@@ -59,7 +59,7 @@ module ChaosDetector
       dep_node = node_for_frame(frame)
       prev_frame = @frame_stack.peek
       if prev_frame == frame
-        dep_node.add_module_attrs(frame.mod_name, frame.mod_type)
+        dep_node.add_module_attrs(mod_name:frame.mod_name, mod_path: frame.fn_path, mod_type: frame.mod_type)
       end
 
       src_node = prev_frame ? node_for_frame(prev_frame) : graph.root_node

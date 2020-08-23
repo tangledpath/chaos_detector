@@ -35,10 +35,14 @@ module TCS
           elsif obj.is_a?(String)
             obj.strip.empty?
           elsif obj.is_a?(Enumerable)
-            obj.empty?
+            obj.none? { |o| aught?(o) }
           elsif obj.is_a?(Numeric)
             obj == 0
           end
+        end
+
+        def aught?(obj)
+          !naught?(obj)
         end
 
         def with(obj)

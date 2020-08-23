@@ -27,8 +27,8 @@ module ChaosDetector
       def pop(frame)
         raise ArgumentError, "Current Frame is required" if frame.nil?
         @stack.index(frame).tap do |n_frame|
-          if n_frame > 0
-            log("Popping out of order: #{@stack[n_frame].to_k}")
+          if n_frame && n_frame > 0
+            log("Popping out of order: #{@stack[n_frame]}")
           end
           @stack.slice!(0..n_frame) unless n_frame.nil?
         end

@@ -3,6 +3,7 @@ require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
+require 'chaos_detector/chaos_graphs/chaos_graph'
 require 'tcs/refined_utils'
 using TCS::RefinedUtils
 
@@ -12,30 +13,30 @@ require 'fixtures/foobar'
 require 'fixtures/fubarm'
 
 describe "ChaosDetector" do
+  let (:opts) {
+    opts = ChaosDetector::Options.new
+    opts.app_root_path = __dir__
+    opts.log_root_path = File.join(__dir__, 'tmp', 'chaos_logs')
+    opts.path_domain_hash = { 'fixtures': 'FuDomain' }
+    opts
+  }
+
+  let (:chaos_nav) { ChaosDetector::Navigator.new(options: opts) }
+
   describe "Navigator" do
     let (:dec1) { "#<Class:Authentication>"}
     let (:dec2) { "#<Class:Person(id: integer)>"}
     let (:dec3) { "#<ChaosDetector::Node:0x00007fdd5d2c6b08>"}
-    let (:opts) {
-      opts = ChaosDetector::Options.new
-      opts.app_root_path = __dir__
-      opts.log_root_path = File.join(__dir__, 'tmp', 'chaos_logs')
-      opts.path_domain_hash = { 'fixtures': 'FuDomain' }
-      opts
-    }
-
-    let (:chaos_nav) { ChaosDetector::Navigator.new(options: opts) }
-
     # a="#<Class:Authentication>"
     # b="#<Class:Person(id: integer, first"
     # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
     it "should undecorate module names" do
-      chaos_nav.undecorate_module_name(dec2).should eq("Person")
-      chaos_nav.undecorate_module_name(dec1).should eq("Authentication")
-      chaos_nav.undecorate_module_name(dec3).should eq("ChaosDetector::Node")
+      expect(chaos_nav.undecorate_module_name(dec2)).to eq("Person")
+      expect(chaos_nav.undecorate_module_name(dec1)).to eq("Authentication")
+      expect(chaos_nav.undecorate_module_name(dec3)).to eq("ChaosDetector::Node")
     end
 
-    it "should record and graph" do
+    it "should record" do
       chaos_nav.record()
       Foo.foo
       Fubarm::Foom.foom
@@ -43,13 +44,9 @@ describe "ChaosDetector" do
 
       atlas = chaos_nav.stop
       puts ("Nodes: #{atlas.node_count}")
-      expect(atlas).to eq(chaos_nav.atlas)
-      grapher = ChaosDetector::Grapher.new(atlas)
-      grapher.build_graphs()
+      expect(atlas.node_count).to eq(6)
 
-      atlas.graph.edges.each do |edge|
-        puts "root edge: #{edge}" if edge.src_node.is_root# =='root'
-      end
+      expect(atlas).to eq(chaos_nav.atlas)
     end
 
     it "should graph theorize" do
@@ -98,8 +95,8 @@ describe "ChaosDetector" do
       expect(playback_atlas).to_not be_nil
 
       # Playback should graph:
-      grapher = ChaosDetector::Grapher.new(playback_atlas)
-      grapher.build_graphs()
+      grapher = ChaosDetector::Graphing::Grapher.new()
+      # grapher.build_graphs()
     end
   end
 
@@ -124,6 +121,60 @@ describe "ChaosDetector" do
       expect(atlas.stack_depth).to eq(0)
 
     end
+  end
+
+  describe "Grapher" do
+    let (:atlas) do
+      chaos_nav.record()
+      Foo.foo
+      Fubarm::Foom.foom
+      chaos_nav.stop
+    end
+
+    it "domain graphs" do
+      grapher = ChaosDetector::Graphing::Grapher.new()
+      grapher.create_directed_graph("domain-test")
+
+      chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(atlas.graph)
+      chaos_graph.infer_all
+      grapher.add_graph_nodes(chaos_graph.domain_nodes)
+      grapher.add_edges(chaos_graph.domain_edges)
+
+      # grapher.add_nodes(atlas.nodes)
+      # grapher.add_nodes(atlas.nodes)
+      grapher.render_graph
+      graph_fs = `ls domain-test.png`
+      p(decorate(graph_fs))
+      expect(graph_fs).to be
+      expect(graph_fs.split.first).to eq("domain-test.png")
+    end
+
+    it "module graphs" do
+      grapher = ChaosDetector::Graphing::Grapher.new()
+      grapher.create_directed_graph("module-test")
+
+      chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(atlas.graph)
+      chaos_graph.infer_all
+      grapher.add_graph_nodes(chaos_graph.module_nodes)
+
+      chaos_graph.module_nodes.each do |n|
+        p("ModNode: #{decorate(n.label)}")
+      end
+
+      chaos_graph.module_edges.each do |e|
+        p("ModEdge: #{decorate(e.src_node.class)} -> #{decorate(e.dep_node.class)}")
+      end
+      grapher.add_edges(chaos_graph.module_edges)
+
+      # grapher.add_nodes(atlas.nodes)
+      # grapher.add_nodes(atlas.nodes)
+      grapher.render_graph
+      graph_fs = `ls module-test.png`
+      p(decorate(graph_fs))
+      expect(graph_fs).to be
+      expect(graph_fs.split.first).to eq("module-test.png")
+    end
+
   end
 
   describe "Utils" do

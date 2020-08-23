@@ -6,7 +6,7 @@ module ChaosDetector
       alias_method :domain_name, :name
       attr_reader :fn_node_count
 
-      def initialize(domain_name:, is_root: false, node_origin:, fn_node_count: nil)
+      def initialize(domain_name:nil, node_origin: nil, is_root: false, fn_node_count: nil)
         super(name: domain_name, root: is_root, node_origin: node_origin)
         @fn_node_count = fn_node_count
       end
@@ -16,7 +16,7 @@ module ChaosDetector
       end
 
       def label
-        domain_name
+        m = super
       end
 
       def to_s

@@ -1,3 +1,4 @@
+require 'tcs/utils/str_util'
 require 'tcs/refined_utils'
 using TCS::RefinedUtils
 
@@ -22,7 +23,7 @@ module ChaosDetector
         end
 
         def to_s
-          p = @mod_path.split("/").last(2).join("/")
+          p = TCS::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
           "%s %s - %s" % [@mod_name, Kernel.decorate(@mod_type, clamp:bracket), p]
         end
     end
