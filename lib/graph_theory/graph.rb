@@ -10,11 +10,11 @@ class GraphTheory::Graph
   def_delegator :@nodes, :length, :node_count
   def_delegator :@edges, :length, :edge_count
 
-  def initialize(root_node:)
+  def initialize(root_node:, nodes: nil, edges: nil)
     raise ArgumentError, "Root node required." unless root_node
     @root_node = root_node
-    @nodes = []
-    @edges = []
+    @nodes = nodes || []
+    @edges = edges || []
   end
 
 
