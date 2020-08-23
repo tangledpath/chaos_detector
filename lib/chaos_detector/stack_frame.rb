@@ -26,7 +26,8 @@ class ChaosDetector::StackFrame
   #   :full when all fields except line_num match
   #   :partial domain and mod_path match AND a module OR function match
   #   :base when domain and mod_path match
-    VERY_SIMILAR = [SimilarityRating::EXACT, SimilarityRating::FULL].freeze
+
+  VERY_SIMILAR = [SimilarityRating::EXACT, SimilarityRating::FULL].freeze
 
   attr_reader :domain_name
   attr_reader :mod_name
@@ -48,10 +49,6 @@ class ChaosDetector::StackFrame
       raise ArgumentError, "Requires module name via mod_name or mod_info."
     end
 
-  #  if [mod_name, mod_info&.mod_name].all?ChaosDetector::Utils.naught?
-  # puts "(#{mod_name.class}) *** mod_name: #{mod_name.inspect}"
-  # puts "(#{mod_info.class}) *** mod_info: #{mod_info.inspect}"
-
     @mod_type = mod_type || mod_info&.mod_type
     @mod_name = mod_name || mod_info&.mod_name
 
@@ -60,18 +57,6 @@ class ChaosDetector::StackFrame
     @fn_name = fn_name
     @line_num = line_num
     @note = note
-  end
-
-  def to_csv_row(supplement:nil)
-    fields = [@domain_name, @mod_name, @mod_type, @mod_path, @line_num, @fn_name]
-    # , @note
-    fields.concat(supplement) unless supplement.nil?
-    ChaosDetector::Utils.to_csv_row(fields)
-  end
-
-  def self.from_csv_row(csv_row_text)
-    domain_name, mod_name, mod_type, mod_path, fn_name, line_num, note = ChaosDetector::Utils.from_csv_row(csv_row_text)
-    StackFrame.new(domain_name: domain_name, mod_type:mod_type, mod_name: mod_name, mod_path: mod_path, fn_name: fn_name, line_num:line_num, note: note)
   end
 
   # Returns nil if no match and SimilarityRating otherwise

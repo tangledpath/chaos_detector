@@ -1,17 +1,18 @@
 # -*- encoding: utf-8 -*-
-# stub: chaos_detector 0.9.9 ruby lib
+# stub: chaos_detector 0.4.2 ruby lib
 
 Gem::Specification.new do |s|
   s.name = "chaos_detector".freeze
-  s.version = "0.9.9"
+  s.version = "0.4.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib".freeze]
-  s.authors = ["Steven Miers, Daniel Cadenas, other contribs".freeze]
-  s.date = "2020-08-07"
+  s.authors = ["Steven Miers".freeze]
+  s.date = "2020-08-09"
   s.description = "Discover and graph dependencies for ruby and RoR apps".freeze
   s.email = "steven.miers@gmail.com".freeze
-  s.files = ["lib/chaos_detector.rb".freeze, "lib/chaos_detector/atlas.rb".freeze, "lib/chaos_detector/edge.rb".freeze, "lib/chaos_detector/grapher.rb".freeze, "lib/chaos_detector/navigator.rb".freeze, "lib/chaos_detector/node.rb".freeze, "lib/chaos_detector/options.rb".freeze, "lib/chaos_detector/scratch.rb".freeze, "lib/chaos_detector/stack_frame.rb".freeze, "lib/chaos_detector/utils.rb".freeze]
+  s.executables = ["detect_chaos".freeze]
+  s.files = ["bin/detect_chaos".freeze, "lib/chaos_detector.rb".freeze, "lib/chaos_detector/atlas.rb".freeze, "lib/chaos_detector/edge.rb".freeze, "lib/chaos_detector/grapher.rb".freeze, "lib/chaos_detector/navigator.rb".freeze, "lib/chaos_detector/node.rb".freeze, "lib/chaos_detector/options.rb".freeze, "lib/chaos_detector/scratch.rb".freeze, "lib/chaos_detector/stack_frame.rb".freeze, "lib/chaos_detector/utils.rb".freeze, "lib/chaos_detector/walkman.rb".freeze]
   s.homepage = "http://github.com/tangledpath/chaos_detector".freeze
   s.licenses = ["MIT".freeze]
   s.rubygems_version = "3.0.8".freeze

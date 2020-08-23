@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+require 'thor'
+
+require 'chaos_detector/atlas'
+require 'chaos_detector/navigator'
+require 'chaos_detector/stack_frame'
+require 'chaos_detector/grapher'
+require 'chaos_detector/options'
+require 'chaos_detector/utils'
+
+
+module ChaosDetector
+  class DetectChaos < Thor
+    package_name "DetectChaos"
+    desc "playback", "Loads dependencies saved by a previous test run"
+    opts = ChaosDetector::Options.new
+    method_option :opt_frame_csv, :type => :string, :default => opts.path_with_root(:frame_csv_path) , :required => true
+    method_option :opt_app_root, :type => :string, :default => opts.app_root_path, :required => true
+    method_option :opt_module_filter, :type => :string, :default => 'ChaosDetector', :required => true
+    # default_task :playback
+
+    def playback
+      ARGV.clear
+      opts = ChaosDetector::Options.new
+      p "ChaosDetector::Navigator.playback with options: #{options}"
+      opts.frame_csv_path = options[:opt_frame_csv].sub(options[:opt_app_root], "")
+      opts.app_root_path = options[:opt_app_root]
+      opts.module_filter = options[:opt_module_filter]
+      ChaosDetector::Navigator.playback(options: opts)
+    end
+  end
+end
+
+ChaosDetector::DetectChaos.start(ARGV)

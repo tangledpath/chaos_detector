@@ -1,10 +1,13 @@
 ## MAC OS
 .DS_Store
 
+## 3rdparty:
+*.png
+.vscode
 
 ## PROJECT::GENERAL
 log
-*.csv
+*.csv*
 *.log
 coverage
 rdoc

@@ -4,12 +4,21 @@ require 'chaos_detector/navigator'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
+require 'chaos_detector/utils'
+
 require 'fixtures/Fubar'
 describe "ChaosDetector" do
   describe "Navigator" do
     let (:dec1) { "#<Class:Authentication>"}
     let (:dec2) { "#<Class:Person(id: integer)>"}
     let (:dec3) { "#<ChaosDetector::Node:0x00007fdd5d2c6b08>"}
+    let (:opts) {
+      opts = ChaosDetector::Options.new
+      opts.app_root_path = __dir__
+      opts.log_root_path = __dir__
+      opts.path_domain_hash = { 'fixtures': 'FuDomain' }
+      opts
+    }
 
     # a="#<Class:Authentication>"
     # b="#<Class:Person(id: integer, first"
@@ -21,10 +30,6 @@ describe "ChaosDetector" do
     end
 
     it "should record and graph" do
-      opts = ChaosDetector::Options.new
-      opts.app_root_path = __dir__
-      opts.log_root_path = __dir__
-      opts.path_domain_hash = { 'fixtures': 'FuDomain' }
       ChaosDetector::Navigator.record(options: opts)
       Foo.foo
       Fubar::Foo.foo
@@ -40,6 +45,30 @@ describe "ChaosDetector" do
         puts "edge: #{edge}" if edge.src_node.mod_name=='root'
       end
 
+    end
+
+    it "should save recording to walkman" do
+      ChaosDetector::Navigator.record(options: opts)
+      Foo.foo
+      Fubar::Foo.foo
+      _atlas = ChaosDetector::Navigator.stop
+
+      expect(ChaosDetector::Navigator.walkman).to_not be_nil
+      walkman = ChaosDetector::Navigator.walkman
+      expect(walkman).to_not be_nil
+      expect(walkman.csv_path).to_not be_nil
+      expect(walkman.csv_path).to_not be_empty
+      csv_content = `cat #{walkman.csv_path}`
+      expect(csv_content).to_not be_nil
+      expect(csv_content).to_not be_empty
+      puts csv_content
+      csv_lines = csv_content.split
+      expect(csv_lines.length).to eq(13)
+      # csv_lines = csv_content.split
+      # puts csv_lines.length
+      # puts '-' * 50
+      # puts csv_lines
+      # puts '-' * 50
     end
   end
 
@@ -63,6 +92,12 @@ describe "ChaosDetector" do
       graph.close_frame(frame:frame1)
       expect(graph.stack_depth).to eq(0)
 
+    end
+  end
+
+  describe "Utils" do
+    it "should self-test" do
+      ChaosDetector::Utils.test
     end
   end
 end
