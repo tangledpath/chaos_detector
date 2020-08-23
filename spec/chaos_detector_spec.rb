@@ -1,13 +1,16 @@
-
 require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
-require 'tcs/utils/util'
+require 'tcs/refined_utils'
+using TCS::RefinedUtils
+
 require 'graph_theory/appraiser'
 
-require 'fixtures/Fubar'
+require 'fixtures/foobar'
+require 'fixtures/fubarm'
+
 describe "ChaosDetector" do
   describe "Navigator" do
     let (:dec1) { "#<Class:Authentication>"}
@@ -35,24 +38,24 @@ describe "ChaosDetector" do
     it "should record and graph" do
       chaos_nav.record()
       Foo.foo
-      Fubar::Foo.foo
+      Fubarm::Foom.foom
       expect(chaos_nav.atlas).to_not be_nil
 
       atlas = chaos_nav.stop
-      TCS::Utils::Util.print_line ("Nodes: #{atlas.node_count}")
+      puts ("Nodes: #{atlas.node_count}")
       expect(atlas).to eq(chaos_nav.atlas)
       grapher = ChaosDetector::Grapher.new(atlas)
       grapher.build_graphs()
 
       atlas.graph.edges.each do |edge|
-        TCS::Utils::Util.print_line "edge: #{edge}" if edge.src_node.is_root# =='root'
+        puts "root edge: #{edge}" if edge.src_node.is_root# =='root'
       end
     end
 
     it "should graph theorize" do
       chaos_nav.record()
       Foo.foo
-      Fubar::Foo.foo
+      Fubarm::Foom.foom
       atlas = chaos_nav.stop
 
       graph_metrics = GraphTheory::Appraiser.new(atlas.graph)
@@ -62,7 +65,7 @@ describe "ChaosDetector" do
     it "should save recording to walkman" do
       chaos_nav.record()
       Foo.foo
-      Fubar::Foo.foo
+      Fubarm::Foom.foom
       _atlas = chaos_nav.stop
 
       expect(chaos_nav.walkman).to_not be_nil
@@ -86,7 +89,7 @@ describe "ChaosDetector" do
     it "should playback from file" do
       chaos_nav.record()
       Foo.foo
-      Fubar::Foo.foo
+      Fubarm::Foom.foom
       recorded_atlas = chaos_nav.stop
       expect(recorded_atlas).to_not be_nil
 
@@ -125,219 +128,7 @@ describe "ChaosDetector" do
 
   describe "Utils" do
     it "should self-test" do
-      TCS::Utils::Util.test
+      TCS::Utils::CoreUtil.test
     end
   end
 end
-
-class Foo
-  def self.foo
-    Bar.bar
-  end
-end
-
-class Bar
-  def self.bar
-    Baz.baz
-  end
-end
-
-class Baz
-  def self.baz
-    puts "bazzzzzz"
-  end
-end
-
-  # it "should show the class level dependencies" do
-  #   dependencies, _ = ::ChaosDetector.dependency_hash_for do
-  #     class IHaveAClassLevelDependency
-  #       Son.class_method
-  #     end
-  #   end
-
-  #   dependencies.should == {"Parent"=>["Son"]}
-  # end
-
-
-
-
-# require 'file_test_helper'
-
-
-# module GrandparentModule
-#   def class_method
-#   end
-# end
-
-# class Grandparent
-#   extend GrandparentModule
-
-#   def instance_method
-#   end
-# end
-
-# class Parent
-#   def self.class_method
-#     Grandparent.class_method
-#   end
-
-#   def instance_method
-#   end
-# end
-
-# class Son
-#   def self.class_method
-#     parent = Parent.new
-#     parent.instance_method
-#     parent.instance_method
-#     class_method2
-#     class_method2
-#   end
-
-#   def self.class_method2
-#   end
-
-#   def instance_method_that_calls_parent_class_method
-#     Parent.class_method
-#   end
-
-#   def instance_method_calling_another_instance_method(second_receiver)
-#     second_receiver.instance_method
-#   end
-
-#   def instance_method
-#     Parent.class_method
-#     Grandparent.class_method
-#   end
-# end
-
-# describe "ChaosDetector" do
-
-#   it "should show the class level dependencies" do
-#     dependencies, _ = ::ChaosDetector.dependency_hash_for do
-#       class IHaveAClassLevelDependency
-#         Son.class_method
-#       end
-#     end
-
-#     dependencies.should == {"Parent"=>["Son"]}
-#   end
-
-#   it "should be idempotent" do
-#     ::ChaosDetector.dependency_hash_for do
-#       class IHaveAClassLevelDependency
-#         Son.class_method
-#       end
-#     end
-
-#     dependencies, _ = ::ChaosDetector.dependency_hash_for do
-#       class IHaveAClassLevelDependency
-#         Son.class_method
-#       end
-#     end
-
-#     dependencies.should == {"Parent"=>["Son"]}
-#   end
-
-#   it "should show the dependency from an object singleton method" do
-#     dependencies, _ = ::ChaosDetector.dependency_hash_for do
-#       s = Son.new
-#       def s.attached_method
-#         Grandparent.class_method
-#       end
-#       s.attached_method
-#     end
-
-#     dependencies.keys.should == ["Grandparent", "GrandparentModule"]
-#     dependencies["Grandparent"].should == ["Son"]
-#     dependencies["GrandparentModule"].should == ["Grandparent"]
-#   end
-
-#   it "should show the dependencies between the classes inside the block" do
-#     dependencies, _ = ::ChaosDetector.dependency_hash_for do
-#       Son.new.instance_method
-#     end
-
-#     dependencies.keys.should =~ ["Parent", "Grandparent", "GrandparentModule"]
-#     dependencies["Parent"].should == ["Son"]
-#     dependencies["Grandparent"].should =~ ["Son", "Parent"]
-#     dependencies["GrandparentModule"].should == ["Grandparent"]
-#   end
-
-#   it "should create correct dependencies for 2 instance methods called in a row" do
-#     dependencies, _ = ::ChaosDetector.dependency_hash_for do
-#       Son.new.instance_method_calling_another_instance_method(Parent.new)
-#     end
-
-#     dependencies.should == {"Parent"=>["Son"]}
-#   end
-
-#   context "with a dumped dependencies file" do
-#     include FileTestHelper
-
-#     sample_dir_structure = {'path1/class_a.rb' => <<-CLASSA,
-#                                require '#{File.dirname(__FILE__)}/../lib/chaos_detector'
-
-#                                require './path1/class_b'
-#                                require './path2/class_c'
-#                                class A
-#                                  def depend_on_b_and_c
-#                                    B.new.b
-#                                    C.new.c
-#                                  end
-#                                end
-
-#                                ChaosDetector.start
-#                                A.new.depend_on_b_and_c
-#                              CLASSA
-#                              'path1/class_b.rb' => 'class B; def b; end end',
-#                              'path2/class_c.rb' => 'class C; def c; end end'}
-
-#     def run(command)
-#       system("ruby -I#{File.dirname(__FILE__)}/../lib #{command}")
-#     end
-
-#     it "should create a dot file" do
-#       with_files(sample_dir_structure) do
-#         run("./path1/class_a.rb")
-#         run("#{File.dirname(__FILE__)}/../bin/chaos_detector")
-
-#         File.read("chaos_detector.dot").should match("digraph G")
-#       end
-#     end
-
-#     it "should be a correct test file" do
-#       with_files(sample_dir_structure) do
-#         status = run("./path1/class_a.rb")
-#         status.should be_true
-#       end
-#     end
-
-#     it "should not filter classes when no filter is specified" do
-#       with_files(sample_dir_structure) do
-#         run("./path1/class_a.rb")
-
-#         dependencies, _ = ::ChaosDetector.dependency_hash_for(:from_file => 'chaos_detector.dump')
-#         dependencies.should == {"B"=>["A"], "C"=>["A"]}
-#       end
-#     end
-
-#     it "should filter classes when a path filter is specified" do
-#       with_files(sample_dir_structure) do
-#         run("./path1/class_a.rb")
-
-#         dependencies, _ = ::ChaosDetector.dependency_hash_for(:from_file => 'chaos_detector.dump', :path_filter => /path1/)
-#         dependencies.should == {"B"=>["A"]}
-#       end
-#     end
-
-#     it "should filter classes when a class name filter is specified" do
-#       with_files(sample_dir_structure) do
-#         run("./path1/class_a.rb")
-
-#         dependencies, _ = ::ChaosDetector.dependency_hash_for(:from_file => 'chaos_detector.dump', :class_name_filter => /C|A/)
-#         dependencies.should == {"C"=>["A"]}
-#       end
-#     end
-#   end
-# end
