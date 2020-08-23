@@ -14,7 +14,7 @@ def Kernel.naught?(obj)
   ChaosDetector::Utils::naught?(obj)
 end
 
-def Kernel.ought?(obj)
+def Kernel.aught?(obj)
   !ChaosDetector::Utils::naught?(obj)
 end
 
@@ -73,8 +73,8 @@ module ChaosDetector::Utils
       end
     end
 
-    def decorate_pair(source, dest, indent_length: 0, clamp: :angle)
-      decorate("#{decorate(source)} -> #{decorate(dest)}", clamp:clamp, indent_length:indent_length)
+    def decorate_pair(source, dest, indent_length: 0, clamp: :angle, join_str: ' -> ')
+      decorate("#{decorate(source)}#{decorate(dest, prefix: join_str)}", clamp:clamp, indent_length:indent_length)
     end
 
     def decorate(text, clamp: :nil, prefix: nil, suffix: nil, sep: nil, indent_length: 0)
@@ -136,6 +136,29 @@ module ChaosDetector::Utils
     end
 
     alias_method :pp, :print_line
+
+
+    # @return subset of given properties not contained withing given object
+    def properties_complement(props, obj:)
+      return props if obj.nil?
+      raise ArgumentError, "props is required." unless props
+
+      puts "(#{obj.class} )props: #{props}"
+
+
+      props - case obj
+        when Hash
+          puts "KKKKK"
+          puts "obj.keys: #{obj.keys}"
+          obj.keys
+
+        else
+          puts "PPPPP #{obj.class}"
+          puts "obj.public_methods: #{obj.public_methods}"
+          obj.public_methods
+
+      end
+    end
 
     # Built-in self-testing:
     # ChaosDetector::Utils.test

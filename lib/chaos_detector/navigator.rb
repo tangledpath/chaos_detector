@@ -1,6 +1,7 @@
-require 'set'
+require 'pathname'
 require 'chaos_detector/atlas'
 require 'chaos_detector/options'
+require 'chaos_detector/nodes/module_node'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
 require 'chaos_detector/walkman'
@@ -31,7 +32,7 @@ class ChaosDetector::Navigator
       @walkman = ChaosDetector::Walkman.new(atlas: @atlas, options: @options)
 
       Kernel.with(@options.root_label) do |root_label|
-        @atlas.root_node.define_singleton_method(:label) { root_label }
+        @atlas.graphus.root_node.define_singleton_method(:label) { root_label }
       end
 
       @app_root_path = ChaosDetector::Utils.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
@@ -84,7 +85,7 @@ class ChaosDetector::Navigator
 
 
         # TODO: Generic module exclusion:
-        next unless Kernel.ought?(frame.mod_name) && !frame.mod_name&.start_with?("ChaosDetector")
+        next unless Kernel.aught?(frame.mod_name) && !frame.mod_name&.start_with?("ChaosDetector")
 
         tracepoint.disable do
           # DISABLE MORE OF ABOVE?
@@ -97,31 +98,33 @@ class ChaosDetector::Navigator
     end
 
     def perform_frame_action(frame, action:, record: false)
+      raise ArgumentError, "#perform_frame_action requires frame" if frame.nil?
+
       if action == :call
-        @atlas.open_frame(frame: frame)
+        @atlas.open_frame(frame)
         @walkman.write_frame(frame, action: :open) if record
       elsif action == :return
-        match = @atlas.close_frame(frame: frame)
-        frame_act = (match && match[0].nil?) ? :pop : :close
-        @walkman.write_frame(frame, action: frame_act , match:match) if record
+        match = @atlas.close_frame(frame)
+        frame_act = match.nil? ? :close : :pop
+        @walkman.write_frame(frame, action: frame_act) if record
       else
         raise ArgumentError, "Action should be one of: #{FRAME_ACTIONS.inspect}.  Actual value: #{action.inspect}"
       end
     end
 
     def frame_at_trace(tracepoint)
-      fn_name = tracepoint.method_id
       mod_info = module_from_tracepoint(tracepoint)
-      # puts("MOD_INFO: #{mod_info}")
-      domain_name = domain_from_path(local_path: mod_info.mod_path)
-      line_num = tracepoint.lineno
+      fn_path = localize_path(tracepoint.path)
+      domain_name = domain_from_path(local_path: fn_path)
 
-      # frame.note = "class: #{tracepoint.defined_class} / #{tracepoint.defined_class&.name} / #{mod_name}"
       ChaosDetector::StackFrame.new(
-        mod_info: mod_info,
+        callee: tracepoint.callee_id,
         domain_name: domain_name,
-        fn_name: fn_name,
-        line_num: line_num)
+        fn_path: fn_path,
+        fn_name: tracepoint.method_id,
+        line_num: tracepoint.lineno,
+        mod_info: mod_info
+      )
     end
 
     # Undecorate all this junk:
@@ -148,7 +151,7 @@ class ChaosDetector::Navigator
     end
 
     def check_name(mod_nm)
-      Kernel.ought?(mod_nm) && !mod_nm.strip.start_with?('#')
+      Kernel.aught?(mod_nm) && !mod_nm.strip.start_with?('#')
     end
 
     def module_from_tracepoint(tp)
@@ -171,9 +174,8 @@ class ChaosDetector::Navigator
           :nil
         end
 
-      mod_path = localize_path(tp.path)
       # Currently dealing with nil and empty modules at a higher level for tracking:
-      ChaosDetector::ModInfo.new(mod_name, mod_path: mod_path, mod_type: mod_type)
+      ChaosDetector::Nodes::ModuleNode.new(mod_name: mod_name, mod_type: mod_type)
     end
 
     def mod_nm(mod)

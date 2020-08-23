@@ -71,7 +71,7 @@ class ChaosDetector::Grapher
     raise ArgumentError, "Atlas is required." if atlas.nil?
     @atlas = atlas
     @options = options
-    @graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(nodes: @atlas.nodes, edges: @atlas.edges)
+    @graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(@atlas.graphus)
   end
 
   def create_directed_graph(label)
@@ -106,7 +106,7 @@ class ChaosDetector::Grapher
     log("Creating a module-level dependency graph from atlas: #{@atlas}")
     graph = create_directed_graph("Module Dependencies")
     nodes = {}
-    domain_graphs = @atlas.nodes.group_by(&:domain_name).map do |domain, dnodes|
+    domain_graphs = @atlas.graph_nodes.group_by(&:domain_name).map do |domain, dnodes|
       subg = add_domain_subgraph(graph, domain)
       dnodes.each do |domain_node|
         nodes[domain_node] = build_graph_node(subg, domain_node)
@@ -119,7 +119,7 @@ class ChaosDetector::Grapher
     # nodes = graph.nodes.zip(viz_nodes).to_h
 
     graph_edges = {}
-    @atlas.edges.each do |edge|
+    @atlas.graph_edges.each do |edge|
       src = nodes.fetch(edge.src_node) do |n|
         log "src edge not found: #{n}"
         # TODO: Look up domain if necessarry.
@@ -148,6 +148,7 @@ class ChaosDetector::Grapher
   end
 
   def build_domain_graph
+    return
     # dg = GraphViz.new( :G, type: :digraph, label: "Domain dependencies")
     dg = create_directed_graph("Domain Dependencies")
 
@@ -161,7 +162,7 @@ class ChaosDetector::Grapher
     @graph_metrics.domain_edges.each do |k|
       src = domain_graph_nodes[k.src_domain]
       dep = domain_graph_nodes[k.dep_domain]
-      # log("DOMAIN EDGE: #{k.src_domain} -> #{k.dep_domain}: #{k.dep_count} (#{k.dep_count_norm.round(2)})")
+      log("DOMAIN EDGE: #{k.src_domain} -> #{k.dep_domain}: #{k.dep_count} (#{k.dep_count_norm.round(2)})")
       dg.add_edges(src, dep, {label: k.dep_count, penwidth: 0.5 + k.dep_count_norm * 7.5})
     end
     dg.output( :png => "domain_dep.png" )

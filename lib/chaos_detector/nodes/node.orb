@@ -9,7 +9,7 @@ module ChaosDetector
     attr_reader :is_root
 
     def initialize(mod_name: nil, mod_path: nil, domain_name:nil, root: false)
-      unless Kernel.ought?(mod_name) || root
+      unless Kernel.aught?(mod_name) || root
         raise ArgumentError, "Must have mod_name or be root (modname=#{mod_name})"
       end
       @is_root = root

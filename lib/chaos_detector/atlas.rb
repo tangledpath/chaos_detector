@@ -1,9 +1,10 @@
+require 'forwardable'
+
 require 'digest'
 require 'matrix'
-require 'set'
-
 require 'chaos_detector/edge'
-require 'chaos_detector/node'
+require 'chaos_detector/graphus'
+require 'chaos_detector/nodes/function_node'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
@@ -11,6 +12,7 @@ require 'chaos_detector/graph_theory/stack_metrics'
 
 # Maintains all nodes and edges as stack calls are pushed and popped via StackFrames.
 class ChaosDetector::Atlas
+  extend Forwardable
   extend ChaosDetector::Utils::ChaosAttr
 
   FULL_TOLERANCE = 6
@@ -18,13 +20,14 @@ class ChaosDetector::Atlas
   BASE_TOLERANCE = 1
 
   INDENT = " ".freeze
-  attr_reader :root_node
   chaos_attr (:options) { ChaosDetector::Options.new }
-  chaos_attr :nodes, []
-  chaos_attr :edges, []
   chaos_attr :frame_stack, []
   chaos_attr :offset, 0
   chaos_attr :frames_nopop, []
+
+  chaos_attr (:graphus)
+  def_instance_delegator :graphus, :nodes, :graph_nodes
+  def_instance_delegator :graphus, :edges, :graph_edges
 
   # chaos_attr :log_buffer, []
   chaos_attr :traversal_stats
@@ -44,10 +47,9 @@ class ChaosDetector::Atlas
   end
 
   def reset
-    @root_node = ChaosDetector::Node.new(root: true)
+    root_node = ChaosDetector::Nodes::FunctionNode.root_node(force_new: true)
+    @graphus = ChaosDetector::Graphus.new(root_node: root_node)
     @md5 = Digest::MD5.new
-    @nodes = [@root_node]
-    @edges = []
     @frame_stack = []
     @frames_nopop = []
     @offset = 0
@@ -59,45 +61,18 @@ class ChaosDetector::Atlas
     @frame_stack.length
   end
 
-  # @return Node matching given frame.  If already in @nodes,
+  # @return Node matching given frame.  If already in nodes,
   # that is returned, otherwise, a new one is created.
-  def node_for_frame(frame:)
-    node = @nodes.find do |n|
-      n.mod_name == frame.mod_name &&
-      (n.domain_name == frame.domain_name || n.mod_path == frame.mod_path)
+  def node_for_frame(frame)
+    graphus.node_for(frame) do
+      ChaosDetector::Nodes::FunctionNode.new(
+        fn_name: frame.fn_name,
+        fn_path: frame.fn_path,
+        domain_name: frame.domain_name,
+        mod_name: frame.mod_name,
+        mod_type: frame.mod_type
+      )
     end
-
-    unless node
-      # puts "*****************Adding to nodes(#{@nodes.length}): #{frame.mod_name}(#{frame.domain_name}) -- #{frame.mod_path}:L#{frame.line_num}"
-      @nodes << node=ChaosDetector::Node.new(domain_name: frame.domain_name, mod_name: frame.mod_name, mod_path: frame.mod_path)
-    end
-
-    node
-  end
-
-  def edge_for_nodes(src_node:, dep_node:)
-    edge = @edges.find do |e|
-      e.src_node == src_node && e.dep_node == dep_node
-    end
-
-    unless edge
-      @edges << edge=ChaosDetector::Edge.new(src_node: src_node, dep_node: dep_node)
-    end
-
-    edge
-  end
-
-  def fn_for_frame(frame:)
-    return nil unless frame
-
-    ChaosDetector::Edge::FnCall.new(fn_name: frame.fn_name, line_num: frame.line_num)
-  end
-
-  def frames_fn_couplet(frame_src:, frame_dep:)
-    ChaosDetector::Edge::FnCallCouplet.new(
-      src: fn_for_frame(frame_src),
-      dep: fn_for_frame(frame_dep)
-    )
   end
 
   def peek_stack
@@ -107,83 +82,47 @@ class ChaosDetector::Atlas
   def stack_match(current_frame)
     raise ArgumentError, "Current Frame is required" if current_frame.nil?
 
-    # Ranking to index:
-    best_index = nil
-    best_rank = -1
-    best_sim = nil
-    window = @offset + FULL_TOLERANCE
-
-    @frame_stack[0..window].each_with_index do |f, n|
-      sim_rank = Kernel.with(current_frame.match?(f)) do |similarity|
-        if ChaosDetector::StackFrame::VERY_SIMILAR.include?(similarity)
-          [similarity, FULL_TOLERANCE]
-        elsif similarity==ChaosDetector::StackFrame::SimilarityRating::PARTIAL
-          [similarity, PARTIAL_TOLERANCE]
-        elsif similarity==ChaosDetector::StackFrame::SimilarityRating::BASE
-          [similarity, BASE_TOLERANCE]
-        else
-          nil
-        end
-      end
-
-      if sim_rank
-        rank = window - n + sim_rank[1]
-        if rank > best_rank
-          best_index = n
-          best_rank = rank
-          best_sim = sim_rank[0]
-        end
-      end
+    @frame_stack.index do |f|
+      ChaosDetector::Nodes::FunctionNode.key_attributes_match?(f, current_frame)
     end
-
-    [best_index, best_sim]
   end
 
-  def open_frame(frame:)
+  def open_frame(frame)
     # stack_len = @frame_stack.length
     # exit(false) if stack_len > 25
     # indent = INDENT * stack_len
+    raise ArgumentError, "#open_frame requires frame" if frame.nil?
 
-    dep_node = node_for_frame(frame: frame)
-
+    dep_node = node_for_frame(frame)
     prev_frame = peek_stack
-    src_node = prev_frame ? node_for_frame(frame: prev_frame) : @root_node
+    if prev_frame == frame
+      dep_node.add_module(frame.mod_info)
+    end
 
-    edge = edge_for_nodes(src_node: src_node, dep_node: dep_node)
+    src_node = prev_frame ? node_for_frame(prev_frame) : graphus.root_node
 
-    # Add function-level info
-    edge.add_fn_couplet(
-      fn_call_src: fn_for_frame(frame:prev_frame),
-      fn_call_dep: fn_for_frame(frame:frame)
-    )
+    _edge = graphus.edge_for_nodes(src_node, dep_node)
 
     @frame_stack.unshift(frame)
     @traversal_stats.record_open_action()
   end
 
-  def close_frame(frame:)
-    stack_match(frame).tap do |frame_n, similarity|
-
-      @traversal_stats.record_close_action(frame_n, similarity)
+  def close_frame(frame)
+    stack_match(frame).tap do |frame_n|
+      @traversal_stats.record_close_action(frame_n)
       if !frame_n.nil?
-        @offset = frame_n
-        @frame_stack.delete_at(frame_n)
+        @frame_stack.slice!(0..frame_n)
       end
     end
   end
 
   def to_s
-    "Nodes: %d, Edges: %d, Frames: %d" % [@nodes.length, @edges.length, @frame_stack.length]
+    "%s, Frames: %d" % [graphus, frame_stack.length]
   end
 
   def inspect
     buffy = [to_s]
-    buffy << "Nodes (#{@nodes.length})"
-    buffy.concat(@nodes.map {|n|"  #{n.label}"})
-
-    # buffy << "Edges (#{@edges.length})"
-    # buffy.concat(@edges.map {|e|"  #{e.to_s}"})
-
+    buffy << graphus.inspect
     buffy.join("\n")
   end
 
