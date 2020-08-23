@@ -1,69 +1,45 @@
 require 'forwardable'
-require 'digest'
-require 'matrix'
+
 require 'graph_theory/edge'
 require 'graph_theory/graph'
 require 'chaos_detector/chaos_graphs/function_node'
-require 'chaos_detector/options'
-require 'chaos_detector/stack_frame'
+require 'chaos_detector/stacker/frame_stack'
+require 'chaos_detector/stacker/frame'
 require 'chaos_detector/utils'
-require 'chaos_detector/stack_metrics'
+require 'chaos_detector/atlas_metrics'
 
-# Maintains all nodes and edges as stack calls are pushed and popped via StackFrames.
+# Maintains all nodes and edges as stack calls are pushed and popped via Frames.
 class ChaosDetector::Atlas
   extend Forwardable
-  extend ChaosDetector::Utils::ChaosAttr
 
-  FULL_TOLERANCE = 6
-  PARTIAL_TOLERANCE = 3
-  BASE_TOLERANCE = 1
+  attr_reader :frame_stack
+  attr_reader :graph
+  attr_reader :atlas_metrics
 
-  INDENT = " ".freeze
-  chaos_attr (:options) { ChaosDetector::Options.new }
-  chaos_attr :frame_stack, []
-  chaos_attr :offset, 0
-  chaos_attr :frames_nopop, []
+  def_delegator :@frame_stack, :depth, :stack_depth
+  def_delegator :@graph, :node_count
+  def_delegator :@graph, :edge_count
 
-  chaos_attr (:graphus)
-  def_instance_delegator :graphus, :nodes, :graph_nodes
-  def_instance_delegator :graphus, :edges, :graph_edges
-
-  # chaos_attr :log_buffer, []
-  chaos_attr :traversal_stats
-
-  def stop
-    log("Stopping:\n#{@traversal_stats}")
-    self
+  def initialize()
+    @frame_stack = ChaosDetector::Stacker::FrameStack.new
+    root_node = ChaosDetector::ChaosGraphs::FunctionNode.root_node(force_new: true)
+    @graph = GraphTheory::Graph.new(root_node: root_node)
+    @atlas_metrics = ChaosDetector::AtlasMetrics.new
   end
 
   def log(msg)
     ChaosDetector::Utils.log(msg, subject: "Atlas")
   end
 
-  def initialize(options: nil)
-    @options = options unless options.nil?
-    reset
-  end
-
-  def reset
-    root_node = ChaosDetector::ChaosGraphs::FunctionNode.root_node(force_new: true)
-    @graphus = GraphTheory::Graph.new(root_node: root_node)
-    @md5 = Digest::MD5.new
-    @frame_stack = []
-    @frames_nopop = []
-    @offset = 0
-
-    @traversal_stats = ChaosDetector::StackMetrics.new
-  end
-
-  def stack_depth
-    @frame_stack.length
+  def stop
+    log("Stopping:\n#{@atlas_metrics}")
+    self
   end
 
   # @return Node matching given frame.  If already in nodes,
   # that is returned, otherwise, a new one is created.
   def node_for_frame(frame)
-    graphus.node_for(frame) do
+    graph.node_for(frame) do
       ChaosDetector::ChaosGraphs::FunctionNode.new(
         fn_name: frame.fn_name,
         fn_path: frame.fn_path,
@@ -74,55 +50,36 @@ class ChaosDetector::Atlas
     end
   end
 
-  def peek_stack
-    @frame_stack.first
-  end
-
-  def stack_match(current_frame)
-    raise ArgumentError, "Current Frame is required" if current_frame.nil?
-
-    @frame_stack.index(current_frame)
-    #  do |f|
-    #   ChaosDetector::ChaosGraphs::FunctionNode.key_attributes_match?(f, current_frame)
-    # end
-  end
-
   def open_frame(frame)
-    # stack_len = @frame_stack.length
-    # exit(false) if stack_len > 25
-    # indent = INDENT * stack_len
     raise ArgumentError, "#open_frame requires frame" if frame.nil?
 
     dep_node = node_for_frame(frame)
-    prev_frame = peek_stack
+    prev_frame = @frame_stack.peek
     if prev_frame == frame
-      dep_node.add_module(frame.mod_info)
+      dep_node.add_module_attrs(frame.mod_name, frame.mod_type)
     end
 
-    src_node = prev_frame ? node_for_frame(prev_frame) : graphus.root_node
+    src_node = prev_frame ? node_for_frame(prev_frame) : graph.root_node
 
-    _edge = graphus.edge_for_nodes(src_node, dep_node)
+    _edge = graph.edge_for_nodes(src_node, dep_node)
 
-    @frame_stack.unshift(frame)
-    @traversal_stats.record_open_action()
+    @frame_stack.push(frame)
+    @atlas_metrics.record_open_action()
   end
 
   def close_frame(frame)
-    stack_match(frame).tap do |frame_n|
-      @traversal_stats.record_close_action(frame_n)
-      if !frame_n.nil?
-        @frame_stack.slice!(0..frame_n)
-      end
+    @frame_stack.pop(frame).tap do |n_frame|
+      @atlas_metrics.record_close_action(n_frame)
     end
   end
 
   def to_s
-    "%s, Frames: %d" % [graphus, frame_stack.length]
+    "%s, Frames: %d" % [graph, stack_depth]
   end
 
   def inspect
     buffy = [to_s]
-    buffy << graphus.inspect
+    buffy << graph.inspect
     buffy.join("\n")
   end
 

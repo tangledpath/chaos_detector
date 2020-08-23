@@ -3,7 +3,7 @@ require 'thor'
 
 require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
-require 'chaos_detector/stack_frame'
+require 'chaos_detector/stacker/frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
 require 'chaos_detector/utils'

@@ -1,5 +1,5 @@
 require 'chaos_detector/chaos_graphs/chaos_graphs'
-
+require 'chaos_detector/chaos_graphs/mod_info'
 class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
   extend Forwardable
   ROOT_NODE_NAME = "ROOT".freeze
@@ -24,30 +24,6 @@ class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
       @root_node = self.new(is_root: true) if force_new || @root_node.nil?
       @root_node
     end
-
-    # raise ArgumentError if object can't access all properties:
-    # def assert_key_props(obj, label:nil)
-    #   missing_props =  ChaosDetector::Utils.properties_complement(KEY_ATTRS, obj:obj)
-    #   if missing_props.any?
-    #     raise ArgumentError, ERR_PROP_MISSING % [decorate(label), missing_props.join(', ')]
-    #   end
-    # end
-
-    # def key_attributes_match?(obj1, obj2, match_line_num: false)
-    #   puts "KAM::: #{obj1.class} / #{obj2.class}"
-    #   assert_key_props(obj1, label:'obj1')
-    #   assert_key_props(obj2, label:'obj2')
-
-    #   raise "Domains differ, but fn_info is the same.  Weird." if \
-    #     obj1.fn_name == obj2.fn_name \
-    #     && obj1.fn_path == obj2.fn_path \
-    #     && obj1.domain_name != obj2.domain_name
-
-    #   obj1.domain_name == obj2.domain_name &&
-    #     obj1.fn_name == obj2.fn_name &&
-    #     obj1.fn_path == obj2.fn_path &&
-    #     (!match_line_num || obj1.line_num == obj2.line_num)
-    # end
   end
 
   def initialize(
@@ -76,7 +52,7 @@ class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
     if mod_info
       add_module(mod_info)
     elsif Kernel.aught?mod_name
-      add_module_by_attr(mod_name:mod_name, mod_type: mod_type)
+      add_module_attrs(mod_name:mod_name, mod_type: mod_type)
     end
   end
 
@@ -84,8 +60,8 @@ class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
     @mod_infos << mod_info if mod_info
   end
 
-  def add_module_by_attr(mod_name:, mod_type:)
-    add_module(ChaosDetector::ChaosGraphs::ModuleNode.new(mod_name:mod_name, mod_type: mod_type))
+  def add_module_attrs(mod_name:, mod_type:)
+    add_module(ChaosDetector::ChaosGraphs::ModInfo.new(mod_name:mod_name, mod_type: mod_type))
   end
 
   def ==(other)

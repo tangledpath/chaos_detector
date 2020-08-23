@@ -1,11 +1,14 @@
 require 'graph_theory/graph_theory'
 
-# Maintains all nodes and edges as stack calls are pushed and popped via StackFrames.
+# Maintains all nodes and edges as stack calls are pushed and popped via Frames.
 class GraphTheory::Graph
   extend Forwardable
   attr_reader :root_node
   attr_reader :nodes
   attr_reader :edges
+
+  def_delegator :@nodes, :length, :node_count
+  def_delegator :@edges, :length, :edge_count
 
   def initialize(root_node:)
     raise ArgumentError, "Root node required." unless root_node
@@ -13,6 +16,7 @@ class GraphTheory::Graph
     @nodes = []
     @edges = []
   end
+
 
   def node_for(obj)
     raise ArgumentError, "#node_for requires obj" unless obj
