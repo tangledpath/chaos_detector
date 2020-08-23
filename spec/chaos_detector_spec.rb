@@ -2,6 +2,7 @@
 require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
 require 'chaos_detector/stack_frame'
+require 'chaos_detector/options'
 
 
 describe "ChaosDetector" do
@@ -21,7 +22,9 @@ describe "ChaosDetector" do
     end
 
     it "should record and graph" do
-      ChaosDetector::Navigator.record(app_root_path: __dir__)
+      opts = ChaosDetector::Options.new
+      opts.log_root_path = __dir__
+      ChaosDetector::Navigator.record(app_root_path: __dir__, options: opts)
       ChaosDetector::Navigator.undecorate_module_name(dec2).should eq("Person")
       ChaosDetector::Navigator.build_graph
     end

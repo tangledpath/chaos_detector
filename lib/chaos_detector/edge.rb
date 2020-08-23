@@ -1,9 +1,11 @@
 module ChaosDetector
-  # TODO: grade edge on relative difference in nodes:
+  # TODO: grade edge on relative difference in its nodes:
   #   domain, path, package?
+  # Coupling
+  #
   # Overall check for
-  # Nodes that call back to themselves (identify unique patterns)
-  # Nodes that call back to themselves
+  # Edges that have a
+  # Engines that call back to t
   class Edge
     FnCall = Struct.new(:fn_name, :line_num)
     DEFAULT_FN = 'Root'.freeze

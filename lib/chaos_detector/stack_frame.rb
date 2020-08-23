@@ -27,6 +27,18 @@ class StackFrame
     @note = note
   end
 
+  def to_csv_row(supplement:nil)
+    fields = [@domain_name, @mod_name, @mod_type, @path, @fn_name, @line_num]
+    # , @note
+    fields.concat(supplement) unless supplement.nil?
+    ChaosDetector::Utils.to_csv_row(fields)
+  end
+
+  def self.from_csv_row(csv_row_text)
+    domain_name, mod_name, mod_type, path, fn_name, line_num, note = ChaosDetector::Utils.from_csv_row(csv_row_text)
+    StackFrame.new(domain_name: domain_name, mod_type:mod_type, mod_name: mod_name, path: path, fn_name: fn_name, line_num:line_num, note: note)
+  end
+
   # Returns nil if no match and SimilarityRating otherwise
   def match?(other)
     if !other.nil? && @domain_name == other.domain_name && @path == other.path
@@ -51,7 +63,7 @@ class StackFrame
     VERY_SIMILAR.include?(match?(other))
   end
 
-  def to_s(level=nil)
+  def to_s
     hkey = "["
     hkey << "(#{@domain_name}) " unless @domain_name.nil? || @domain_name.empty?
     hkey << "#{@mod_type} " unless @mod_type.nil? || @mod_type.empty?
@@ -60,8 +72,12 @@ class StackFrame
     hkey << " '#{@path}'" unless @path.nil? || @path.empty?
     hkey << "]"
     hkey << "(L##{@line_num})" unless @line_num.nil?
-    hkey << " - #{@note}" if level==:high unless @note.nil?
 
+  end
+
+  def describe
+    hkey = to_s
+    hkey << " - #{@note}" unless @note.nil?
   end
 end
 end

@@ -96,6 +96,21 @@ module Utils
       end
     end
 
+    def to_csv_row(ary)
+      ary.map{|val| to_csv_item(val)}.join(", ")
+      # [@domain_name, @mod_name, @mod_type, @path, @fn_name, @line_num, @note]
+    end
+
+    def to_csv_item(v)
+      if v.is_a?Numeric
+        v
+      elsif v.is_a?Symbol
+        v.inspect
+      else
+        %{"#{v}"}
+      end
+    end
+
     # Built-in self-testing:
     # ChaosDetector::Utils.test
     def test

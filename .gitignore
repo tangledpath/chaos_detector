@@ -4,6 +4,7 @@
 
 ## PROJECT::GENERAL
 log
+*.csv
 *.log
 coverage
 rdoc

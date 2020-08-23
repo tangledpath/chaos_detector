@@ -11,12 +11,69 @@ class Navigator
   require 'ruby-graphviz'
 
   class << self
+    # extend ChaosDetector::Utils::ChaosAttr
+    attr_reader :options  #) { ChaosDetector::Options.new }
     attr_reader :app_root_path
     attr_reader :domain_hash
     attr_reader :module_module_hash
     attr_reader :fn_fn_hash
-    attr_reader :module_counter
     attr_reader :graph
+
+    def record(app_root_path:, domain_hash: nil, options: nil)
+      # Put all options in optinos
+      @options = options
+      puts("  LOG_ROOT_PATH??? ")
+      puts("  LOG_ROOT_PATH #{@options.log_root_path}") if @options
+
+
+      @app_root_path = Pathname.new(app_root_path)
+      @domain_hash = {}
+      domain_hash && domain_hash.each do |path, group|
+        dpath = Pathname.new(path).cleanpath.to_s
+        @domain_hash[dpath] = group
+        puts ("Setting #{dpath} : #{group}")
+      end
+
+      @graph = ChaosDetector::Atlas.new(options: @options)
+
+      trace = TracePoint.new(:call, :return) do |tp|
+        next unless app_root_path && tp.path.start_with?(app_root_path.to_s)
+
+        mod_path = localize_path(path: tp.path)
+        mod_name, mod_type = get_module(tp:tp)
+        next if mod_name.start_with?('ChaosDetector')
+
+
+        domain_name = domain_from_path(local_path: mod_path)
+
+        if tp.method_id != tp.callee_id
+          puts "XXXXX {%s} (%s)[%s] :: [%s] <> {%s}" % [domain_name, mod_type, mod_name, tp.method_id, tp.callee_id]
+        end
+
+        frame = StackFrame.new(mod_type:mod_type, mod_name: mod_name, domain_name: domain_name, path: mod_path, fn_name: tp.method_id, line_num: tp.lineno)
+        frame.note = "class: #{tp.defined_class} / #{tp.defined_class&.name} / #{mod_name}"
+        if tp.event == :call
+          @graph.open_frame(frame: frame)
+        elsif tp.event == :return
+          @graph.close_frame(frame: frame)
+        end
+      end
+
+      trace.enable
+    end
+
+
+    def build_domain_graph
+      dg = GraphViz.new( :G, :type => :digraph )
+      domain_edges = graph.domain_deps
+      domain_edges.each do |k, count|
+        puts "Edge: #{k.src_domain} -> #{k.dep_domain}: #{count}"
+        src = dg.add_nodes(k.src_domain.to_s)
+        dep = dg.add_nodes(k.dep_domain.to_s)
+        dg.add_edges(src, dep)
+      end
+      dg.output( :png => "domain_dep.png" )
+    end
 
     def build_graph_node(graph, node)
       graph.add_nodes(node.label)
@@ -28,13 +85,11 @@ class Navigator
       # Create a new graph
       g = GraphViz.new( :G, :type => :digraph )
 
-
-
       nodes = {}
       domain_graphs = graph.nodes.group_by(&:domain_name).map do |domain, dnodes|
         subg = g.subgraph("cluster_#{domain}") do |sg|
-          dnodes.each do |domian_node|
-            nodes[domian_node] = build_graph_node(sg, domian_node)
+          dnodes.each do |domain_node|
+            nodes[domain_node] = build_graph_node(sg, domain_node)
           end
         end
         [domain, subg]
@@ -62,72 +117,9 @@ class Navigator
 
        # Generate output image
       g.output( :png => "dep.png" )
+
+      build_domain_graph
     end
-
-    def record(app_root_path:, domain_hash: nil, options: nil)
-      @options = options
-      @module_counter = Hash.new(0)
-      @app_root_path = Pathname.new(app_root_path)
-      @domain_hash = {}
-      domain_hash && domain_hash.each do |path, group|
-        dpath = Pathname.new(path).cleanpath.to_s
-        @domain_hash[dpath] = group
-        puts ("Setting #{dpath} : #{group}")
-      end
-
-      @graph = ChaosDetector::Atlas.new(options: @options)
-
-      trace = TracePoint.new(:call, :return) do |tp|
-        next unless app_root_path && tp.path.start_with?(app_root_path.to_s)
-
-        mod_path = localize_path(path: tp.path)
-        mod_name, mod_type = get_module(tp:tp)
-        next if mod_name.start_with?('ChaosDetector')
-
-        @module_counter[mod_name] +=1
-
-        # caller = tp.binding.eval("caller_locations(4, 1).first.label")
-        #caller = caller_locations().join(" -> ")
-        # callers = caller_locations(1, 4)
-        # callers = tp.binding.eval("eval('caller_locations')")
-
-        domain_name = domain_from_path(local_path: mod_path)
-
-        # puts "XXXXX ([%s]) [%s] :: [%s] ccc {%s}" % [group, mod_name, tp.method_id, tp.callee_id]
-        if tp.method_id != tp.callee_id
-          puts "XXXXX {%s} (%s)[%s] :: [%s] <> {%s}" % [domain_name, mod_type, mod_name, tp.method_id, tp.callee_id]
-        end
-
-        frame = StackFrame.new(mod_type:mod_type, mod_name: mod_name, domain_name: domain_name, path: mod_path, fn_name: tp.method_id, line_num: tp.lineno)
-        frame.note = "class: #{tp.defined_class} / #{tp.defined_class&.name} / #{mod_name}"
-        if tp.event == :call
-          @graph.open_frame(frame: frame)
-        elsif tp.event == :return
-          @graph.close_frame(frame: frame)
-        end
-      end
-
-      trace.enable
-    end
-
-    def report_module_counter
-
-      mods = @module_counter.sort_by {|k, v| -v}
-
-      total_mods = 0
-
-      msg = []
-
-      mods.each do |k,v|
-        msg << "#{k}: #{v} items"
-        total_mods += v
-      end
-
-      msg<<"Encountered #{@module_counter.length} unique modules."
-      msg<<"Encountered #{@total_mods} total modules."
-      p(msg.join)
-    end
-
 
     def extract_module(tp:)
       mod_name = tp.defined_class.name

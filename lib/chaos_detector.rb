@@ -14,6 +14,7 @@ module ChaosDetector
       puts("Detecting chaos at #{app_root_path}")
       puts("  Domains #{domain_hash.inspect}")
       options.log_root_path = app_root_path
+      puts("  log_root_path #{options.log_root_path}")
       ChaosDetector::Navigator.record(
         app_root_path: app_root_path,
         domain_hash: domain_hash,

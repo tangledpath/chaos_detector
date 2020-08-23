@@ -26,6 +26,23 @@ class Atlas
   chaos_attr :frames_nopop, []
   chaos_attr :graph_stats
 
+  DomainEdge = Struct.new(:src_domain, :dep_domain)
+  def domain_deps
+    domain_edges = {}
+
+    @edges.each do |edge|
+      src_domain = edge.src_node&.domain_name
+      dep_domain = edge.dep_node&.domain_name
+
+      if src_domain && dep_domain && src_domain != dep_domain
+        domain_edge = DomainEdge.new(src_domain, dep_domain)
+        domain_edges[domain_edge] = domain_edges.fetch(domain_edge, 0) + 1
+      end
+    end
+
+    domain_edges
+  end
+
   def initialize(options: nil)
     @options = options unless options.nil?
     reset
@@ -46,7 +63,7 @@ class Atlas
   end
 
   def stack_depth
-    frame_stack.length
+    @frame_stack.length
   end
 
   # @return Node matching given frame.  If already in @nodes,
@@ -129,60 +146,6 @@ class Atlas
     [best_index, best_sim]
   end
 
-    #   buffy = []
-    #   # Due to the dynamic nature of ruby; meta-programming, method_missing, etc
-    #   # matching with tolerance:
-    #   @frame_stack[1..-1].each_with_index do |f, i|
-    #     msg = "#{i}"
-    #     ChaosDetector::Utils.with(current_frame.match?(f)) do |match|
-    #       match_candidates[i] = match
-    #       msg << ": #{match}"
-    #       msg << " [#{f.to_s}]"
-    #       buffy << msg
-    #     end
-    #   end
-
-    #   @graph_stats.no_matches += 1
-
-    #   log_status(action: "NO EAASY MATCH for (#{current_frame}) ", details: buffy)
-
-    #   # Find best match
-    #   # It isn't always an easy apples-apples when looking for
-    #   # Due to the dynamic nature of ruby; meta-programming, method_missing, etc
-    #   # todeo: PARTIAL MATCH allow
-    #   # if frame.domain_name == frame.domain_name
-    #   # @domain_name == other.domain_name &&
-    #   # @mod_name == other.mod_name &&
-    #   # @path == other.path &&
-    #   # @fn_name == other.fn_name
-    #   # buffy = match_candidates.entries.map{|k,v| "#{k}: #{v}"}
-
-    #   # mf = ChaosDetector::Utils.with(match_candidates.entries.first) do |position, rating|
-    #   #   @graph_stats.unideal_matches += 1
-    #   #   log_status(action: "PARTIAL CANDIDATE(#{rating}) [#{position}] frames back (#{current_frame})", details: buffy)
-    #   #   @graph_stats.increment_rating(rating)
-    #   # end
-
-    #   # if mf.nil?
-    #   #   log_status(action: "NO CANDIDATE for (#{current_frame}) ")
-    #   #   @graph_stats.no_matches += 1
-    #   # end
-    # end
-
-    # matching_frame || current_frame
-  #   matching_frame
-  # end
-
-  # def make_key(path:, mod_name:, domain_name:, fn_name:, line_num:)
-  #   @md5.reset
-  #   @md5 << path if (path && !path.empty?)
-  #   @md5 << mod_name if (mod_name || !mod_name.empty?)
-  #   @md5 << domain_name.to_s if (domain_name || !domain_name.empty?)
-  #   @md5 << fn_name if (fn_name || !fn_name.empty?)
-  #   @md5 << line_num if line_num
-  #   @md5.hexdigest
-  # end
-
   def count_depth
     -1
   end
@@ -196,23 +159,24 @@ class Atlas
   end
 
   def init_status_csv()
-    csv_status = %w{action offset stack_length node_count edge_count}
+    csv_status = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE PATH FN_NAME LINE_NUM DEPTH OFFSET NODES EDGES MATCH}.join(', ')
     atlas_path = log_path
-    File.write(atlas_path, csv_status, File.size(atlas_path), mode: 'w')
+    File.write(atlas_path, "#{csv_status}\n", mode: 'w')
   end
 
-  def write_csv_status(action)
-    csv_status = [action, offset, @frame_stack.length, @nodes.length, @edges.length].join(', ')
+  def write_frame_csv_row(frame, action:, match: nil)
     atlas_path = log_path
-    File.write(atlas_path, csv_status, File.size(atlas_path), mode: 'a')
+    csv_row = frame.to_csv_row(supplement: [@frame_stack.length, @offset, @nodes.length, @edges.length, match])
+    csv_row = "#{action}, #{csv_row}\n"
+    loc = File.exists?(atlas_path) ? File.size(atlas_path) : 0
+    File.write(atlas_path, csv_row, loc, mode: 'a')
   end
 
   def log_status(action:, indent: '', details: nil)
-    write_csv_status(action)
     indent = INDENT * [@frame_stack.length, 25].min
     # exit(false) if stack_len > 25
 
-    puts "#{indent}[#{action}] Stack offset: #{offset} -> Stack depth: #{@frame_stack.length}(#{@graph_stats}) / Node count: #{nodes.length} "
+    puts "#{indent}[#{action}] Stack offset: #{offset} -> Stack depth: #{@frame_stack.length}(#{@graph_stats}) / Node count: #{@nodes.length} "
     if details
       j = "\n#{indent}  "
       puts j + details.join("\n#{indent}  ")
@@ -242,7 +206,7 @@ class Atlas
     @frame_stack.unshift(frame)
     @graph_stats.open_count += 1
     log_status(action: "#OPEN(#{frame})")
-
+    write_frame_csv_row(frame, action: :open)
   end
 
   def close_frame(frame:)
@@ -256,18 +220,24 @@ class Atlas
     if frame_n.nil?
       buffy << "No frame found: #{frame}"
       buffy.concat(@frame_stack.first(50).map{|f| "  <- #{f}"})
+      write_frame_csv_row(frame, action: :close, match: match)
     else
       # if stack_frame.ma != frame
       #   buffy << "Pop Mismatch: #{frame} <> #{stack_frame}"
       #   # buffy.concat(@frame_stack.first(50).reverse.map{|f| "  -> #{f}"})
       # end
       # buffy << "POPPING from frame stack: #{frame}"
+      match = "#{frame_n}(#{similarity})"
+      @offset = frame_n
       @frame_stack.delete_at(frame_n)
+      write_frame_csv_row(frame, action: :pop, match: match)
     end
 
     # indent.chomp!(INDENT)
     @graph_stats.close_count += 1
     log_status(action: "#>>>CLOSE@#{frame_n} <<#{similarity}>> (#{frame})", details: buffy)
+
+
   end
 
   class GraphStats
