@@ -13,11 +13,11 @@ class ChaosDetector::Navigator
   class << self
     extend ChaosDetector::Utils::ChaosAttr
     chaos_attr (:options) { ChaosDetector::Options.new }
+    chaos_attr :atlas
     attr_reader :app_root_path
     attr_reader :domain_hash
     attr_reader :module_module_hash
     attr_reader :fn_fn_hash
-    attr_reader :atlas
     attr_reader :walkman
 
     def full_path_skip?(path)
@@ -47,8 +47,8 @@ class ChaosDetector::Navigator
     def playback(options: nil)
       log("Detecting chaos in playback via walkman")
       apply_options(options)
-      @walkman.each do |action, frame|
-        #log("Performing :#{action} on frame: #{frame}")
+      @walkman.playback do |action, frame|
+        log("Performing :#{action} on frame: #{frame}")
         frame_act = case action.to_sym
         when :open
           :call
@@ -57,6 +57,7 @@ class ChaosDetector::Navigator
         end
         perform_frame_action(frame, action: frame_act, record: false)
       end
+      @atlas
     end
 
     def record(options: nil)
@@ -92,6 +93,7 @@ class ChaosDetector::Navigator
       end
 
       @trace.enable
+      @atlas
     end
 
     def perform_frame_action(frame, action:, record: false)

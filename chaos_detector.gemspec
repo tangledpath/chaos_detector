@@ -8,11 +8,11 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib".freeze]
   s.authors = ["Steven Miers".freeze]
-  s.date = "2020-08-09"
+  s.date = "2020-08-10"
   s.description = "Discover and graph dependencies for ruby and RoR apps".freeze
   s.email = "steven.miers@gmail.com".freeze
   s.executables = ["detect_chaos".freeze]
-  s.files = ["bin/detect_chaos".freeze, "lib/chaos_detector.rb".freeze, "lib/chaos_detector/atlas.rb".freeze, "lib/chaos_detector/edge.rb".freeze, "lib/chaos_detector/grapher.rb".freeze, "lib/chaos_detector/navigator.rb".freeze, "lib/chaos_detector/node.rb".freeze, "lib/chaos_detector/options.rb".freeze, "lib/chaos_detector/scratch.rb".freeze, "lib/chaos_detector/stack_frame.rb".freeze, "lib/chaos_detector/utils.rb".freeze, "lib/chaos_detector/walkman.rb".freeze]
+  s.files = ["bin/detect_chaos".freeze, "lib/chaos_detector.rb".freeze, "lib/chaos_detector/atlas.rb".freeze, "lib/chaos_detector/edge.rb".freeze, "lib/chaos_detector/graph_theory.rb".freeze, "lib/chaos_detector/graph_theory/domain_metrics.rb".freeze, "lib/chaos_detector/graph_theory/edge_metrics.rb".freeze, "lib/chaos_detector/graph_theory/node_metrics.rb".freeze, "lib/chaos_detector/graph_theory/stack_metrics.rb".freeze, "lib/chaos_detector/grapher.rb".freeze, "lib/chaos_detector/navigator.rb".freeze, "lib/chaos_detector/node.rb".freeze, "lib/chaos_detector/options.rb".freeze, "lib/chaos_detector/scratch.rb".freeze, "lib/chaos_detector/stack_frame.rb".freeze, "lib/chaos_detector/utils.rb".freeze, "lib/chaos_detector/walkman.rb".freeze]
   s.homepage = "http://github.com/tangledpath/chaos_detector".freeze
   s.licenses = ["MIT".freeze]
   s.rubygems_version = "3.0.8".freeze

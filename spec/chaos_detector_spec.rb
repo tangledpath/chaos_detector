@@ -37,7 +37,7 @@ describe "ChaosDetector" do
       expect(ChaosDetector::Navigator.atlas).to_not be_nil
 
       atlas = ChaosDetector::Navigator.stop
-      ChaosDetector::Utils.p ("Nodes: #{atlas.nodes.length}")
+      ChaosDetector::Utils.print_line ("Nodes: #{atlas.nodes.length}")
       expect(atlas).to eq(ChaosDetector::Navigator.atlas)
       grapher = ChaosDetector::Grapher.new(atlas)
       grapher.build_graphs()
@@ -78,6 +78,24 @@ describe "ChaosDetector" do
       # puts '-' * 50
       # puts csv_lines
       # puts '-' * 50
+    end
+
+    it "should playback from file" do
+      ChaosDetector::Navigator.record(options: opts)
+      Foo.foo
+      Fubar::Foo.foo
+      recorded_atlas = ChaosDetector::Navigator.stop
+      expect(recorded_atlas).to_not be_nil
+
+      # TODO: instaantize Navigator class and whack this:
+      ChaosDetector::Navigator::atlas = nil
+      ChaosDetector::Navigator::options = nil
+      playback_atlas = ChaosDetector::Navigator.playback(options: opts)
+      expect(playback_atlas).to_not be_nil
+
+      # Playback should graph:
+      grapher = ChaosDetector::Grapher.new(playback_atlas)
+      grapher.build_graphs()
     end
   end
 

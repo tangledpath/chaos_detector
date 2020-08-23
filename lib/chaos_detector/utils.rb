@@ -120,23 +120,27 @@ module ChaosDetector::Utils
     def log(msg, subject: nil)
       message = naught?(subject) ? msg : d(msg, prefix:d(subject, clamp: :bracket))
       if block_given?
-        p(d(message, prefix: 'Starting: '))
+        print_line(d(message, prefix: 'Starting: '))
         result = yield
-        p(d(message, prefix: 'Complete: ', suffix: d(result)))
+        print_line(d(message, prefix: 'Complete: ', suffix: d(result)))
       else
-        p(message)
+        print_line(message)
       end
+      message
     end
 
-    def print_ln(msg, *opts)
-      print(msg = "\n", opts)
+    def print_line(msg, *opts)
+      # print("#{msg}\n", opts)
+      # nil
+      Kernel.puts(msg, opts)
     end
-    alias_method :p, :print_ln
+
+    alias_method :pp, :print_line
 
     # Built-in self-testing:
     # ChaosDetector::Utils.test
     def test
-      log("Testing ChaosDetector::Utils") do
+      log("Testing ChaosDetector::Utils", subject: "ChaosDetector::Utils") do
         assert(true, 'Naught detects blank string'){ChaosDetector::Utils.naught?("")}
         assert(true, 'Naught detects blank string with space'){ChaosDetector::Utils.naught?(" ")}
         assert(true, 'Naught detects int 0'){ChaosDetector::Utils.naught?(0)}

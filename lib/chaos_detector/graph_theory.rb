@@ -27,10 +27,10 @@ module ChaosDetector::GraphTheory
       appraise_nodes
       log("Appraising edges.")
       appraise_edges
+      log("Measuring domain dependencies.")
+      measure_domain_deps
       log("Measuring cyclomatic complexity.")
       measure_cyclomatic_complexity
-      log("Meaasuring domain dependencies.")
-      measure_domain_deps
       log("Performed appraisal: #{report}")
     end
 
@@ -50,12 +50,18 @@ module ChaosDetector::GraphTheory
 
     def report
       buffy = [to_s]
+
+      buffy << "Circular References #{@circular_paths.length} / #{@circular_paths.uniq.length}"
+      buffy.concat(@circular_paths.map do |p|
+        "  " + p.map(&:label).join(' -> ')
+      end)
+
       # Gather nodes:
       buffy << "Nodes:"
-      buffy.append(@node_metrics.map{|n, m| "  (#{n.domain_name})#{n.label}: #{m}" })
+      buffy.concat(@node_metrics.map{|n, m| "  (#{n.domain_name})#{n.label}: #{m}" })
 
       # Gather edges:
-      buffy << "Edges:"
+      # buffy << "Edges:"
       # buffy.append(@edge_metrics.map{|e, m| "  #{e}: #{m}" })
 
       buffy.join("\n")
@@ -99,40 +105,72 @@ module ChaosDetector::GraphTheory
       def measure_cyclomatic_complexity
         @circular_paths = []
         @full_paths = []
-        @h= 5
         traverse_nodes
         @path_count_uniq = @circular_paths.uniq.count + @full_paths.uniq.count
         @cyclomatic_complexity = @edges.count - @nodes.count + (2 * @path_count_uniq)
       end
 
+      # TODO: Use edgestack instead of nodestack for easier debugging?:
       def traverse_nodes(nodestack=[get_root_node])
         node = nodestack.last
         if nodestack.index(node) < nodestack.length-1
-          # if @circular_paths
-          # if nodestack.length > @h || (@h % 1000).zero
-          #   p("Nodestack > #{nodestack.length}")
-          #   p(nodestack)
-          #   @h = nodestack.length
-          #   p
-          # end
-          # @h
+          # if (@circular_paths.length % 100).zero?
+          #   p("@CCCCCCCCcircular_paths.length: #{@circular_paths.length} (#{@circular_paths.uniq.length}) / Nodestack [#{nodestack.length}]: #{nodestack.map(&:mod_name).join(' -> ')}")
 
-          if (@circular_paths.length % 100).zero?
-            p("@circular_paths.length: #{@circular_paths.length} (#{@circular_paths.uniq.length}) / Nodestack [#{nodestack.length}]: #{nodestack.map(&:mod_name).join(' -> ')}")
-            p
-          end
+          # end
           # LAST NODE IS IN STACK...CIRCULAR
           # log("Node stack is circular: #{nodestack}")
           @circular_paths << nodestack
+
+          if (@circular_paths.length % 100).zero?
+            log("Circular deps@#{@circular_paths.length}")
+          end
+          if @circular_paths.length > 20000
+            log("Circular deps@#{@circular_paths.length} exceeded threshold; exiting!")
+            puts(report)
+          end
         else
-          out_nodes = fan_out_nodes(node)
-          if out_nodes.none?
+          out_edges = fan_out_edges(node)
+          if out_edges.none?
             @full_paths << nodestack
             # nodestack
           else
-            out_nodes.each { |out_node| traverse_nodes(nodestack + [out_node]) }
+            out_edges.each do |edge|
+              traverse_nodes(nodestack + [edge.dep_node])
+              # if nodestack.include?(edge.dep_node)
+              #   @circular_paths << nodestack + [edge.dep_node]
+
+              #   # p("@circular_paths.length: #{@circular_paths.length} (#{@circular_paths.uniq.length})")
+              #   # p("Nodestack [#{nodestack.length}]: #{nodestack.map(&:mod_name).join(' -> ') }")
+              #   # p(edge)
+              #   # puts
+              #   # puts
+
+              #   # if @circular_paths.length > 1000
+              #   #   puts("CIRCULAR_ROUTES")
+              #   #   @circular_paths.each do |p|
+              #   #     puts(p.map{|n|"#{n.domain_name}:#{n.mod_name}"}.join(' -> '))
+              #   #   end
+              #   #   exit(true)
+              #   # end
+              # else
+              #   traverse_nodes(nodestack + [edge.dep_node])
+              # end
+            end
           end
+
+          # out_nodes = fan_out_nodes(node)
+          # if out_nodes.none?
+          #   @full_paths << nodestack
+          #   # nodestack
+          # else
+          #   out_nodes.each { |out_node| traverse_nodes(nodestack + [out_node]) }
+          # end
         end
+      end
+
+      def fan_out_edges(node)
+        @edges.find_all{|e| e.src_node==node }
       end
 
       def fan_out_nodes(node)
