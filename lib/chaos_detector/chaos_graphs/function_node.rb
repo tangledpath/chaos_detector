@@ -2,29 +2,14 @@ require 'chaos_detector/chaos_graphs/chaos_graphs'
 require 'chaos_detector/chaos_graphs/mod_info'
 class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
   extend Forwardable
-  ROOT_NODE_NAME = "ROOT".freeze
-  # ERR_PROP_MISSING = "Properties were missing from object%s: %s"
-
-  # This composite uniquely identifies a function node:
-  # KEY_ATTRS = [:fn_name, :fn_path, :domain_name]
-
   alias_method :fn_name, :name
   attr_accessor :domain_name
   attr_accessor :fn_path
   attr_accessor :fn_line
-  attr_accessor :is_root
 
   # Modules to which this Function Node is associated:
   attr_reader :mod_infos
   def_delegator :@mod_infos, :first, :mod_info_prime
-
-  class << self
-    attr_reader :root_node
-    def root_node(force_new: false)
-      @root_node = self.new(is_root: true) if force_new || @root_node.nil?
-      @root_node
-    end
-  end
 
   def initialize(
     fn_name: nil,
@@ -36,16 +21,11 @@ class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
     mod_name:nil,
     mod_type:nil
   )
-    funcname = fn_name || (is_root ? ROOT_NODE_NAME : nil)
-    unless Kernel.aught?funcname
-      raise ArgumentError, "Must pass fn_name: or set is_root (fn_name=#{fn_name})"
-    end
-    super(name: funcname)
+    super(name: fn_name, root: is_root)
 
     @domain_name = domain_name
     @fn_path = fn_path
     @fn_line = fn_line
-    @is_root = is_root
     @mod_infos = []
 
     # Add module info, if supplied:
@@ -92,12 +72,20 @@ class ChaosDetector::ChaosGraphs::FunctionNode < GraphTheory::Node
     # "#{m}\n#{@domain_name}"
   end
 
-  def self.human_key(fn_path:nil, fn_name:nil, domain_name:nil)
+  def self.human_key(fn_path:nil, fn_name:nil, domain_name:nil, root: nil)
     hkey = "["
     hkey << "(#{domain_name}) " unless domain_name.nil? || domain_name.empty?
-    hkey << ##{fn_name} unless fn_name.nil? || fn_name.empty?
+    hkey << decorate(fn_name)  #unless fn_name.nil? || fn_name.empty?
     hkey << " '#{fn_path}'" unless fn_path.nil? || fn_path.empty?
-    m << decorate(ROOT_NODE_NAME, clamp: :parens) if @is_root
+    m << decorate(ROOT_NODE_NAME, clamp: :parens) if root
     hkey << "]"
+  end
+
+  class << self
+    attr_reader :root_node
+    def root_node(force_new: false)
+      @root_node = self.new(is_root: true) if force_new || @root_node.nil?
+      @root_node
+    end
   end
 end

@@ -13,8 +13,10 @@ class ChaosDetector::ChaosGraphs::ModInfo
     @mod_type = mod_type
   end
 
-  def == (other)
-    self.mod_name == other.mod_name && self.mod_path == other.mod_path && self.mod_type == other.mod_type
+  def ==(other)
+    self.mod_name == other.mod_name &&
+      self.mod_path == other.mod_path &&
+      self.mod_type == other.mod_type
   end
 
   def to_s

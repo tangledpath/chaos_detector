@@ -6,8 +6,8 @@ class ChaosDetector::ChaosGraphs::ModuleNode < GraphTheory::Node
   attr_reader :domain_name
   alias_method :mod_name, :name
 
-  def initialize(mod_name:, fn_node:, domain_name: nil, mod_type:nil)
-    super(name:mod_name, node_origin: fn_node)
+  def initialize(mod_name:, is_root: false, fn_node:, domain_name: nil, mod_type:nil)
+    super(name:mod_name, root: is_root, node_origin: fn_node)
     @mod_type = mod_type
   end
 
@@ -27,5 +27,13 @@ class ChaosDetector::ChaosGraphs::ModuleNode < GraphTheory::Node
 
   def to_s
     [mod_name, @mod_type].join(', ')
+  end
+
+  class << self
+    attr_reader :root_node
+    def root_node(force_new: false)
+      @root_node = self.new(is_root: true) if force_new || @root_node.nil?
+      @root_node
+    end
   end
 end
