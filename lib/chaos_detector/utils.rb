@@ -33,7 +33,8 @@ module ChaosDetector::Utils
     def enum(*values)
       Module.new do |mod|
         values.each_with_index do |v,i|
-          mod.const_set(v.to_s.upcase, 2**i)
+          mod.const_set(v.to_s.upcase, v.to_s.downcase.to_sym)
+          # mod.const_set(v.to_s.upcase, 2**i)
         end
 
         def mod.values

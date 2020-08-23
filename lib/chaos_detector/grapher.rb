@@ -29,26 +29,31 @@ class ChaosDetector::Grapher
     color: CLR_WHITE,
     compound: 'true',
     # # concentrate: 'true',
-    # # engine: 'dot',
+    # engine: 'dot',
     fontcolor: CLR_WHITE,
     fontname: 'Georgia',
     fontsize: '48',
     labelloc: 't',
     pencolor: CLR_WHITE,
-    # # ordering: 'out',
+    # ordering: 'out',
     # outputorder: 'nodesfirst',
     nodesep: '0.25',
-    newrank: 'true',
-    rankdir: 'LR',
+    # newrank: 'true',
+    # rankdir: 'LR',
     ranksep: '1.0',
-    size: '10,8',
-    splines: 'spline',
+    # size: '10,8',
+    # splines: 'spline',
     strict: 'true'
   }
 
   SUBDOMAIN_ATTRS = {
     bgcolor: CLR_NICEGREY,
-    fontsize: '16'
+    fontsize: '16',
+    rank: 'same',
+    fontname: 'Verdana',
+    labelloc: 't',
+    pencolor: CLR_GREY,
+    penwidth: '2'
   }
 
   NODE_ATTR={
@@ -67,7 +72,7 @@ class ChaosDetector::Grapher
   end
 
   def create_directed_graph(label)
-    GraphViz.new(:G, label: label, **GRAPH_OPTS)
+    GraphViz.digraph(:G, label: label, **GRAPH_OPTS)
   end
 
   def add_domain_subgraph(graph, domain_name)
@@ -78,7 +83,19 @@ class ChaosDetector::Grapher
   def build_graphs
     raise "Atlas isn't present!  Call record first." if @atlas.nil?
 
+    build_module_graph
+
+    build_domain_graph
+  end
+
+  def log(msg)
+    ChaosDetector::Utils.log(msg, subject: "Grapher")
+  end
+
+  def build_module_graph
     # Create a new top-level graph:
+
+    log("Creating a module-level dependency graph from atlas: #{@atlas}")
     graph = create_directed_graph("Dependency Graph")
     nodes = {}
     domain_graphs = @atlas.nodes.group_by(&:domain_name).map do |domain, dnodes|
@@ -88,6 +105,8 @@ class ChaosDetector::Grapher
       end
       [domain, subg]
     end
+
+    log("Graph Domains: #{domain_graphs.length}")
 
     # nodes = graph.nodes.zip(viz_nodes).to_h
 
@@ -106,6 +125,7 @@ class ChaosDetector::Grapher
 
       edge_key = [src, dep]
       unless graph_edges.has_key?(edge_key)
+        log("Edge: #{src} -> #{dep}")
         graph_edges[edge_key] = graph.add_edges(src, dep, color: CLR_WHITE)
       end
       # puts "SRC: #{src}"
@@ -114,27 +134,24 @@ class ChaosDetector::Grapher
       # puts "-------------------------------------"
     end
 
-     # Generate output image
-     graph.output( :png => "mod_dep.png" )
-
-    build_domain_graph
-  end
-
-  def log(msg)
-    ChaosDetector::Utils.log(msg, subject: "Grapher")
+    log("Writing module dependencies")
+    # Generate output image
+    graph.output( :png => "module_deps.png" )
   end
 
   def build_domain_graph
     # dg = GraphViz.new( :G, type: :digraph, label: "Domain dependencies")
     dg = create_directed_graph("Dependency Dependencies")
 
+    # TODO: Add subgraph (clusters) and edges between them:
+
     domain_edges = @atlas.domain_deps
     log("Domain dependencies #{domain_edges.length}")
-    domain_edges.each do |k, count|
-      log("Edge: #{k.src_domain} -> #{k.dep_domain}: #{count}")
-      src = dg.add_nodes(k.src_domain.to_s)
-      dep = dg.add_nodes(k.dep_domain.to_s)
-      dg.add_edges(src, dep)
+    domain_edges.each do |k|
+      src = dg.add_nodes("#{k.src_domain.to_s}")
+      dep = dg.add_nodes("#{k.dep_domain.to_s}")
+      log("DOMAIN EDGE: #{k.src_domain} -> #{k.dep_domain}: #{k.dep_count} (#{k.dep_count_norm.round(2)})")
+      dg.add_edges(src, dep, {label: k.dep_count, penwidth: 0.5 + k.dep_count_norm * 7.5})
     end
     dg.output( :png => "domain_dep.png" )
   end

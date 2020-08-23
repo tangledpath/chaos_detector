@@ -9,7 +9,7 @@ require 'csv'
 
 # TODO: add traversal types to find depth, coupling in various ways (directory/package/namespace):
 class ChaosDetector::Walkman
-  CSV_HEADER = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE MOD_PATH LINE_NUM FN_NAME DEPTH OFFSET NODES EDGES MATCH}
+  CSV_HEADER = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE MOD_PATH LINE_NUM FN_NAME DEPTH OFFSET NODES EDGES MATCH_OFFSET SIMILARITY}
   COL_COUNT = CSV_HEADER.length
   COL_INDEXES = CSV_HEADER.map.with_index {|col, i| [col.downcase.to_sym, i]}.to_h
 
@@ -98,10 +98,11 @@ class ChaosDetector::Walkman
   end
 
   def write_frame(frame, action:, match: nil)
+    action = action
     csv_row = [action]
     csv_row.concat(frame_csv_fields(frame))
     csv_row.concat(atlas_csv_fields)
-    csv_row.concat(["#{match&[1]}"])
+    csv_row.concat(match) if match
 
     @log_buffer << csv_row
     buffered_trigger
