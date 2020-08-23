@@ -3,6 +3,7 @@ require 'chaos_detector/atlas'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
+require 'chaos_detector/walkman'
 
 class ChaosDetector::Navigator
   REGEX_MODULE_UNDECORATE = /#<(Class:)?([a-zA-Z\:]*)(.*)>/.freeze
@@ -17,12 +18,18 @@ class ChaosDetector::Navigator
     attr_reader :module_module_hash
     attr_reader :fn_fn_hash
     attr_reader :atlas
+    attr_reader :walkman
 
     def full_path_skip?(path)
       !(@app_root_path && path.start_with?(@app_root_path))
     end
 
-    def prepare_options
+    def apply_options(options)
+      @options = options if options
+
+      @atlas = ChaosDetector::Atlas.new(options: @options)
+      @walkman = ChaosDetector::Walkman.new(atlas: @atlas, options: @options)
+
       Kernel.with(@options.root_label) do |root_label|
         @atlas.root_node.define_singleton_method(:label) { root_label }
       end
@@ -36,19 +43,31 @@ class ChaosDetector::Navigator
 
     end
 
-    def record(options: nil)
-      @options = options if options
+    ### Playback of walkman CSV file:
+    def playback(options: nil)
+      log("Detecting chaos in playback via walkman")
+      apply_options(options)
+      @walkman.each do |action, frame|
+        log("Performing #{action.inspect} on frame: #{frame}")
+        # perform_frame_action(frame, action: action)
+      end
+    end
 
-      @atlas = ChaosDetector::Atlas.new(options: @options)
-      prepare_options
+    def record(options: nil)
+      apply_options(options)
+
       puts("Detecting chaos at #{@app_root_path}")
 
-      # setup_domain_hash(@options.path_domain_hash)
+      @walkman.record_start
 
+      # setup_domain_hash(@options.path_domain_hash)
+      @total_traces = 0
       @trace = TracePoint.new(*FRAME_ACTIONS) do |tracepoint|
+        @total_traces += 1
         next if full_path_skip?(tracepoint.path)
         frame = frame_at_trace(tracepoint)
 
+        # TODO: Generic module exclusion:
         next unless Kernel.ought?(frame.mod_name) && !frame.mod_name&.start_with?("ChaosDetector")
         # puts "FRame: #{frame}"
 
@@ -66,8 +85,10 @@ class ChaosDetector::Navigator
     def perform_frame_action(frame, action:)
       if action == :call
         @atlas.open_frame(frame: frame)
+        @walkman.write_frame(frame, action:action)
       elsif action == :return
-        @atlas.close_frame(frame: frame)
+        match = @atlas.close_frame(frame: frame)
+        @walkman.write_frame(frame, action:action, match:match)
       else
         raise ArgumentError("Action should be one of: #{FRAME_ACTIONS.inspect}.  Actual value: #{action.inspect}")
       end
@@ -141,7 +162,9 @@ class ChaosDetector::Navigator
     end
 
     def stop
+      log("Stopping after total traces: #{@total_traces}")
       @trace&.disable
+      @walkman.stop
       @atlas.stop
     end
 
@@ -150,6 +173,10 @@ class ChaosDetector::Navigator
       p = Pathname.new(path).cleanpath.to_s
       p.sub!(@app_root_path, '') unless ChaosDetector::Utils.naught?(@app_root_path)
       p.start_with?('/') ? p[1..-1] : p
+    end
+
+    def log(msg)
+      ChaosDetector::Utils.log(msg, subject: "Navigator")
     end
 
     def domain_from_path(local_path:)

@@ -6,11 +6,9 @@ require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
 
 # TODO: add traversal types to find depth, coupling in various ways (directory/package/namespace):
-module ChaosDetector
-class Atlas
+class ChaosDetector::Atlas
   extend ChaosDetector::Utils::ChaosAttr
 
-  CSV_HEADER = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE PATH LINE_NUM FN_NAME DEPTH OFFSET NODES EDGES MATCH}.join(', ')
   FULL_TOLERANCE = 6
   PARTIAL_TOLERANCE = 3
   BASE_TOLERANCE = 1
@@ -25,7 +23,7 @@ class Atlas
   chaos_attr :frames_nopop, []
 
   # chaos_attr :log_buffer, []
-  chaos_attr :graph_stats
+  chaos_attr :traversal_stats
 
   DomainEdge = Struct.new(:src_domain, :dep_domain)
   def domain_deps
@@ -43,6 +41,11 @@ class Atlas
     end
 
     domain_edges
+  end
+
+  def stop
+    log("Stopping:\n#{@traversal_stats}")
+    self
   end
 
   def log(msg)
@@ -79,7 +82,6 @@ class Atlas
   end
 
   def reset
-    stop
     @root_node = ChaosDetector::Node.new(root: true)
     @md5 = Digest::MD5.new
     @nodes = []
@@ -88,14 +90,7 @@ class Atlas
     @frames_nopop = []
     @offset = 0
 
-    @graph_stats = GraphStats.new
-    init_status_csv
-  end
-
-  # Call when done to flush any buffers as necessary
-  def stop
-    flush_status_csv
-    self
+    @traversal_stats = GraphStats.new
   end
 
   def stack_depth
@@ -190,55 +185,6 @@ class Atlas
     -1
   end
 
-  def log_path
-    File.join(options.log_root_path, options.atlas_log_path)
-  end
-
-  def flush_status_csv
-    if @log_buffer && @log_buffer.any?
-      # puts @log_buffer.join('\n')
-      File.open(log_path, "a") do |log_file|
-        @log_buffer.each do |log_line|
-          log_file.puts(log_line)
-        end
-      end
-
-      @log_buffer.clear
-    end
-  end
-
-  def init_status_csv
-    flush_status_csv
-    @log_buffer = []
-    File.open(log_path, "w") {|f| f.puts CSV_HEADER}
-    # File.puts(atlas_path, "#{csv_status}\n", mode: 'w')
-  end
-
-  def write_frame_csv_row(frame, action:, match: nil)
-    csv_row = frame.to_csv_row(supplement: [@frame_stack.length, @offset, @nodes.length, @edges.length, match])
-    csv_row = "#{action}, #{csv_row}\n"
-    buffer_status_csv(csv_row)
-  end
-
-  def buffer_status_csv(csv_row)
-    @log_buffer << csv_row
-    @log_buffer.length > 0 && flush_status_csv
-  end
-
-  def log_status(action:, indent: '', details: nil)
-    return
-    indent = INDENT * [@frame_stack.length, 25].min
-    # exit(false) if stack_len > 25
-
-    puts "#{indent}[#{action}] Stack offset: #{offset} -> Stack depth: #{@frame_stack.length}(#{@graph_stats}) / Node count: #{@nodes.length} "
-    if details
-      j = "\n#{indent}  "
-      puts j + details.join("\n#{indent}  ")
-      puts
-    end
-
-  end
-
   def open_frame(frame:)
     # stack_len = @frame_stack.length
     # exit(false) if stack_len > 25
@@ -258,77 +204,52 @@ class Atlas
     )
 
     @frame_stack.unshift(frame)
-    @graph_stats.open_count += 1
-    log_status(action: "#OPEN(#{frame})")
-    write_frame_csv_row(frame, action: :open)
+    @traversal_stats.record_open_action()
   end
 
   def close_frame(frame:)
-    buffy=[]
-
-    # log_status(action: "#<CLOSE(#{frame})")
-    # indent = INDENT * (@frame_stack.length + 1)
-
-    frame_n, similarity = stack_match(frame)
-
-    if frame_n.nil?
-      # buffy << "No frame found: #{frame}"
-      # buffy.concat(@frame_stack.first(50).map{|f| "  <- #{f}"})
-      write_frame_csv_row(frame, action: :close, match: similarity)
-    else
-      # if stack_frame.ma != frame
-      #   buffy << "Pop Mismatch: #{frame} <> #{stack_frame}"
-      #   # buffy.concat(@frame_stack.first(50).reverse.map{|f| "  -> #{f}"})
-      # end
-      # buffy << "POPPING from frame stack: #{frame}"
-      match = "#{frame_n}(#{similarity})"
-      @offset = frame_n
-      @frame_stack.delete_at(frame_n)
-      write_frame_csv_row(frame, action: :pop, match: match)
+    stack_match(frame).tap do |frame_n, similarity|
+      @traversal_stats.record_close_action(frame_n, similarity)
+      if !frame_n.nil?
+        @offset = frame_n
+        @frame_stack.delete_at(frame_n)
+      end
     end
-
-    # indent.chomp!(INDENT)
-    @graph_stats.close_count += 1
-    # log_status(action: "#>>>CLOSE@#{frame_n} <<#{similarity}>> (#{frame})", details: buffy)
-
-
   end
 
   class GraphStats
-    attr_accessor :open_count
-    attr_accessor :close_count
-
-    attr_accessor :perfect_matches
-    attr_accessor :ideal_matches
-    attr_accessor :unideal_matches
-    attr_accessor :no_matches
-
-    attr_accessor :rating_counts
-    # attr_accessor :partial_matches
-    # attr_accessor :exact_matches
-    # attr_accessor :full_matches
-
     def initialize
-      @open_count = 0
+      @push_count = 0
+      @pop_count = 0
       @close_count = 0
-
-      @perfect_matches = 0
-      @ideal_matches = 0
-      @unideal_matches = 0
-      @no_matches = 0
-
-      @rating_counts = {}
+      @match_unideal_count = 0
+      @match_nonzero_count = 0
     end
 
-    def increment_rating(rating)
-      rating_counts[rating] = rating_counts.fetch(rating, 0) + 1
+    def record_open_action
+      @push_count += 1
+    end
+
+    def record_close_action(frame_n, similarity)
+      if frame_n.nil?
+        @close_count += 1
+      else
+        @pop_count += 1
+        @match_unideal_count += 1 unless ChaosDetector::StackFrame::VERY_SIMILAR.include?(similarity)
+        @match_nonzero_count += 1 if frame_n > 0
+      end
     end
 
     def to_s
-      " +#{@open_count} -#{@close_count} =(#{@open_count - @close_count}) ->[**#{@perfect_matches} / *#{@ideal_matches} / ^#{@unideal_matches} / !#{@no_matches}]"
+      m << decorate(ROOT_NODE_NAME, clamp: :parens) if @is_root
+      "Total: %s [+push -pop (-close)] +%d -%d(%d) unideal: %d >> stack-pos-off: %d" % [
+        decorate(@push_count + @pop_count + @close_count, clamp: :bracket),
+        @push_count,
+        @pop_count,
+        @close_count,
+        @match_unideal_count,
+        @match_nonzero_count
+      ]
     end
   end
-
-
-end
 end

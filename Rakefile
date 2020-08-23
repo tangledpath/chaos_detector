@@ -13,8 +13,8 @@ gemspec = Gem::Specification.new do |s|
   s.description = DESCRIPTION
   s.email = "steven.miers@gmail.com"
   s.homepage = "http://github.com/tangledpath/chaos_detector"
-  s.authors = ["Steven Miers, Daniel Cadenas, other contribs"]
-  # s.executables = ["chaos_detector"]
+  s.authors = ["Steven Miers"]
+  s.executables = ["detect_chaos"]
   s.licenses = ['MIT']
   s.add_development_dependency(%q<rake-compiler>, ["~> 1.1"])
   s.add_development_dependency(%q<rspec>, ["~> 3.9"])

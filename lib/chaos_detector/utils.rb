@@ -19,7 +19,7 @@ def Kernel.ought?(obj)
 end
 
 def decorate(text, *args)
-  ChaosDetector::Utils::decorate(text, args)
+  ChaosDetector::Utils::decorate(text, *args)
 end
 
 
@@ -124,21 +124,6 @@ module ChaosDetector::Utils
         p(d(message, prefix: 'Complete: ', suffix: d(result)))
       else
         p(message)
-      end
-    end
-
-    def to_csv_row(ary)
-      ary.map{|val| to_csv_item(val)}.join(", ")
-      # [@domain_name, @mod_name, @mod_type, @mod_path, @fn_name, @line_num, @note]
-    end
-
-    def to_csv_item(v)
-      if v.is_a?Numeric
-        v
-      elsif v.is_a?Symbol
-        v.inspect
-      else
-        %{"#{v}"}
       end
     end
 
