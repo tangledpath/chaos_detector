@@ -13,6 +13,11 @@ module TCS
         TCS::Utils::StrUtil::decorate(text, *args)
       end
 
+      def decorate_tuple(src, dest, *args)
+        TCS::Utils::StrUtil::decorate_tuple(src, dest, *args)
+      end
+
+
       def with(obj)
         TCS::Utils::CoreUtil::with(obj) {yield obj}
       end
@@ -22,7 +27,7 @@ module TCS
       end
 
       def aught?(obj)
-        !TCS::Utils::CoreUtil::naught?(obj)
+        TCS::Utils::CoreUtil::aught?(obj)
       end
     end
   end

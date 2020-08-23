@@ -138,11 +138,26 @@ module ChaosDetector
       end
 
       def frame_at_trace(tracepoint)
-        mod_class = tracepoint.defined_class
-        mod_name = mod_name_from_class(mod_class)
-        mod_type = mod_type_from_class(mod_class)
         fn_path = localize_path(tracepoint.path)
         domain_name = domain_from_path(local_path: fn_path)
+
+        mod_class = tracepoint.defined_class
+        mod_name = mod_name_from_class(mod_class)
+
+        if naught?mod_name
+          puts "Blank class get mod_class for tracepoint. [#{tracepoint.defined_class}]"
+          puts ("MMMM >>> %s, %s, %s, %s:L%d, %s " % [
+            decorate(tracepoint.callee_id),
+            decorate(domain_name),
+            decorate(tracepoint.method_id),
+            decorate(fn_path),
+            tracepoint.lineno,
+            decorate(tracepoint.self)
+          ])
+        end
+
+        mod_type = mod_type_from_class(mod_class)
+
 
         ChaosDetector::Stacker::Frame.new(
           callee: tracepoint.callee_id,
@@ -188,7 +203,8 @@ module ChaosDetector
           when Module
             :module
           else
-            log "Unknown mod_type: #{tp&.defined_class&.class}"
+            # log "Unknown mod_type: #{tp&.defined_class&.class}"
+            log "Unknown mod_type: #{clz}"
             :nil
         end
       end

@@ -4,10 +4,11 @@ module TCS
     module StrUtil
       STR_INDENT = '  '.freeze
       STR_BLANK = ''.freeze
+      STR_NS_SEP = '::'.freeze
 
       class << self
 
-        def decorate_pair(source, dest, indent_length: 0, clamp: :angle, join_str: ' -> ')
+        def decorate_tuple(source, dest, indent_length: 0, clamp: :angle, join_str: ' -> ')
           decorate("#{decorate(source)}#{decorate(dest, prefix: join_str)}", clamp:clamp, indent_length:indent_length)
         end
 
@@ -16,6 +17,13 @@ module TCS
 
           clamp_pre, clamp_post = clamp_chars(clamp: clamp)
           indent("#{prefix}#{sep}#{clamp_pre}#{text}#{clamp_post}#{sep}#{suffix}", indent_length)
+        end
+
+        def humanize_module(mod_name, max_segments:2, sep_token: STR_NS_SEP)
+          return STR_BLANK if nay?mod_name
+          raise ArgumentError, "Must have at least 1 segment." if max_segments < 1
+
+          mod_name.split(sep_token).last(max_segments).join(sep_token)
         end
 
         alias_method :d, :decorate

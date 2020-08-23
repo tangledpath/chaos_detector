@@ -1,179 +1,174 @@
 require 'ruby-graphviz'
 
-require_relative 'atlas'
 require_relative 'options'
 require_relative 'stacker/frame'
 require 'graph_theory/appraiser'
 require 'tcs/refined_utils'
+require 'tcs/utils/str_util'
+
 using TCS::RefinedUtils
 
 module ChaosDetector
-  class Grapher
-    extend TCS::Utils::CoreUtil::ChaosAttr
+  module Graphing
+    class Grapher
+      extend TCS::Utils::CoreUtil::ChaosAttr
 
-    CLR_BLACK='black'
-    CLR_DARKRED = 'red4'
-    CLR_DARKGREEN = 'darkgreen'
-    CLR_BRIGHTGREEN = 'yellowgreen'
-    CLR_CYAN = 'cyan'
-    CLR_GREY = 'snow3'
-    CLR_ORANGE = 'orange'
-    CLR_NICEGREY = 'snow4'
-    CLR_PALEGREEN = 'palegreen'
-    CLR_PINK = 'deeppink1'
-    CLR_PURPLE = '#662D91'
-    CLR_SLATE = "#778899"
-    CLR_WHITE='white'
+      EDGE_MIN = 0.5
+      EDGE_BASELINE = 7.5
 
-    GRAPH_OPTS = {
-      type: :digraph,
-      bgcolor: CLR_SLATE,
-      center: 'true',
-      color: CLR_WHITE,
-      compound: 'true',
-      # # concentrate: 'true',
-      # engine: 'dot',
-      fontcolor: CLR_WHITE,
-      fontname: 'Georgia',
-      fontsize: '48',
-      labelloc: 't',
-      pencolor: CLR_WHITE,
-      # ordering: 'out',
-      # outputorder: 'nodesfirst',
-      nodesep: '0.25',
-      # newrank: 'true',
-      # rankdir: 'LR',
-      ranksep: '1.0',
-      # size: '10,8',
-      # splines: 'spline',
-      strict: 'true'
-    }
+      CLR_BLACK='black'
+      CLR_DARKRED = 'red4'
+      CLR_DARKGREEN = 'darkgreen'
+      CLR_BRIGHTGREEN = 'yellowgreen'
+      CLR_CYAN = 'cyan'
+      CLR_GREY = 'snow3'
+      CLR_ORANGE = 'orange'
+      CLR_NICEGREY = 'snow4'
+      CLR_PALEGREEN = 'palegreen'
+      CLR_PINK = 'deeppink1'
+      CLR_PURPLE = '#662D91'
+      CLR_SLATE = "#778899"
+      CLR_WHITE='white'
 
-    SUBDOMAIN_ATTRS = {
-      bgcolor: CLR_NICEGREY,
-      fontsize: '16',
-      rank: 'same',
-      fontname: 'Verdana',
-      labelloc: 't',
-      pencolor: CLR_GREY,
-      penwidth: '2'
-    }
+      GRAPH_OPTS = {
+        type: :digraph,
+        bgcolor: CLR_SLATE,
+        center: 'true',
+        color: CLR_WHITE,
+        compound: 'true',
+        # # concentrate: 'true',
+        # engine: 'dot',
+        fontcolor: CLR_WHITE,
+        fontname: 'Georgia',
+        fontsize: '48',
+        labelloc: 't',
+        pencolor: CLR_WHITE,
+        # ordering: 'out',
+        # outputorder: 'nodesfirst',
+        nodesep: '0.25',
+        # newrank: 'true',
+        # rankdir: 'LR',
+        ranksep: '1.0',
+        # size: '10,8',
+        # splines: 'spline',
+        strict: 'true'
+      }
 
-    NODE_ATTR={
-      shape: 'egg',
-      fontname: 'Verdana',
-      fontsize: '12',
-      # fillcolor: CLR_WHITE,
-      fontcolor: CLR_WHITE,
-      color: CLR_WHITE
-    }
+      SUBDOMAIN_ATTRS = {
+        bgcolor: CLR_NICEGREY,
+        fontsize: '16',
+        rank: 'same',
+        fontname: 'Verdana',
+        labelloc: 't',
+        pencolor: CLR_GREY,
+        penwidth: '2'
+      }
 
-    # TODO: integrate options as needed:
-    def initialize(atlas, options=nil)
-      raise ArgumentError, "Atlas is required." if atlas.nil?
-      @atlas = atlas
-      @options = options
-      @graph_metrics = GraphTheory::Appraiser.new(@atlas.graph)
-    end
+      NODE_ATTR={
+        shape: 'egg',
+        fontname: 'Verdana',
+        fontsize: '12',
+        # fillcolor: CLR_WHITE,
+        fontcolor: CLR_WHITE,
+        color: CLR_WHITE
+      }
 
-    def create_directed_graph(label)
-      GraphViz.digraph(:G, label: label, **GRAPH_OPTS)
-    end
 
-    def add_domain_subgraph(graph, domain_name)
-      domain_label = "#{domain_name.capitalize} Domain"
-      graph.add_graph("cluster_#{domain_name}", label: domain_label, **SUBDOMAIN_ATTRS)
-    end
 
-    def build_graphs
-      raise "Atlas isn't present!  Call record first." if @atlas.nil?
-      log("Graphing from Atlas: #{@atlas.inspect}")
-      log("Gathering graph metrics...")
-      @graph_metrics.appraise
-      log("Building module graph...")
-      build_module_graph
-      log("Building domain graph...")
-      build_domain_graph
-      log("Graph metrics")
-      log(@graph_metrics.report)
-    end
-
-    def log(msg)
-      log_msg(msg, subject: "Grapher")
-    end
-
-    # TODO: This has moved to chaos_graphs/....
-    def build_module_graph
-      # Create a new top-level graph:
-
-      log("Creating a module-level dependency graph from atlas: #{@atlas}")
-      graph = create_directed_graph("Module Dependencies")
-      nodes = {}
-      domain_graphs = @atlas.graph.nodes.group_by(&:domain_name).map do |domain, dnodes|
-        subg = add_domain_subgraph(graph, domain)
-        dnodes.each do |domain_node|
-          nodes[domain_node] = build_graph_node(subg, domain_node)
-        end
-        [domain, subg]
+      # TODO: integrate options as needed:
+      def initialize(options=nil)
+        @options = options
+        @root_graph = nil
+        @node_hash = {}
+        @subgraph_hash = {}
+        # @graph_metrics = GraphTheory::Appraiser.new(@atlas.graph)
       end
 
-      log("Graph Domains: #{domain_graphs.length}")
-
-      # nodes = graph.nodes.zip(viz_nodes).to_h
-
-      graph_edges = {}
-      @atlas.graph.edges.each do |edge|
-        src = nodes.fetch(edge.src_node) do |n|
-          log "src edge not found: #{n}"
-          # TODO: Look up domain if necessarry.
-          build_graph_node(graph, n)
-        end
-
-        dep = nodes.fetch(edge.dep_node) do |n|
-          log "Dep edge not found: #{n}"
-          build_graph_node(graph, n)
-        end
-
-        edge_key = [src, dep]
-        unless graph_edges.has_key?(edge_key)
-          log("Edge: #{src} -> #{dep}")
-          graph_edges[edge_key] = graph.add_edges(src, dep, color: CLR_WHITE)
-        end
-        # puts "SRC: #{src}"
-        # puts "DEP: #{dep}"
-
-        # puts "-------------------------------------"
+      def create_directed_graph(label)
+        @label = label
+        @root_graph = GraphViz.digraph(:G, label: @label, **GRAPH_OPTS)
       end
 
-      log("Writing module dependencies")
-      # Generate output image
-      graph.output( :png => "module_deps.png" )
-    end
-
-    def build_domain_graph
-      return
-      # dg = GraphViz.new( :G, type: :digraph, label: "Domain dependencies")
-      dg = create_directed_graph("Domain Dependencies")
-
-      # TODO: Add subgraph (clusters) and edges between them:
-
-      domain_graph_nodes = @graph_metrics.domain_names.map do |dom_name|
-        [dom_name, add_domain_subgraph(dg, dom_name)]
-      end.to_h
-
-      log("Domain dependencies #{@graph_metrics.domain_edges.length}")
-      @graph_metrics.domain_edges.each do |k|
-        src = domain_graph_nodes[k.src_domain]
-        dep = domain_graph_nodes[k.dep_domain]
-        log("DOMAIN EDGE: #{k.src_domain} -> #{k.dep_domain}: #{k.dep_count} (#{k.dep_count_norm.round(2)})")
-        dg.add_edges(src, dep, {label: k.dep_count, penwidth: 0.5 + k.dep_count_norm * 7.5})
+      def assert_graph_state
+        raise "@root_graph is not set yet.  Call create_directed_graph." unless @root_graph
       end
-      dg.output( :png => "domain_dep.png" )
-    end
 
-    def build_graph_node(graph, node)
-      graph.add_nodes(node.label, **NODE_ATTR)
-      # graph.add_nodes(label: node.label, **NODE_ATTR)
+      def add_node_as_subgraph(node, graph:nil)
+        assert_graph_state
+        raise "node is required" unless node
+        parent_graph = graph || @root_graph
+
+        parent_graph.add_graph("cluster_#{node.label}", label: node.label, **SUBDOMAIN_ATTRS)
+      end
+
+      def add_node_to_graph(node, graph)
+        assert_graph_state
+        raise "graph is required" unless graph
+        raise "node is required" unless node
+
+        graph.add_nodes(node.label, **NODE_ATTR)
+      end
+
+      def add_graph_nodes(nodes, graph:nil, as_subgraph:false)
+        assert_graph_state
+        raise "node is required" unless nodes
+
+        parent_graph = graph || @root_graph
+
+        nodes.each do |node|
+          if as_subgraph
+            @subgraph_hash[node.to_k] = add_subgraph_node(node, parent_graph, )
+          else
+            @node_hash[node.to_k] = add_node_to_graph(node, parent_graph)
+          end
+        end
+      end
+
+      def add_nodes_to_parent(nodes, parent_node: nil)
+        assert_graph_state
+
+        subgraph = parent_node ? @subgraph_hash[parent_node.to_k] : @root_graph
+        add_graph_nodes(subgraph, nodes)
+      end
+
+      def find_graph_node(node)
+        assert_graph_state
+        log("NODE_HASH: LOOKING UP #{decorate(node)}")
+        @node_hash[node.to_k] || @subgraph_hash[node.to_k]
+      end
+
+      def add_edges(edges)
+        assert_graph_state
+
+        @node_hash.each do |k, v|
+          log("NODE_HASH: Has value for #{decorate(k)} => #{decorate(v)}")
+        end
+
+        max_reduce = edges.map(&:reduce_cnt).max
+
+        edges.each do |e|
+          log("DDDDDOMAIN EDGE: #{e}")
+          src = find_graph_node(e.src_node)
+          dep = find_graph_node(e.dep_node)
+          log("DOMAIN EDGE: #{src} -> #{dep}")
+          norm_reduce_cnt = e.reduce_cnt / max_reduce
+          weight = edge_weight(norm_reduce_cnt)
+          @root_graph.add_edges(src, dep)  #, {label: e.reduce_cnt, penwidth: weight})
+        end
+      end
+
+      def edge_weight(n, edge_min: EDGE_MIN, edge_baseline: EDGE_BASELINE)
+        edge_min + n * edge_baseline
+      end
+
+      def log(msg)
+        log_msg(msg, subject: "Grapher")
+      end
+
+      def render_graph
+        assert_graph_state
+        @root_graph.output( :png => "#{@label}.png" )
+      end
     end
   end
 end

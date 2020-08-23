@@ -22,7 +22,7 @@ require 'chaos_detector/options'
 #   #   def build_graphs
 #   #     raise "Atlas isn't present!  Call record first." if ChaosDetector::Navigator.atlas.nil?
 
-#   #     grapher = ChaosDetector::Grapher.new(ChaosDetector::Navigator.atlas)
+#   #     grapher = ChaosDetector::Graphing::Grapher.new(ChaosDetector::Navigator.atlas)
 #   #     grapher.build_graphs()
 #   #   end
 #   # end

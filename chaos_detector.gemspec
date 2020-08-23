@@ -8,7 +8,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib".freeze]
   s.authors = ["Steven Miers".freeze]
-  s.date = "2020-08-16"
+  s.date = "2020-08-19"
   s.description = "Discover and graph dependencies for ruby and RoR apps".freeze
   s.email = "steven.miers@gmail.com".freeze
   s.executables = ["detect_chaos".freeze]

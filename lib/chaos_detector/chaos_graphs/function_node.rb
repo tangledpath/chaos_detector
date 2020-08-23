@@ -1,3 +1,4 @@
+require_relative 'fn_info'
 require_relative 'mod_info'
 require 'forwardable'
 require 'graph_theory/edge'
@@ -69,24 +70,22 @@ module ChaosDetector
         # !@is_root ? @domain_name : @domain_name || ROOT_NODE_NAME.downcase
       end
 
-      def to_s(scope=nil)
-        self.class.human_key(fn_path: @fn_path, fn_name: fn_name, domain_name: domain_name)
+      def to_s
+        "%s: (%s) - %s" % [super, domain_name, short_path]
+      end
+
+      def to_info
+        FnInfo.new(fn_name: fn_name, fn_path: fn_path, domain_name: domain_name)
       end
 
       def label
-        m = @fn_path.split("/").last(2).join("/")
-        m << decorate(fn_name, clamp: :parens)
+        m = decorate(super, clamp: :parens, suffix:' ')
+        m << short_path
         m
-        # "#{m}\n#{@domain_name}"
       end
 
-      def self.human_key(fn_path:nil, fn_name:nil, domain_name:nil, root: nil)
-        hkey = "["
-        hkey << "(#{domain_name}) " unless domain_name.nil? || domain_name.empty?
-        hkey << decorate(fn_name)  #unless fn_name.nil? || fn_name.empty?
-        hkey << " '#{fn_path}'" unless fn_path.nil? || fn_path.empty?
-        m << decorate(ROOT_NODE_NAME, clamp: :parens) if root
-        hkey << "]"
+      def short_path
+        TCS::Utils::StrUtil.humanize_module(@fn_path, sep_token: '/')
       end
 
       class << self

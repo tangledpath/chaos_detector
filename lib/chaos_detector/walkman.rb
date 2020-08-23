@@ -14,7 +14,7 @@ using TCS::RefinedUtils
 module ChaosDetector
   class Walkman
     PLAYBACK_MSG = "Playback error on line number %d of pre-recorded CSV %s:\n  %s\n  %s".freeze
-    CSV_HEADER = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE FN_PATH LINE_NUM FN_NAME DEPTH NODES EDGES MATCH_OFFSET}
+    CSV_HEADER = %w{ROWNUM, ACTION DOMAIN_NAME MOD_NAME MOD_TYPE FN_PATH LINE_NUM FN_NAME DEPTH NODES EDGES MATCH_OFFSET}
     COL_COUNT = CSV_HEADER.length
     COL_INDEXES = CSV_HEADER.map.with_index {|col, i| [col.downcase.to_sym, i]}.to_h
 
@@ -27,12 +27,14 @@ module ChaosDetector
       flush_csv
       @csv_path = nil
       @log_buffer = []
+      @rownum = 0
     end
 
     def record_start
       flush_csv
       @csv_path = nil
       @log_buffer = []
+      @rownum = 0
       autosave_csv
       init_file_with_header(csv_path)
     end
@@ -43,17 +45,17 @@ module ChaosDetector
     #   frame A Frame object with its attributes contained in the CSV row
     def playback
       log("Walkman replaying CSV: #{csv_path}")
-      row_num = 0
+      @rownum = 0
       row_cur = nil
       CSV.foreach(csv_path, headers: true) do |row|
-        row_num += 1
+        @rownum += 1
         row_cur = row
         action, frame = playback_row(row)
         log("playback_row= [#{action}]: #{frame}")
         yield action, frame
       end
     rescue StandardError => x
-      raise ScriptError, log(PLAYBACK_MSG % [row_num, csv_path, row_cur, x.inspect])
+      raise ScriptError, log(PLAYBACK_MSG % [@rownum, csv_path, row_cur, x.inspect])
     end
 
     def count
@@ -108,11 +110,12 @@ module ChaosDetector
 
     def write_frame(frame, action:, frame_offset:nil)
       action = action
-      csv_row = [action]
+      csv_row = [@rownum, action]
       csv_row.concat(frame_csv_fields(frame))
       csv_row.concat(atlas_csv_fields(frame_offset: frame_offset))
 
       @log_buffer << csv_row
+      @rownum += 1
       buffered_trigger
     end
 
