@@ -68,7 +68,7 @@ class ChaosDetector::Atlas
     end
 
     unless node
-      puts "*****************Adding to nodes(#{@nodes.length}): #{frame.mod_name}(#{frame.domain_name}) -- #{frame.mod_path}:L#{frame.line_num}"
+      # puts "*****************Adding to nodes(#{@nodes.length}): #{frame.mod_name}(#{frame.domain_name}) -- #{frame.mod_path}:L#{frame.line_num}"
       @nodes << node=ChaosDetector::Node.new(domain_name: frame.domain_name, mod_name: frame.mod_name, mod_path: frame.mod_path)
     end
 
@@ -174,6 +174,17 @@ class ChaosDetector::Atlas
 
   def to_s
     "Nodes: %d, Edges: %d, Frames: %d" % [@nodes.length, @edges.length, @frame_stack.length]
+  end
+
+  def inspect
+    buffy = [to_s]
+    buffy << "Nodes (#{@nodes.length})"
+    buffy.concat(@nodes.map {|n|"  #{n.label}"})
+
+    # buffy << "Edges (#{@edges.length})"
+    # buffy.concat(@edges.map {|e|"  #{e.to_s}"})
+
+    buffy.join("\n")
   end
 
   private

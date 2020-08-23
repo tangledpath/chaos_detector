@@ -68,6 +68,7 @@ class ChaosDetector::Grapher
 
   # TODO: integrate options:
   def initialize(atlas, options=nil)
+    raise ArgumentError, "Atlas is required." if atlas.nil?
     @atlas = atlas
     @options = options
     @graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(nodes: @atlas.nodes, edges: @atlas.edges)
@@ -84,6 +85,7 @@ class ChaosDetector::Grapher
 
   def build_graphs
     raise "Atlas isn't present!  Call record first." if @atlas.nil?
+    log("Graphing from Atlas: #{@atlas.inspect}")
     log("Gathering graph metrics...")
     @graph_metrics.appraise
     log("Building module graph...")

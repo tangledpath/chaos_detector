@@ -9,6 +9,7 @@ require 'csv'
 
 # TODO: add traversal types to find depth, coupling in various ways (directory/package/namespace):
 class ChaosDetector::Walkman
+  PLAYBACK_MSG = "Playback error on line number %d of pre-recorded CSV %s:\n  %s\n  %s".freeze
   CSV_HEADER = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE MOD_PATH LINE_NUM FN_NAME DEPTH OFFSET NODES EDGES MATCH_OFFSET SIMILARITY}
   COL_COUNT = CSV_HEADER.length
   COL_INDEXES = CSV_HEADER.map.with_index {|col, i| [col.downcase.to_sym, i]}.to_h
@@ -32,19 +33,23 @@ class ChaosDetector::Walkman
     File.open(csv_path, "w") {|f| f.puts CSV_HEADER.join(",")}
   end
 
-  def each
+  # Play back CSV configured in Walkman options
+  # yields each row as
+  #   action A symbol denoting the type of action for the recorded frame
+  #   frame A StackFrame object with its attributes contained in the CSV row
+  def playback
     log("Walkman replaying CSV: #{csv_path}")
+    row_num = 0
+    row_cur = nil
     CSV.foreach(csv_path, headers: true) do |row|
-      stack_frame = ChaosDetector::StackFrame.new(
-        mod_type: csv_row_val(row, :mod_type),
-        mod_name: csv_row_val(row, :mod_name),
-        mod_path: csv_row_val(row, :mod_path),
-        domain_name: csv_row_val(row, :domain_name),
-        fn_name: csv_row_val(row, :fn_name),
-        line_num: csv_row_val(row, :line_num)
-      )
-      yield csv_row_val(row, :action), stack_frame
+      row_num += 1
+      row_cur = row
+      action, frame = playback_row(row)
+      log("playback_row= [#{action}]: #{frame}")
+      yield action, frame
     end
+  rescue StandardError => x
+    raise ScriptError, log(PLAYBACK_MSG % [row_num, csv_path, row_cur, x.inspect])
   end
 
   def count
@@ -126,4 +131,18 @@ class ChaosDetector::Walkman
       [@atlas.frame_stack.length, @atlas.offset, @atlas.nodes.length, @atlas.edges.length]
     end
 
+    # Play back a single given row
+    # returns the action and frame as described in #playback
+    def playback_row(row)
+      action = csv_row_val(row, :action)
+      frame = ChaosDetector::StackFrame.new(
+        mod_type: csv_row_val(row, :mod_type),
+        mod_name: csv_row_val(row, :mod_name),
+        mod_path: csv_row_val(row, :mod_path),
+        domain_name: csv_row_val(row, :domain_name),
+        fn_name: csv_row_val(row, :fn_name),
+        line_num: csv_row_val(row, :line_num)
+      )
+      [action, frame]
+    end
 end

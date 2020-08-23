@@ -15,6 +15,13 @@ module ChaosDetector
       def safe_fn_call(fn_call)
         fn_call || FnCall.new(DEFAULT_FN, nil)
       end
+
+      def to_s
+        ChaosDetector::Utils.decorate_pair(
+          "#{@src.fn_name}:L##{@src.line_num}",
+          "#{@dep.fn_name}:L##{@dep.line_num}"
+        )
+      end
     end
 
     attr_reader :src_node
@@ -44,20 +51,18 @@ module ChaosDetector
       # @fn_calls[fn_call] = cnt + 1
     end
 
-    def to_s(show_nodes: true, show_fn_pairs: false)
+    def to_s()
+      s = ChaosDetector::Utils.decorate_pair(src_node.label, dep_node.label, clamp: :angle)
+      Kernel.with(@fn_call_pairs.first) {|f| s << "#{f.src.fn_name}:L##{f.src.line_num}" }
+      s
+    end
 
+    def inspect(show_nodes: true, show_fn_pairs: false)
       buffy = []
 
-      buffy << ChaosDetector::Utils.decorate_pair(src_node, dep_node, clamp: :angle) if show_nodes
-
+      buffy << to_s if show_nodes
       if show_fn_pairs && @fn_call_pairs.any?
-        @fn_call_pairs.each do |f|
-          buffy << ChaosDetector::Utils.decorate_pair(
-            "#{f.src.fn_name}:L##{f.src.line_num}",
-            "#{f.dep.fn_name}:L##{f.dep.line_num}",
-            indent: 1
-          )
-        end
+        buffy.concat(@fn_call_pairs.map {|f| ChaosDetector::Utils.indent(f, 2) })
       end
 
       buffy.join("\n")
