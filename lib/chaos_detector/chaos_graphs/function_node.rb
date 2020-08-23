@@ -1,5 +1,5 @@
-require_relative 'fn_info'
-require_relative 'mod_info'
+require 'chaos_detector/stacker/fn_info'
+require 'chaos_detector/stacker/mod_info'
 require 'forwardable'
 require 'chaos_detector/graph_theory/edge'
 require 'chaos_detector/graph_theory/node'
@@ -14,6 +14,7 @@ module ChaosDetector
       attr_accessor :domain_name
       attr_accessor :fn_path
       attr_accessor :fn_line
+      attr_accessor :fn_line_end
 
       # Modules to which this Function Node is associated:
       attr_reader :mod_infos
@@ -49,11 +50,11 @@ module ChaosDetector
       end
 
       def add_module_attrs(mod_name:, mod_path:, mod_type:)
-        add_module(ChaosDetector::ChaosGraphs::ModInfo.new(mod_name:mod_name, mod_path: mod_path, mod_type: mod_type))
+        add_module(ChaosDetector::Stacker::ModInfo.new(mod_name:mod_name, mod_path: mod_path, mod_type: mod_type))
       end
 
       def ==(other)
-        ChaosDetector::ChaosGraphs::FnInfo.match?(self, other)
+        ChaosDetector::Stacker::FnInfo.match?(self, other)
       end
 
       def domain_name
@@ -66,7 +67,7 @@ module ChaosDetector
       end
 
       def to_info
-        FnInfo.new(fn_name: fn_name, fn_line: fn_line, fn_path: fn_path, domain_name: domain_name)
+        FnInfo.new(fn_name: fn_name, fn_line: fn_line, fn_path: fn_path)
       end
 
       def label

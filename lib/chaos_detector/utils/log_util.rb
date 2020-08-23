@@ -8,8 +8,10 @@ module ChaosDetector
       class << self
 
         # Simple logging, more later
-        def log(msg, subject: nil)
+        def log(msg, object: nil, subject: nil)
           message = nay?(subject) ? msg : d(msg, prefix:d(subject, clamp: :bracket))
+          message << d(object, clamp: :parens, prefix: ': ')
+
           if block_given?
             print_line(d(message, prefix: 'Starting: '))
             result = yield

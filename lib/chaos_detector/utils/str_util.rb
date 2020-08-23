@@ -18,14 +18,14 @@ module ChaosDetector
         end
 
         def decorate(text, clamp: :nil, prefix: nil, suffix: nil, sep: nil, indent_length: 0)
-          return STR_BLANK if nay?text
+          return '' if nay?text
 
           clamp_pre, clamp_post = clamp_chars(clamp: clamp)
           indent("#{prefix}#{sep}#{clamp_pre}#{text}#{clamp_post}#{sep}#{suffix}", indent_length)
         end
 
         def humanize_module(mod_name, max_segments:2, sep_token: STR_NS_SEP)
-          return STR_BLANK if nay?mod_name
+          return '' if nay?mod_name
           raise ArgumentError, "Must have at least 1 segment." if max_segments < 1
 
           mod_name.split(sep_token).last(max_segments).join(sep_token)
@@ -57,7 +57,7 @@ module ChaosDetector
         end
 
         def indent(text, indent_length=1)
-          return STR_BLANK if nay?text
+          return '' if nay?text
           return text unless indent_length
 
           "#{STR_INDENT * indent_length}#{text}"

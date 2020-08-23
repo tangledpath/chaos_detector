@@ -1,5 +1,5 @@
-require_relative 'mod_info'
-
+require 'chaos_detector/stacker/mod_info'
+require 'chaos_detector/graph_theory/node'
 require 'chaos_detector/utils/str_util'
 require 'chaos_detector/chaos_utils'
 
@@ -38,7 +38,7 @@ module ChaosDetector
       end
 
       def to_info
-        ChaosDetector::ChaosGraphs::ModInfo.new(mod_name:mod_name, mod_path: mod_path, mod_type: mod_type)
+        ChaosDetector::Stacker::ModInfo.new(mod_name:mod_name, mod_path: mod_path, mod_type: mod_type)
       end
 
       def to_k

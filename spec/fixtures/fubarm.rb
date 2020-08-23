@@ -13,7 +13,10 @@ module Fubarm
 
   class Bazm
     def self.bazm
+      # Comment
       puts "fubar_mod::bazzzzzz"
+      # Stuff
+      puts "again"
     end
   end
 end

@@ -1,25 +1,24 @@
+require 'csv'
 require 'digest'
-require 'chaos_detector/graph_theory/edge'
-require_relative 'chaos_graphs/function_node'
+
+require 'chaos_detector/utils/fs_util'
+require 'chaos_detector/chaos_utils'
+
 require_relative 'options'
 require_relative 'stacker/frame'
-require 'chaos_detector/utils/fs_util'
-require 'csv'
 
-require 'chaos_detector/chaos_utils'
 # TODO: add traversal types to find depth, coupling in various ways (directory/package/namespace):
 module ChaosDetector
   class Walkman
     PLAYBACK_MSG = "Playback error on line number %d of pre-recorded CSV %s:\n  %s\n  %s".freeze
-    CSV_HEADER = %w{ROWNUM ACTION DOMAIN_NAME MOD_NAME MOD_TYPE FN_PATH FN_LINE FN_NAME DEPTH NODES EDGES MATCH_OFFSET}
+    CSV_HEADER = %w{ROWNUM EVENT MOD_NAME MOD_TYPE FN_PATH FN_LINE FN_NAME CALLER_PATH CALLER_LINE CALLER_NAME }
     COL_COUNT = CSV_HEADER.length
     COL_INDEXES = CSV_HEADER.map.with_index {|col, i| [col.downcase.to_sym, i]}.to_h
 
     DEFALT_BUFFER_LENGTH = 1000
 
-    def initialize(atlas:, options:)
+    def initialize(options:)
       @buffer_length = options.walkman_buffer_length || DEFALT_BUFFER_LENGTH
-      @atlas = atlas
       @options = options
       flush_csv
       @csv_path = nil
@@ -38,7 +37,6 @@ module ChaosDetector
 
     # Play back CSV configured in Walkman options
     # yields each row as
-    #   action A symbol denoting the type of action for the recorded frame
     #   frame A Frame object with its attributes contained in the CSV row
     def playback
       log("Walkman replaying CSV with #{count} lines: #{csv_path}")
@@ -47,9 +45,9 @@ module ChaosDetector
       CSV.foreach(csv_path, headers: true) do |row|
         @rownum += 1
         row_cur = row
-        action, frame = playback_row(row)
+        frame = playback_row(row)
         # log("playback_row= [#{action}]: #{frame}")
-        yield @rownum, action, frame
+        yield @rownum, frame
       end
     rescue StandardError => x
       raise ScriptError, log(PLAYBACK_MSG % [@rownum, csv_path, row_cur, x.inspect])
@@ -107,11 +105,9 @@ module ChaosDetector
       end
     end
 
-    def write_frame(frame, action:, frame_offset:nil)
-      action = action
-      csv_row = [@rownum, action]
+    def write_frame(frame, frame_offset:nil)
+      csv_row = [@rownum]
       csv_row.concat(frame_csv_fields(frame))
-      csv_row.concat(atlas_csv_fields(frame_offset: frame_offset))
 
       @log_buffer << csv_row
       @rownum += 1
@@ -119,10 +115,6 @@ module ChaosDetector
     end
 
     private
-
-      def atlas_csv_fields(frame_offset: nil)
-        [@atlas.stack_depth, @atlas.graph.nodes.length, @atlas.graph.edges.length, frame_offset]
-      end
 
       def csv_row_val(row, col_header)
         r = COL_INDEXES[col_header]
@@ -134,7 +126,17 @@ module ChaosDetector
       end
 
       def frame_csv_fields(f)
-        [f.domain_name, f.mod_name, f.mod_type, f.fn_path, f.fn_line, f.fn_name]
+        [
+          f.event,
+          f.mod_info.mod_name,
+          f.mod_info.mod_type,
+          f.fn_info.fn_path,
+          f.fn_info.fn_line,
+          f.fn_info.fn_name,
+          f.caller_fn_info&.fn_path,
+          f.caller_fn_info&.fn_line,
+          f.caller_fn_info&.fn_name
+        ]
       end
 
       def init_file_with_header(filepath)
@@ -143,20 +145,38 @@ module ChaosDetector
       end
 
       # Play back a single given row
-      # returns the action and frame as described in #playback
+      # returns the event and frame as described in #playback
       def playback_row(row)
-        action = csv_row_val(row, :action)
-        linenum = csv_row_val(row, :fn_line)
-        fn_line = linenum.nil? ? nil : linenum.to_i
-        frame = ChaosDetector::Stacker::Frame.new(
-          mod_type: csv_row_val(row, :mod_type),
+        event = csv_row_val(row, :event)
+        fn_path = csv_row_val(row, :fn_path)
+        fn_line = csv_row_val(row, :fn_line)&.to_i
+
+        mod_info = ChaosDetector::Stacker::ModInfo.new(
           mod_name: csv_row_val(row, :mod_name),
-          fn_path: csv_row_val(row, :fn_path),
-          domain_name: csv_row_val(row, :domain_name),
-          fn_name: csv_row_val(row, :fn_name),
-          fn_line: fn_line
+          mod_path: fn_path,
+          mod_type: csv_row_val(row, :mod_type),
         )
-        [action, frame]
+
+        fn_info = ChaosDetector::Stacker::FnInfo.new(
+          fn_name: csv_row_val(row, :fn_name),
+          fn_line: fn_line,
+          fn_path: fn_path
+        )
+
+        caller_fn_info = ChaosUtils.with(csv_row_val(row, :caller_name)) do |fn_nm|
+          ChaosDetector::Stacker::FnInfo.new(
+            fn_name: fn_nm,
+            fn_line: csv_row_val(row, :caller_line)&.to_i,
+            fn_path: csv_row_val(row, :caller_path)
+          )
+        end
+
+         ChaosDetector::Stacker::Frame.new(
+          event: event,
+          mod_info: mod_info,
+          fn_info: fn_info,
+          caller_fn_info: caller_fn_info
+        )
       end
   end
 end
