@@ -1,6 +1,5 @@
 require 'ruby-graphviz'
 
-require 'chaos_detector/options'
 require 'tcs/utils/str_util'
 
 require 'tcs/refined_utils'
@@ -8,7 +7,7 @@ using TCS::RefinedUtils
 
 module ChaosDetector
   module Graphing
-    class Grapher
+    class Directed
       EDGE_MIN = 0.5
       EDGE_BASELINE = 7.5
 
@@ -69,19 +68,18 @@ module ChaosDetector
         color: CLR_WHITE
       }
 
-
-
       # TODO: integrate options as needed:
-      def initialize(options=nil)
-        @options = options
+      def initialize(render_path: nil)
         @root_graph = nil
         @node_hash = {}
-        @subgraph_hash = {}
-        # @graph_metrics = GraphTheory::Appraiser.new(@atlas.graph)
+        @cluster_node_hash = {}
+        @render_path = render_path
       end
 
       def create_directed_graph(label)
         @label = label
+        @node_hash.clear
+        @cluster_node_hash.clear
         @root_graph = GraphViz.digraph(:G, label: @label, **GRAPH_OPTS)
       end
 
@@ -89,48 +87,43 @@ module ChaosDetector
         raise "@root_graph is not set yet.  Call create_directed_graph." unless @root_graph
       end
 
-      def add_node_as_subgraph(node, graph:nil)
+      # Add node to given parent_node, assuming parent_node is a subgraph
+      def add_node_to_parent(node, parent_node:, as_cluster: false)
         assert_graph_state
         raise "node is required" unless node
-        parent_graph = graph || @root_graph
 
-        parent_graph.add_graph("cluster_#{node.label}", label: node.label, **SUBDOMAIN_ATTRS)
-      end
-
-      def add_node_to_graph(node, graph)
-        assert_graph_state
-        raise "graph is required" unless graph
-        raise "node is required" unless node
-
-        graph.add_nodes(node.label, **NODE_ATTR)
-      end
-
-      def add_graph_nodes(nodes, graph:nil, as_subgraph:false)
-        assert_graph_state
-        raise "node is required" unless nodes
-
-        parent_graph = graph || @root_graph
-
-        nodes.each do |node|
-          if as_subgraph
-            @subgraph_hash[node.to_k] = add_subgraph_node(node, parent_graph, )
-          else
-            @node_hash[node.to_k] = add_node_to_graph(node, parent_graph)
+        parent_graph = if parent_node
+          find_graph_node(parent_node).tap do |pnode|
+            raise "Couldn't find parent node: #{parent_node}" unless pnode
           end
+        else
+          @root_graph
+        end
+
+        add_node_to_graph(node, graph: parent_graph, as_cluster: as_cluster)
+      end
+
+      def add_node_to_graph(node, graph:nil, as_cluster: false)
+        assert_graph_state
+        raise "node is required" unless node
+
+        parent_graph = graph || @root_graph
+
+        if as_cluster
+          @cluster_node_hash[node.to_k] = parent_graph.add_graph("cluster_#{node.label}", label: node.label, **SUBDOMAIN_ATTRS)
+        else
+          @node_hash[node.to_k] = parent_graph.add_nodes(node.label, **NODE_ATTR)
         end
       end
 
-      def add_nodes_to_parent(nodes, parent_node: nil)
+      def append_nodes(nodes, as_cluster: false)
         assert_graph_state
+        raise "node is required" unless nodes
 
-        subgraph = parent_node ? @subgraph_hash[parent_node.to_k] : @root_graph
-        add_graph_nodes(subgraph, nodes)
-      end
-
-      def find_graph_node(node)
-        assert_graph_state
-        log("NODE_HASH: LOOKING UP #{decorate(node)}")
-        @node_hash[node.to_k] || @subgraph_hash[node.to_k]
+        nodes.each do |node|
+          parent_node = block_given? ? yield(node) : nil
+          add_node_to_parent(node, parent_node: parent_node, as_cluster: as_cluster)
+        end
       end
 
       def add_edges(edges)
@@ -153,18 +146,30 @@ module ChaosDetector
         end
       end
 
-      def edge_weight(n, edge_min: EDGE_MIN, edge_baseline: EDGE_BASELINE)
-        edge_min + n * edge_baseline
-      end
-
-      def log(msg)
-        log_msg(msg, subject: "Grapher")
-      end
-
       def render_graph
         assert_graph_state
-        @root_graph.output( :png => "#{@label}.png" )
+        filename = "#{@label}.png"
+        filename = File.join(@render_path, filename).to_s if @render_path
+        log("Rendering to #{filename}")
+        @root_graph.output(:png => filename )
+        #:path => @render_path,
       end
+
+      private
+        def find_graph_node(node)
+          assert_graph_state
+          log("NODE_HASH: LOOKING UP #{decorate(node)}")
+          @node_hash[node.to_k] || @cluster_node_hash[node.to_k]
+        end
+
+        def edge_weight(n, edge_min: EDGE_MIN, edge_baseline: EDGE_BASELINE)
+          edge_min + n * edge_baseline
+        end
+
+        def log(msg)
+          log_msg(msg, subject: "Grapher")
+        end
+
     end
   end
 end
