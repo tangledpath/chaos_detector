@@ -53,15 +53,7 @@ module ChaosDetector
       end
 
       def ==(other)
-        raise "Domains differ, but fn_info is the same.  Weird." if \
-          self.fn_name == other.fn_name \
-          && self.fn_path == other.fn_path \
-          && self.domain_name != other.domain_name
-
-        self.fn_path == other.fn_path &&
-          (self.fn_name == other.fn_name || self.fn_line == other.fn_line)
-
-          # && (!match_line_num || self.fn_line == other.fn_line)
+        ChaosDetector::ChaosGraphs::FnInfo.match?(self, other)
       end
 
       def domain_name
@@ -74,7 +66,7 @@ module ChaosDetector
       end
 
       def to_info
-        FnInfo.new(fn_name: fn_name, fn_path: fn_path, domain_name: domain_name)
+        FnInfo.new(fn_name: fn_name, fn_line: fn_line, fn_path: fn_path, domain_name: domain_name)
       end
 
       def label
@@ -93,6 +85,24 @@ module ChaosDetector
           @root_node = self.new(is_root: true) if force_new || @root_node.nil?
           @root_node
         end
+
+        def match?(obj1, obj2)
+          raise "Domains differ, but fn_info is the same.  Weird." if \
+            obj1.fn_name == obj2.fn_name \
+            && obj1.fn_path == obj2.fn_path \
+            && obj1.domain_name != other.domain_name
+
+          fn_path == other.fn_path &&
+            (fn_name == other.fn_name || line_match?(other.fn_line, fn_line))
+
+        end
+
+        def line_match?(l1, l2)
+          return false if l1.nil? || l2.nil?
+
+          (l2 - l1).between?(0, 1)
+        end
+
       end
     end
   end

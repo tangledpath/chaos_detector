@@ -1,4 +1,6 @@
 require 'chaos_detector/chaos_utils'
+require 'chaos_detector/chaos_graphs/mod_info'
+require 'chaos_detector/chaos_graphs/fn_info'
 
 # A single stack (tracepoint) frame
 module ChaosDetector
@@ -38,9 +40,7 @@ module ChaosDetector
       end
 
       def ==(other)
-        # self.domain_name == other.domain_name &&
-        self.fn_name == other.fn_name &&
-        self.fn_path == other.fn_path
+        ChaosDetector::ChaosGraphs::FnInfo.match?(self, other)
       end
 
       def to_mod_info

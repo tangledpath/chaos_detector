@@ -41,14 +41,14 @@ module ChaosDetector
     #   action A symbol denoting the type of action for the recorded frame
     #   frame A Frame object with its attributes contained in the CSV row
     def playback
-      log("Walkman replaying CSV: #{csv_path}")
+      log("Walkman replaying CSV with #{count} lines: #{csv_path}")
       @rownum = 0
       row_cur = nil
       CSV.foreach(csv_path, headers: true) do |row|
         @rownum += 1
         row_cur = row
         action, frame = playback_row(row)
-        log("playback_row= [#{action}]: #{frame}")
+        # log("playback_row= [#{action}]: #{frame}")
         yield @rownum, action, frame
       end
     rescue StandardError => x
@@ -146,13 +146,15 @@ module ChaosDetector
       # returns the action and frame as described in #playback
       def playback_row(row)
         action = csv_row_val(row, :action)
+        linenum = csv_row_val(row, :fn_line)
+        fn_line = linenum.nil? ? nil : linenum.to_i
         frame = ChaosDetector::Stacker::Frame.new(
           mod_type: csv_row_val(row, :mod_type),
           mod_name: csv_row_val(row, :mod_name),
           fn_path: csv_row_val(row, :fn_path),
           domain_name: csv_row_val(row, :domain_name),
           fn_name: csv_row_val(row, :fn_name),
-          fn_line: csv_row_val(row, :fn_line)
+          fn_line: fn_line
         )
         [action, frame]
       end

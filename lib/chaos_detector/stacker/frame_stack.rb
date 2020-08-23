@@ -24,24 +24,24 @@ module ChaosDetector
       def pop(frame)
         raise ArgumentError, "Current Frame is required" if frame.nil?
 
-        n_frame = @stack.index(frame)
-        if frame.fn_name == 'awaiting_quotes?'
-          log("Looking for #{frame.fn_name}: #{n_frame.inspect}")
+        popped_frame, n_frame = @stack.each_with_index.find do |f, n|
+          if f==frame
+            true
+          elsif n.zero? && frame.fn_name==f.fn_name
+            # log("Matching #{f} \nto:\n #{frame} as most recent entry in stack.")
+            true
+          else
+            false
+          end
         end
 
-        if n_frame.nil?
-          log("Could not find #{frame} in stack")
-          log(self.inspect)
-        end
+        # if n_frame.nil?
+        #   log("Could not find #{frame} in stack")
+        #   log(self.inspect)
+        # end
 
-          # if !n_frame.nil? && n_frame > 0
-          #   # log("Popping out of order@#{@stack.length} ##{n_frame}: #{@stack[n_frame]}")
-          # end
-          # log("Perfect match @#{@stack.length}") if !n_frame.nil? && n_frame==0
         @stack.slice!(0..n_frame) unless n_frame.nil?
-
-        #TOOO: yield actual sliced frame:
-        n_frame
+        [popped_frame, n_frame]
       end
 
       def push(frame)

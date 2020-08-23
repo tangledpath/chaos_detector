@@ -69,7 +69,7 @@ module ChaosDetector
     end
 
     def close_frame(frame)
-      @frame_stack.pop(frame).tap do |n_frame|
+      @frame_stack.pop(frame).tap do |popped_frame, n_frame|
         @atlas_metrics.record_close_action(n_frame)
       end
     end
