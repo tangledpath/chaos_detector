@@ -1,31 +1,17 @@
 require 'graph_theory/graph_theory'
 module GraphTheory
   class NodeMetrics
-    # https://en.wikipedia.org/wiki/Software_package_metrics
-    # https://en.wikipedia.org/wiki/Efferent_coupling
-
-    # This metric is often used to calculate instability of a component in software architecture as
-
-    # Fan-in of M: number of modules calling functions in M
-    # Fan-out of M: number of modules called by M
-    # * fan-in afferent_coupling(Ca)
-    # * fan-out efferent_coupling(Ce)
-
-    # * Cohesion: calls
-    #   inside the
-    #   module
-    # * Coupling: calls
-    #   between the
-    #   modules
     attr_accessor :afferent_couplings
     attr_accessor :efferent_couplings
+    attr_accessor :terminal_routes
+    attr_accessor :circular_routes
 
-    # https://en.wikipedia.org/wiki/Cyclomatic_complexity
-    # M = E − N + 2P,
 
-    def initialize(afferent_couplings: 0, efferent_couplings: 0)
+    def initialize(afferent_couplings: 0, efferent_couplings: 0, terminal_routes:, circular_routes:)
       @afferent_couplings = afferent_couplings
       @efferent_couplings = efferent_couplings
+      @terminal_routes = terminal_routes || []
+      @circular_routes = circular_routes || []
     end
 
     # https://en.wikipedia.org/wiki/Software_package_metrics

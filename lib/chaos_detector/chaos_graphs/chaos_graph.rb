@@ -172,12 +172,6 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
       end.to_h
     end
 
-    def appraise_edges
-      @edge_metrics = @function_graph.edges.map do |edge|
-        [edge, appraise_edge(edge)]
-      end.to_h
-    end
-
     # For each node, measure fan-in(Ca) and fan-out(Ce)
     # TODO: Make edges parameter and appraise from different aspects
     def appraise_node(node)
@@ -201,10 +195,6 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
 
       end
       node_matrix
-    end
-
-    # Calculate
-    def edge_metrics
     end
 
     # @return positive integer indicating distance in number of edges

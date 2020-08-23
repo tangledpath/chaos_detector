@@ -1,29 +1,23 @@
 require 'graph_theory/graph_theory'
-require 'graph_theory/edge_metrics'
 require 'graph_theory/node_metrics'
 
 class GraphTheory::Appraiser
   attr_reader :cyclomatic_complexity
-
   attr_reader :node_metrics
-  attr_reader :edge_metrics
 
   def initialize(graph)
     @graph = graph
     @cyclomatic_complexity = nil
     @node_metrics = {}
-    @edge_metrics = {}
   end
 
   def appraise
     log("Appraising nodes.")
     appraise_nodes
-    log("Appraising edges.")
-    appraise_edges
-    # log("Measuring domain dependencies.")
-    # find_domain_edges
+
     log("Measuring cyclomatic complexity.")
     measure_cyclomatic_complexity
+
     log("Performed appraisal: #{report}")
   end
 
@@ -52,10 +46,6 @@ class GraphTheory::Appraiser
     # Gather nodes:
     buffy << "Nodes:"
     buffy.concat(@node_metrics.map{|n, m| "  (#{n.domain_name})#{n.label}: #{m}" })
-
-    # Gather edges:
-    # buffy << "Edges:"
-    # buffy.append(@edge_metrics.map{|e, m| "  #{e}: #{m}" })
 
     buffy.join("\n")
   end
@@ -150,24 +140,31 @@ class GraphTheory::Appraiser
       end.to_h
     end
 
-    def appraise_edges
-      @edge_metrics = @graph.edges.map do |edge|
-        [edge, appraise_edge(edge)]
-      end.to_h
-    end
-
     # For each node, measure fan-in(Ca) and fan-out(Ce)
     def appraise_node(node)
+      circular_routes, terminal_routes = appraise_node_routes(node)
       GraphTheory::NodeMetrics.new(
         afferent_couplings: @graph.edges.count{|e| e.dep_node==node },
-        efferent_couplings: @graph.edges.count{|e| e.src_node==node }
+        efferent_couplings: @graph.edges.count{|e| e.src_node==node },
+        circular_routes: circular_routes,
+        terminal_routes: terminal_routes,
       )
     end
 
-    def appraise_edge(edge)
+    def appraise_node_routes(node)
+      # Traverse starting at each node to see if
+      # and how many ways we come back to ourselves
+      terminal_routes = []
+      circular_routes = []
+
+      return [terminal_routes, circular_routes]
     end
 
     def adjacency_matrix
+      adj_matrix = Matrix.build(@graph.nodes.length) do |row, col|
+
+      end
+      adj_matrix
     end
 
     #  Coupling: Each node couplet (Example for 100 nodes, we'd have 100 * 99 potential couplets)
@@ -180,11 +177,7 @@ class GraphTheory::Appraiser
       node_matrix
     end
 
-    # Calculate
-    def edge_metrics
-    end
-
-    # @return positive integer indicating distance in number of edges
+    # @return positive integer indicating distance in number of vertices
     # from node_src to node_dep.  If multiple routes, calculate shortest:
     def node_distance(node_src, node_dep)
 
@@ -199,15 +192,5 @@ class GraphTheory::Appraiser
       ary
     end
 
-
-  #   Report edge on relative difference in its nodes:
-  #   domain, path, package?
-  # domain, path, package?
-  # Coupling
-  #
-  # Overall check for
-  # Edges that have a
-  # Engines that call back to t
-  # Report for all edges
 
 end

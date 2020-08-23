@@ -1,5 +1,5 @@
-require 'forwardable'
-require 'matrix'
+# require 'forwardable'
+# require 'matrix'
 
 # namespace for all generic graph theory
 module GraphTheory
