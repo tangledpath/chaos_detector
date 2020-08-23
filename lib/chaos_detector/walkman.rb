@@ -1,6 +1,6 @@
 require 'digest'
 require 'chaos_detector/edge'
-require 'chaos_detector/node'
+require 'chaos_detector/nodes/function_node'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
@@ -10,7 +10,7 @@ require 'csv'
 # TODO: add traversal types to find depth, coupling in various ways (directory/package/namespace):
 class ChaosDetector::Walkman
   PLAYBACK_MSG = "Playback error on line number %d of pre-recorded CSV %s:\n  %s\n  %s".freeze
-  CSV_HEADER = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE MOD_PATH LINE_NUM FN_NAME DEPTH OFFSET NODES EDGES MATCH_OFFSET SIMILARITY}
+  CSV_HEADER = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE FN_PATH LINE_NUM FN_NAME DEPTH OFFSET NODES EDGES MATCH_OFFSET SIMILARITY}
   COL_COUNT = CSV_HEADER.length
   COL_INDEXES = CSV_HEADER.map.with_index {|col, i| [col.downcase.to_sym, i]}.to_h
 
@@ -102,12 +102,12 @@ class ChaosDetector::Walkman
     end
   end
 
-  def write_frame(frame, action:, match: nil)
+  def write_frame(frame, action:)
     action = action
     csv_row = [action]
     csv_row.concat(frame_csv_fields(frame))
     csv_row.concat(atlas_csv_fields)
-    csv_row.concat(match) if match
+    # csv_row.concat(match) if match
 
     @log_buffer << csv_row
     buffered_trigger
@@ -124,11 +124,11 @@ class ChaosDetector::Walkman
     end
 
     def frame_csv_fields(f)
-      [f.domain_name, f.mod_name, f.mod_type, f.mod_path, f.line_num, f.fn_name]
+      [f.domain_name, f.mod_name, f.mod_type, f.fn_path, f.line_num, f.fn_name]
     end
 
     def atlas_csv_fields
-      [@atlas.frame_stack.length, @atlas.offset, @atlas.nodes.length, @atlas.edges.length]
+      [@atlas.frame_stack.length, @atlas.offset, @atlas.graph_nodes.length, @atlas.graph_edges.length]
     end
 
     # Play back a single given row
@@ -138,7 +138,7 @@ class ChaosDetector::Walkman
       frame = ChaosDetector::StackFrame.new(
         mod_type: csv_row_val(row, :mod_type),
         mod_name: csv_row_val(row, :mod_name),
-        mod_path: csv_row_val(row, :mod_path),
+        fn_path: csv_row_val(row, :fn_path),
         domain_name: csv_row_val(row, :domain_name),
         fn_name: csv_row_val(row, :fn_name),
         line_num: csv_row_val(row, :line_num)

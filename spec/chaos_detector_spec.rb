@@ -37,13 +37,13 @@ describe "ChaosDetector" do
       expect(ChaosDetector::Navigator.atlas).to_not be_nil
 
       atlas = ChaosDetector::Navigator.stop
-      ChaosDetector::Utils.print_line ("Nodes: #{atlas.nodes.length}")
+      ChaosDetector::Utils.print_line ("Nodes: #{atlas.graph_nodes.length}")
       expect(atlas).to eq(ChaosDetector::Navigator.atlas)
       grapher = ChaosDetector::Grapher.new(atlas)
       grapher.build_graphs()
 
-      atlas.edges.each do |edge|
-        ChaosDetector::Utils.p "edge: #{edge}" if edge.src_node.mod_name=='root'
+      atlas.graph_edges.each do |edge|
+        ChaosDetector::Utils.print_line "edge: #{edge}" if edge.src_node.is_root# =='root'
       end
     end
 
@@ -53,7 +53,7 @@ describe "ChaosDetector" do
       Fubar::Foo.foo
       atlas = ChaosDetector::Navigator.stop
 
-      graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(nodes: atlas.nodes, edges: atlas.edges)
+      graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(atlas.graphus)
       graph_metrics.appraise
     end
 
@@ -102,21 +102,21 @@ describe "ChaosDetector" do
   describe "Atlas" do
     it "should do basic frame stacking" do
       graph = ChaosDetector::Atlas.new
-      frame1 = ChaosDetector::StackFrame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', mod_path: 'foo/bar', fn_name: 'baz', line_num: 2112)
-      frame2 = ChaosDetector::StackFrame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', mod_path: 'foo/mepper', fn_name: 'blop', line_num: 3112)
+      frame1 = ChaosDetector::StackFrame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', fn_path: 'foo/bar', fn_name: 'baz', line_num: 2112)
+      frame2 = ChaosDetector::StackFrame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', fn_path: 'foo/mepper', fn_name: 'blop', line_num: 3112)
 
       expect(graph.stack_depth).to eq(0)
 
-      graph.open_frame(frame: frame1)
+      graph.open_frame(frame1)
       expect(graph.stack_depth).to eq(1)
 
-      graph.open_frame(frame: frame2)
+      graph.open_frame(frame2)
       expect(graph.stack_depth).to eq(2)
 
-      graph.close_frame(frame:frame2)
+      graph.close_frame(frame2)
       expect(graph.stack_depth).to eq(1)
 
-      graph.close_frame(frame:frame1)
+      graph.close_frame(frame1)
       expect(graph.stack_depth).to eq(0)
 
     end
