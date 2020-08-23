@@ -7,6 +7,9 @@ require 'chaos_detector/node'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
+require 'chaos_detector/graph_theory/stack_metrics'
+require 'chaos_detector/graph_theory/node_metrics'
+require 'chaos_detector/graph_theory/edge_metrics'
 
 # Maintains all nodes and edges as stack calls are pushed and popped via StackFrames.
 class ChaosDetector::Atlas
@@ -53,15 +56,6 @@ class ChaosDetector::Atlas
     normalize(domain_edges, :dep_count, :dep_count_norm)
   end
 
-  def normalize(ary, property, norm_property)
-    vector = Vector.elements(ary.map{|obj| obj.send(property)})
-    vector = vector.normalize
-    ary.each_with_index do |obj, i|
-      obj.send("#{norm_property}=", vector[i])
-    end
-    ary
-  end
-
   def domain_names
     @nodes.reduce(Set[]){|set, node| set << node.domain_name}
   end
@@ -79,16 +73,29 @@ class ChaosDetector::Atlas
     ChaosDetector::Utils.log(msg, subject: "Atlas")
   end
 
-# TODO: x
+  # TODO: x
   # Report for each node
   #   outgoing
   #   incoming
-  #   How many
 
-  #  Each node couplet (Example for 100 nodes, we'd have 100 * 99 potential couplets)
+  #  Coupling: Each node couplet (Example for 100 nodes, we'd have 100 * 99 potential couplets)
   #  Capture how many other nodes depend upon both nodes in couplet [directly, indirectly]
   #  Capture how many other nodes from other domains depend upon both [directly, indirectly]
-  def node_stats
+  def node_metrics
+    node_matrix = Matrix.build(@nodes.length) do |row, col|
+
+    end
+    node_matrix
+  end
+
+  # Calculate
+  def edge_metrics
+  end
+
+  # @return positive integer indicating distance in number of edges
+  # from node_src to node_dep.  If multiple routes, calculate shortest:
+  def node_distance(node_src, node_dep)
+
   end
 
   #   Report edge on relative difference in its nodes:
@@ -101,8 +108,7 @@ class ChaosDetector::Atlas
   # Engines that call back to t
   # Report for all edges
   #   Count all that span domains (weight by total hits AND distinct fn_call_coupletf)
-  def edge_stats
-  end
+
   def initialize(options: nil)
     @options = options unless options.nil?
     reset
@@ -117,7 +123,7 @@ class ChaosDetector::Atlas
     @frames_nopop = []
     @offset = 0
 
-    @traversal_stats = GraphStats.new
+    @traversal_stats = ChaosDetector::GraphTheory::StackMetrics.new
   end
 
   def stack_depth
@@ -204,14 +210,6 @@ class ChaosDetector::Atlas
     [best_index, best_sim]
   end
 
-  def count_depth
-    -1
-  end
-
-  def count_breadth
-    -1
-  end
-
   def open_frame(frame:)
     # stack_len = @frame_stack.length
     # exit(false) if stack_len > 25
@@ -249,39 +247,22 @@ class ChaosDetector::Atlas
     "Nodes: %d, Edges: %d, Frames: %d" % [@nodes.length, @edges.length, @frame_stack.length]
   end
 
-  class GraphStats
-    def initialize
-      @push_count = 0
-      @pop_count = 0
-      @close_count = 0
-      @match_unideal_count = 0
-      @match_nonzero_count = 0
+  private
+    def count_depth
+      -1
     end
 
-    def record_open_action
-      @push_count += 1
+    def count_breadth
+      -1
     end
 
-    def record_close_action(frame_n, similarity)
-      if frame_n.nil?
-        @close_count += 1
-      else
-        @pop_count += 1
-        @match_unideal_count += 1 unless ChaosDetector::StackFrame::VERY_SIMILAR.include?(similarity)
-        @match_nonzero_count += 1 if frame_n > 0
+    def normalize(ary, property, norm_property)
+      vector = Vector.elements(ary.map{|obj| obj.send(property)})
+      vector = vector.normalize
+      ary.each_with_index do |obj, i|
+        obj.send("#{norm_property}=", vector[i])
       end
+      ary
     end
 
-    def to_s
-      m << decorate(ROOT_NODE_NAME, clamp: :parens) if @is_root
-      "Total: %s [+push -pop (-close)] +%d -%d(%d) unideal: %d >> stack-pos-off: %d" % [
-        decorate(@push_count + @pop_count + @close_count, clamp: :bracket),
-        @push_count,
-        @pop_count,
-        @close_count,
-        @match_unideal_count,
-        @match_nonzero_count
-      ]
-    end
-  end
 end

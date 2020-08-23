@@ -1,0 +1,3 @@
+module ChaosDetector::GraphTheory
+
+end
