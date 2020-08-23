@@ -5,6 +5,7 @@ require 'chaos_detector/stack_frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
 require 'chaos_detector/utils'
+require 'chaos_detector/graph_theory'
 
 require 'fixtures/Fubar'
 describe "ChaosDetector" do
@@ -36,15 +37,24 @@ describe "ChaosDetector" do
       expect(ChaosDetector::Navigator.atlas).to_not be_nil
 
       atlas = ChaosDetector::Navigator.stop
-      puts ("ATls: #{atlas.nodes.length}")
+      ChaosDetector::Utils.p ("Nodes: #{atlas.nodes.length}")
       expect(atlas).to eq(ChaosDetector::Navigator.atlas)
       grapher = ChaosDetector::Grapher.new(atlas)
       grapher.build_graphs()
 
       atlas.edges.each do |edge|
-        puts "edge: #{edge}" if edge.src_node.mod_name=='root'
+        ChaosDetector::Utils.p "edge: #{edge}" if edge.src_node.mod_name=='root'
       end
+    end
 
+    it "should graph theorize" do
+      ChaosDetector::Navigator.record(options: opts)
+      Foo.foo
+      Fubar::Foo.foo
+      atlas = ChaosDetector::Navigator.stop
+
+      graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(nodes: atlas.nodes, edges: atlas.edges)
+      graph_metrics.appraise
     end
 
     it "should save recording to walkman" do
@@ -61,7 +71,6 @@ describe "ChaosDetector" do
       csv_content = `cat #{walkman.csv_path}`
       expect(csv_content).to_not be_nil
       expect(csv_content).to_not be_empty
-      puts csv_content
       csv_lines = csv_content.split
       expect(csv_lines.length).to eq(13)
       # csv_lines = csv_content.split

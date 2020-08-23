@@ -73,11 +73,11 @@ module ChaosDetector::Utils
       end
     end
 
-    def decorate_pair(source, dest, indent_length: 0, clamp: :brace)
+    def decorate_pair(source, dest, indent_length: 0, clamp: :angle)
       decorate("#{decorate(source)} -> #{decorate(dest)}", clamp:clamp, indent_length:indent_length)
     end
 
-    def decorate(text, clamp: :brace, prefix: nil, suffix: nil, sep: nil, indent_length: 0)
+    def decorate(text, clamp: :nil, prefix: nil, suffix: nil, sep: nil, indent_length: 0)
       return STR_BLANK if naught?text
 
       clamp_pre, clamp_post = clamp_chars(clamp: clamp)
@@ -86,7 +86,7 @@ module ChaosDetector::Utils
 
     alias_method :d, :decorate
 
-    def clamp_chars(clamp: :brace)
+    def clamp_chars(clamp: nil)
       case(clamp)
         when :angle, :arrow
           ['<', '>']
@@ -120,13 +120,18 @@ module ChaosDetector::Utils
     def log(msg, subject: nil)
       message = naught?(subject) ? msg : d(msg, prefix:d(subject, clamp: :bracket))
       if block_given?
-        p(decorate(message, prefix: 'Starting: '))
+        p(d(message, prefix: 'Starting: '))
         result = yield
         p(d(message, prefix: 'Complete: ', suffix: d(result)))
       else
         p(message)
       end
     end
+
+    def print_ln(msg, *opts)
+      print(msg = "\n", opts)
+    end
+    alias_method :p, :print_ln
 
     # Built-in self-testing:
     # ChaosDetector::Utils.test

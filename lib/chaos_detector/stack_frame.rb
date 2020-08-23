@@ -1,5 +1,6 @@
 require 'chaos_detector/utils'
 
+# Consider putting action/event in this class and naming it accordingly
 class ChaosDetector::ModInfo
   extend ChaosDetector::Utils::ChaosAttr
   ModuleType = ChaosDetector::Utils.enum(:module, :class, :unknown)
@@ -40,12 +41,6 @@ class ChaosDetector::StackFrame
   def initialize(mod_info: nil, mod_type: nil, mod_name: nil, mod_path: nil, domain_name:nil, fn_name:nil, line_num: nil, note: nil)
 
     if [mod_name, mod_info&.mod_name].all?("ChaosDetector::Utils.naught?")
-
-    # unless ChaosDetector::Utils.any?(mod_name, mod_info&.mod_name)
-      puts "------------------------------"
-      puts "(#{mod_name.class}) *** mod_name: #{mod_name.inspect}"
-      puts "(#{mod_info.class}) *** mod_info: #{mod_info.inspect}"
-
       raise ArgumentError, "Requires module name via mod_name or mod_info."
     end
 

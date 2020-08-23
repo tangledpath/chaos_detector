@@ -4,6 +4,7 @@ require 'chaos_detector/atlas'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
+require 'chaos_detector/graph_theory'
 
 class ChaosDetector::Grapher
   extend ChaosDetector::Utils::ChaosAttr
@@ -69,6 +70,7 @@ class ChaosDetector::Grapher
   def initialize(atlas, options=nil)
     @atlas = atlas
     @options = options
+    @graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(nodes: @atlas.nodes, edges: @atlas.edges)
   end
 
   def create_directed_graph(label)
@@ -82,10 +84,14 @@ class ChaosDetector::Grapher
 
   def build_graphs
     raise "Atlas isn't present!  Call record first." if @atlas.nil?
-
+    log("Gathering graph metrics...")
+    @graph_metrics.appraise
+    log("Building module graph...")
     build_module_graph
-
+    log("Building domain graph...")
     build_domain_graph
+    log("Graph metrics")
+    log(@graph_metrics.report)
   end
 
   def log(msg)
@@ -96,7 +102,7 @@ class ChaosDetector::Grapher
     # Create a new top-level graph:
 
     log("Creating a module-level dependency graph from atlas: #{@atlas}")
-    graph = create_directed_graph("Dependency Graph")
+    graph = create_directed_graph("Module Dependencies")
     nodes = {}
     domain_graphs = @atlas.nodes.group_by(&:domain_name).map do |domain, dnodes|
       subg = add_domain_subgraph(graph, domain)
@@ -113,13 +119,13 @@ class ChaosDetector::Grapher
     graph_edges = {}
     @atlas.edges.each do |edge|
       src = nodes.fetch(edge.src_node) do |n|
-        puts "src edge not found: #{n}"
+        log "src edge not found: #{n}"
         # TODO: Look up domain if necessarry.
         build_graph_node(graph, n)
       end
 
       dep = nodes.fetch(edge.dep_node) do |n|
-        puts "Dep edge not found: #{n}"
+        log "Dep edge not found: #{n}"
         build_graph_node(graph, n)
       end
 
@@ -141,16 +147,19 @@ class ChaosDetector::Grapher
 
   def build_domain_graph
     # dg = GraphViz.new( :G, type: :digraph, label: "Domain dependencies")
-    dg = create_directed_graph("Dependency Dependencies")
+    dg = create_directed_graph("Domain Dependencies")
 
     # TODO: Add subgraph (clusters) and edges between them:
 
-    domain_edges = @atlas.domain_deps
-    log("Domain dependencies #{domain_edges.length}")
-    domain_edges.each do |k|
-      src = dg.add_nodes("#{k.src_domain.to_s}")
-      dep = dg.add_nodes("#{k.dep_domain.to_s}")
-      log("DOMAIN EDGE: #{k.src_domain} -> #{k.dep_domain}: #{k.dep_count} (#{k.dep_count_norm.round(2)})")
+    domain_graph_nodes = @graph_metrics.domain_names.map do |dom_name|
+      [dom_name, add_domain_subgraph(dg, dom_name)]
+    end.to_h
+
+    log("Domain dependencies #{@graph_metrics.domain_edges.length}")
+    @graph_metrics.domain_edges.each do |k|
+      src = domain_graph_nodes[k.src_domain]
+      dep = domain_graph_nodes[k.dep_domain]
+      # log("DOMAIN EDGE: #{k.src_domain} -> #{k.dep_domain}: #{k.dep_count} (#{k.dep_count_norm.round(2)})")
       dg.add_edges(src, dep, {label: k.dep_count, penwidth: 0.5 + k.dep_count_norm * 7.5})
     end
     dg.output( :png => "domain_dep.png" )
