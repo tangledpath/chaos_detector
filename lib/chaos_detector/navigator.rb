@@ -48,8 +48,14 @@ class ChaosDetector::Navigator
       log("Detecting chaos in playback via walkman")
       apply_options(options)
       @walkman.each do |action, frame|
-        log("Performing #{action.inspect} on frame: #{frame}")
-        # perform_frame_action(frame, action: action)
+        #log("Performing :#{action} on frame: #{frame}")
+        frame_act = case action.to_sym
+        when :open
+          :call
+        when :close, :pop
+          :return
+        end
+        perform_frame_action(frame, action: frame_act, record: false)
       end
     end
 
@@ -69,28 +75,26 @@ class ChaosDetector::Navigator
 
         # TODO: Generic module exclusion:
         next unless Kernel.ought?(frame.mod_name) && !frame.mod_name&.start_with?("ChaosDetector")
-        # puts "FRame: #{frame}"
 
-        # perform_frame_action(frame, action: tracepoint.event)
         tracepoint.disable do
-          perform_frame_action(frame, action: tracepoint.event)
+          # DISABLE MORE OF ABOVE?
+          perform_frame_action(frame, action: tracepoint.event, record: true)
         end
       end
 
       @trace.enable
     end
 
-
-
-    def perform_frame_action(frame, action:)
+    def perform_frame_action(frame, action:, record: false)
       if action == :call
         @atlas.open_frame(frame: frame)
-        @walkman.write_frame(frame, action:action)
+        @walkman.write_frame(frame, action: :open) if record
       elsif action == :return
         match = @atlas.close_frame(frame: frame)
-        @walkman.write_frame(frame, action:action, match:match)
+        frame_act = (match && match[0].nil?) ? :pop : :close
+        @walkman.write_frame(frame, action: frame_act , match:match) if record
       else
-        raise ArgumentError("Action should be one of: #{FRAME_ACTIONS.inspect}.  Actual value: #{action.inspect}")
+        raise ArgumentError, "Action should be one of: #{FRAME_ACTIONS.inspect}.  Actual value: #{action.inspect}"
       end
     end
 

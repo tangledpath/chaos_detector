@@ -1,11 +1,14 @@
 require 'digest'
+require 'matrix'
+require 'set'
+
 require 'chaos_detector/edge'
 require 'chaos_detector/node'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
 
-# TODO: add traversal types to find depth, coupling in various ways (directory/package/namespace):
+# Maintains all nodes and edges as stack calls are pushed and popped via StackFrames.
 class ChaosDetector::Atlas
   extend ChaosDetector::Utils::ChaosAttr
 
@@ -25,22 +28,46 @@ class ChaosDetector::Atlas
   # chaos_attr :log_buffer, []
   chaos_attr :traversal_stats
 
-  DomainEdge = Struct.new(:src_domain, :dep_domain)
+  DomainEdge = Struct.new(:src_domain, :dep_domain, :dep_count, :dep_count_norm)
   def domain_deps
-    domain_edges = {}
+    domain_edges = []
 
     @edges.each do |edge|
       src_domain = edge.src_node&.domain_name
       dep_domain = edge.dep_node&.domain_name
 
-      log("Checking edge: #{edge} : #{src_domain && dep_domain && src_domain != dep_domain}")
+      # log("Checking edge: #{edge} : #{src_domain && dep_domain && src_domain != dep_domain}")
       if src_domain && dep_domain && src_domain != dep_domain
-        domain_edge = DomainEdge.new(src_domain, dep_domain)
-        domain_edges[domain_edge] = domain_edges.fetch(domain_edge, 0) + 1
+        domain_edge = domain_edges.find do |dedge|
+          dedge.src_domain == src_domain && dedge.dep_domain == dep_domain
+        end
+        if domain_edge.nil?
+          domain_edges << DomainEdge.new(src_domain, dep_domain, 1)
+        else
+          domain_edge.dep_count += 1
+        end
+        # domain_edges[domain_edge] = domain_edges.fetch(domain_edge, 0) + 1
       end
     end
 
-    domain_edges
+    normalize(domain_edges, :dep_count, :dep_count_norm)
+  end
+
+  def normalize(ary, property, norm_property)
+    vector = Vector.elements(ary.map{|obj| obj.send(property)})
+    vector = vector.normalize
+    ary.each_with_index do |obj, i|
+      obj.send("#{norm_property}=", vector[i])
+    end
+    ary
+  end
+
+  def domain_names
+    @nodes.reduce(Set[]){|set, node| set << node.domain_name}
+  end
+
+  def domain_nodes(domain)
+    @nodes.find_all{|node|node.domain_name==domain}
   end
 
   def stop
@@ -152,7 +179,7 @@ class ChaosDetector::Atlas
     window = @offset + FULL_TOLERANCE
 
     @frame_stack[0..window].each_with_index do |f, n|
-      sim_rank = ChaosDetector::Utils.with(current_frame.match?(f)) do |similarity|
+      sim_rank = Kernel.with(current_frame.match?(f)) do |similarity|
         if ChaosDetector::StackFrame::VERY_SIMILAR.include?(similarity)
           [similarity, FULL_TOLERANCE]
         elsif similarity==ChaosDetector::StackFrame::SimilarityRating::PARTIAL
@@ -209,12 +236,17 @@ class ChaosDetector::Atlas
 
   def close_frame(frame:)
     stack_match(frame).tap do |frame_n, similarity|
+
       @traversal_stats.record_close_action(frame_n, similarity)
       if !frame_n.nil?
         @offset = frame_n
         @frame_stack.delete_at(frame_n)
       end
     end
+  end
+
+  def to_s
+    "Nodes: %d, Edges: %d, Frames: %d" % [@nodes.length, @edges.length, @frame_stack.length]
   end
 
   class GraphStats

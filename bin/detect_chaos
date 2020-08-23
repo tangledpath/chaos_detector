@@ -27,6 +27,9 @@ module ChaosDetector
       opts.app_root_path = options[:opt_app_root]
       opts.module_filter = options[:opt_module_filter]
       ChaosDetector::Navigator.playback(options: opts)
+
+      grapher = ChaosDetector::Grapher.new(ChaosDetector::Navigator.atlas)
+      grapher.build_graphs()
     end
   end
 end
