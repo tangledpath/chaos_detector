@@ -2,7 +2,7 @@
 # Domain node
 module ChaosDetector
   module ChaosGraphs
-    class DomainNode < GraphTheory::Node
+    class DomainNode < ChaosDetector::GraphTheory::Node
       alias_method :domain_name, :name
       attr_reader :fn_node_count
 

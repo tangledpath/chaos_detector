@@ -1,5 +1,5 @@
 require_relative 'core_util'
-module TCS
+module ChaosDetector
   module Utils
     module StrUtil
       STR_INDENT = '  '.freeze
@@ -8,8 +8,13 @@ module TCS
 
       class << self
 
-        def decorate_tuple(source, dest, indent_length: 0, clamp: :angle, join_str: ' -> ')
+        def decorate_pair(source, dest, indent_length: 0, clamp: :angle, join_str: ' -> ')
           decorate("#{decorate(source)}#{decorate(dest, prefix: join_str)}", clamp:clamp, indent_length:indent_length)
+        end
+
+        def decorate_tuple(tuple, indent_length: 0, clamp: :angle, join_str: ' -> ')
+          body = tuple.map{|t| decorate(t, indent_length: indent_length)}.join(join_str)
+          decorate(body, clamp:clamp, indent_length:indent_length)
         end
 
         def decorate(text, clamp: :nil, prefix: nil, suffix: nil, sep: nil, indent_length: 0)
@@ -28,7 +33,7 @@ module TCS
 
         alias_method :d, :decorate
 
-        def clamp_chars(clamp: nil)
+        def clamp_chars(clamp: :none)
           case(clamp)
             when :angle, :arrow
               ['<', '>']
@@ -59,7 +64,7 @@ module TCS
         end
 
         def nay?(obj)
-          TCS::Utils::CoreUtil::naught?(obj)
+          ChaosDetector::Utils::CoreUtil::naught?(obj)
         end
 
       end

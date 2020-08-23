@@ -1,6 +1,6 @@
-require 'tcs/utils/str_util'
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/utils/str_util'
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   module ChaosGraphs
@@ -23,8 +23,8 @@ module ChaosDetector
         end
 
         def to_s
-          p = TCS::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
-          "%s %s - %s" % [@mod_name, Kernel.decorate(@mod_type, clamp:bracket), p]
+          p = ChaosDetector::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
+          "%s %s - %s" % [@mod_name, Kernel.decorate(@mod_type, clamp: :bracket), p]
         end
     end
   end

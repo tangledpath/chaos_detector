@@ -1,5 +1,5 @@
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   class AtlasMetrics

@@ -1,20 +1,20 @@
 require 'digest'
-require 'graph_theory/edge'
+require 'chaos_detector/graph_theory/edge'
 require_relative 'chaos_graphs/function_node'
 require_relative 'options'
 require_relative 'stacker/frame'
-require 'tcs/utils/fs_util'
+require 'chaos_detector/utils/fs_util'
 require 'csv'
 
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 
 # TODO: add traversal types to find depth, coupling in various ways (directory/package/namespace):
 module ChaosDetector
   class Walkman
     PLAYBACK_MSG = "Playback error on line number %d of pre-recorded CSV %s:\n  %s\n  %s".freeze
-    CSV_HEADER = %w{ROWNUM, ACTION DOMAIN_NAME MOD_NAME MOD_TYPE FN_PATH LINE_NUM FN_NAME DEPTH NODES EDGES MATCH_OFFSET}
+    CSV_HEADER = %w{ROWNUM ACTION DOMAIN_NAME MOD_NAME MOD_TYPE FN_PATH LINE_NUM FN_NAME DEPTH NODES EDGES MATCH_OFFSET}
     COL_COUNT = CSV_HEADER.length
     COL_INDEXES = CSV_HEADER.map.with_index {|col, i| [col.downcase.to_sym, i]}.to_h
 
@@ -52,7 +52,7 @@ module ChaosDetector
         row_cur = row
         action, frame = playback_row(row)
         log("playback_row= [#{action}]: #{frame}")
-        yield action, frame
+        yield @rownum, action, frame
       end
     rescue StandardError => x
       raise ScriptError, log(PLAYBACK_MSG % [@rownum, csv_path, row_cur, x.inspect])
@@ -141,7 +141,7 @@ module ChaosDetector
       end
 
       def init_file_with_header(filepath)
-        TCS::Utils::FSUtil::ensure_paths_to_file(filepath)
+        ChaosDetector::Utils::FSUtil::ensure_paths_to_file(filepath)
         File.open(filepath, "w") {|f| f.puts CSV_HEADER.join(",")}
       end
 

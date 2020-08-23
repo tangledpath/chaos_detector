@@ -1,11 +1,13 @@
+require 'set'
 require 'pathname'
 require_relative 'atlas'
 require_relative 'options'
+require_relative 'chaos_graphs/mod_info'
 require_relative 'chaos_graphs/module_node'
 require_relative 'stacker/frame'
 require_relative 'walkman'
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 # The main interface for intercepting tracepoints,
 # and converting them into recordable and playable
@@ -25,18 +27,23 @@ module ChaosDetector
     attr_reader :fn_fn_hash
     attr_reader :walkman
     attr_reader :stopped
+    attr_reader :module_stack
 
     def initialize(options:)
       raise ArgumentError, "#initialize requires options" if options.nil?
       @options = options
       @stopped = false
+      @paused = false
+      @module_stack = []
+      @total_traces = 0
       apply_options
     end
 
     ### Playback of walkman CSV file:
     def playback()
       log("Detecting chaos in playback via walkman")
-      @walkman.playback do |action, frame|
+      @total_traces = 0
+      @walkman.playback do |rownum, action, frame|
         log("Performing :#{action} on frame: #{frame}")
         frame_act = case action.to_sym
           when :open
@@ -45,13 +52,18 @@ module ChaosDetector
             :return
         end
         perform_frame_action(frame, action: frame_act, record: false)
+
+        if (rownum % 50000).zero?
+          log("Walkman Row# #{rownum}")
+          log(@atlas.stack.inspect)
+        end
       end
       @atlas
     end
 
     def record()
       log("Detecting chaos at #{@app_root_path}")
-
+      @module_stack.clear
       @walkman.record_start
       @total_traces = 0
       @trace = TracePoint.new(*FRAME_ACTIONS) do |tracepoint|
@@ -61,25 +73,52 @@ module ChaosDetector
           next
         end
 
-        if [:class, :end].include?tracepoint.event
-          # puts tracepoint.inspect
-          # FUN: TODO.
-          next
-        end
+        next if @paused
 
-        next if full_path_skip?(tracepoint.path)
-        tracepoint.disable do
+        puts "BOOMPaused=#{@paused}" if @paused
+        begin
+          @paused = true
+          if ['decorate', 'complete?'].include?(tracepoint.method_id.to_s)
+            cl = tracepoint.binding.eval('caller_locations(0,19)')
+
+            sep = tracepoint.event == :return ? '*' : '@'
+
+            puts
+            puts tracepoint.event.to_s.upcase
+            puts decorate(tracepoint.inspect)
+            puts sep * 50
+            puts cl.join("\n\t->\t")
+            puts ">" * 50
+            puts
+          end
+
+          tracepoint.disable
+
+          if [:class, :end].include?tracepoint.event
+            # puts tracepoint.inspect
+            # FUN: TODO.
+            next
+          end
+
+          next if full_path_skip?(tracepoint.path)
           @total_traces += 1
           frame = frame_at_trace(tracepoint)
 
           # Generic module exclusion:
           if module_skip?(frame.mod_name)
-            puts "Skipping module #{frame.mod_name}"
-            break
+            @skipped ||= Set[]
+            puts "Skipping module #{frame.mod_name}" unless @skipped.include?frame.mod_name
+            @skipped << frame.mod_name
+            next
           end
+
+          @module_stack.unshift(frame.to_mod_info) if aught?frame.mod_name
 
           # DISABLE MORE OF ABOVE?
           perform_frame_action(frame, action: tracepoint.event, record: true)
+        ensure
+          @paused = false
+          tracepoint.enable
         end
       end
 
@@ -99,8 +138,11 @@ module ChaosDetector
     # a="#<Class:Authentication>"
     # b="#<Class:Person(id: integer, first"
     # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
+
+    # Blank class get mod_class for tracepoint. [#<Class:#<Parslet::Context:0x00007fa90ee06c80>>]
+    # MMMM >>> (word), (default), (word), (lib/email_parser.rb):L106, (#<Parslet::Context:0x00007fa90ee06c80>)
     def undecorate_module_name(mod_name)
-      return 'BOO!' if naught?(mod_name)
+      return nil if naught?(mod_name)
       return mod_name unless mod_name.start_with?('#')
 
       plain_name = nil
@@ -127,12 +169,15 @@ module ChaosDetector
         elsif action == :return
           offset = @atlas.close_frame(frame)
           frame_act = offset.nil? ? :close : :pop
-          if offset
-            puts "Offset is #{offset} on closing frame #{frame}" if offset && offset > 0
-          end
+          # puts "Offset is #{offset} on closing frame #{frame}" if offset && offset > 0
           @walkman.write_frame(frame, action: frame_act, frame_offset: offset) if record
         else
           raise ArgumentError, "Action should be one of: #{FRAME_ACTIONS.inspect}.  Actual value: #{action.inspect}"
+        end
+
+        if (@total_traces % 50000).zero?
+          log("Frame Actions# #{@total_traces}.  Here is the stack")
+          log(@atlas.frame_stack.inspect)
         end
       end
 
@@ -141,30 +186,41 @@ module ChaosDetector
         domain_name = domain_from_path(local_path: fn_path)
 
         mod_class = tracepoint.defined_class
-        mod_name = mod_name_from_class(mod_class)
-
-        if naught?mod_name
-          puts "Blank class get mod_class for tracepoint. [#{tracepoint.defined_class}]"
-          puts ("MMMM >>> %s, %s, %s, %s:L%d, %s " % [
-            decorate(tracepoint.callee_id),
-            decorate(domain_name),
-            decorate(tracepoint.method_id),
-            decorate(fn_path),
-            tracepoint.lineno,
-            decorate(tracepoint.self)
-          ])
-        end
+        mod_name = mod_name_from_class(tracepoint.defined_class)
+        # self_mod_name = mod_name_from_class(tracepoint.self&.class)
 
         mod_type = mod_type_from_class(mod_class)
 
+        if naught?(mod_name) && (fn_path=="gems/chaos_detector/lib/chaos_detector/utils/str_util.rb")
+          puts
+          log ("%sMOD%s >>> %s %s, %s:L%d" % [
+            decorate(domain_name, clamp: :parens),
+            decorate(mod_name, clamp: :bracket),
+            decorate(tracepoint.callee_id),
+            decorate(tracepoint.method_id, prefix: ' / '),
+            decorate(fn_path, clamp: :none, prefix: ' '),
+            tracepoint.lineno,
+          ])
+
+          log (
+            decorate([
+              decorate(tracepoint.defined_class, clamp: :angle),
+              decorate(tracepoint.defined_class&.name, clamp: :brace),
+              decorate(tracepoint.self&.class, clamp: :angle),
+              decorate(tracepoint.self&.class&.name, clamp: :brace),
+              decorate(module_stack.first, clamp: :brace),
+            ].inspect, clamp: :none, indent_length: 2)
+          )
+          puts
+        end
 
         ChaosDetector::Stacker::Frame.new(
-          callee: tracepoint.callee_id,
-          domain_name: domain_name,
-          fn_path: fn_path,
-          fn_name: tracepoint.method_id,
+          callee: tracepoint.callee_id.to_s,
+          domain_name: domain_name.to_s,
+          fn_path: fn_path.to_s,
+          fn_name: tracepoint.method_id.to_s,
           line_num: tracepoint.lineno,
-          mod_name: mod_name,
+          mod_name: mod_name.to_s,
           mod_type: mod_type
         )
       end
@@ -174,7 +230,8 @@ module ChaosDetector
       end
 
       def module_skip?(mod_name)
-        naught?(mod_name) || @options.ignore_modules.any? { |m| mod_name.include?(m) }
+        return false unless aught?mod_name
+        @options.ignore_modules.any? { |m| mod_name.include?(m) }
       end
 
       def apply_options
@@ -187,7 +244,7 @@ module ChaosDetector
           @atlas.graph.root_node.define_singleton_method(:label) { root_label }
         end
 
-        @app_root_path = TCS::Utils::CoreUtil.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
+        @app_root_path = ChaosDetector::Utils::CoreUtil.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
         @domain_hash = {}
         @options.path_domain_hash && options.path_domain_hash.each do |path, group|
           dpath = Pathname.new(path.to_s).cleanpath.to_s
@@ -219,7 +276,8 @@ module ChaosDetector
         # @app_root_path.relative_path_from(Pathname.new(path).cleanpath).to_s
         p = Pathname.new(path).cleanpath.to_s
         p.sub!(@app_root_path, '') if @app_root_path
-        p.start_with?('/') ? p[1..-1] : p
+        local_path = p.start_with?('/') ? p[1..-1] : p
+        local_path.to_s
       end
 
       def log(msg)

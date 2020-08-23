@@ -1,9 +1,9 @@
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   class Options
-    extend TCS::Utils::CoreUtil::ChaosAttr
+    extend ChaosDetector::Utils::CoreUtil::ChaosAttr
 
     IGNORE_CHAOS = 'ChaosDetector::'
     IGNORE_RSPEC = 'RSpec::'

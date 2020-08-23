@@ -3,9 +3,9 @@ require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/graphing/directed'
 require 'chaos_detector/options'
-require 'tcs/utils/str_util'
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/utils/str_util'
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   module Graphing
@@ -18,7 +18,7 @@ module ChaosDetector
       def initialize(options: nil)
         @options = options || ChaosDetector::Options.new
         @render_path = @options.path_with_root(:graph_render_folder)
-        TCS::Utils::FSUtil::ensure_dirpath(@render_path)
+        ChaosDetector::Utils::FSUtil::ensure_dirpath(@render_path)
         @navigator = ChaosDetector::Navigator.new(options: @options)
       end
 

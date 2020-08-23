@@ -5,10 +5,10 @@ require 'chaos_detector/graphing/directed'
 require 'chaos_detector/graphing/graphs'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_graphs/chaos_graph'
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
-require 'graph_theory/appraiser'
+require 'chaos_detector/graph_theory/appraiser'
 
 require 'fixtures/foobar'
 require 'fixtures/fubarm'
@@ -56,7 +56,7 @@ describe "ChaosDetector" do
       Fubarm::Foom.foom
       atlas = chaos_nav.stop
 
-      graph_metrics = GraphTheory::Appraiser.new(atlas.graph)
+      graph_metrics = ChaosDetector::GraphTheory::Appraiser.new(atlas.graph)
       graph_metrics.appraise
     end
 
@@ -201,7 +201,7 @@ describe "ChaosDetector" do
 
   describe "Utils" do
     it "should self-test" do
-      TCS::Utils::CoreUtil.test
+      ChaosDetector::Utils::CoreUtil.test
     end
   end
 end

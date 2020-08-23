@@ -1,14 +1,14 @@
 require 'forwardable'
 
-require 'graph_theory/edge'
-require 'graph_theory/graph'
+require 'chaos_detector/graph_theory/edge'
+require 'chaos_detector/graph_theory/graph'
 require_relative 'chaos_graphs/function_node'
 require_relative 'stacker/frame_stack'
 require_relative 'stacker/frame'
 require_relative 'atlas_metrics'
-require 'tcs/refined_utils'
+require 'chaos_detector/refined_utils'
 
-using TCS::RefinedUtils
+using ChaosDetector::RefinedUtils
 
 # Maintains all nodes and edges as stack calls are pushed and popped via Frames.
 module ChaosDetector
@@ -26,7 +26,7 @@ module ChaosDetector
     def initialize()
       @frame_stack = ChaosDetector::Stacker::FrameStack.new
       root_node = ChaosDetector::ChaosGraphs::FunctionNode.root_node(force_new: true)
-      @graph = GraphTheory::Graph.new(root_node: root_node)
+      @graph = ChaosDetector::GraphTheory::Graph.new(root_node: root_node)
       @atlas_metrics = ChaosDetector::AtlasMetrics.new
     end
 
@@ -58,7 +58,7 @@ module ChaosDetector
 
       dep_node = node_for_frame(frame)
       prev_frame = @frame_stack.peek
-      if prev_frame == frame
+      if prev_frame == frame && aught?(frame.mod_name)
         dep_node.add_module_attrs(mod_name:frame.mod_name, mod_path: frame.fn_path, mod_type: frame.mod_type)
       end
 

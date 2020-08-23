@@ -1,9 +1,9 @@
 require 'ruby-graphviz'
 
-require 'tcs/utils/str_util'
+require 'chaos_detector/utils/str_util'
 
-require 'tcs/refined_utils'
-using TCS::RefinedUtils
+require 'chaos_detector/refined_utils'
+using ChaosDetector::RefinedUtils
 
 module ChaosDetector
   module Graphing

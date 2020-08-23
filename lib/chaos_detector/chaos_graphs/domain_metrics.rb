@@ -1,4 +1,4 @@
-require 'graph_theory/graph_theory'
+require 'chaos_detector/graph_theory/graph_theory'
 
 # Dependency Count total/normalized
 #
