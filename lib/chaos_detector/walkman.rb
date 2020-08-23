@@ -75,12 +75,14 @@ module ChaosDetector
 
     def autosave_csv
       csvp = csv_path
-      1.upto(100) do |n|
-        p = "#{csvp}.#{n}"
-        unless FileTest.exist?(p)
-          log("Autosaving #{csvp} to #{p}")
-          log(`cp #{csvp} #{p}`)
-          break
+      if FileTest.exist?(csvp)
+        1.upto(100) do |n|
+          p = "#{csvp}.#{n}"
+          unless FileTest.exist?(p)
+            log("Autosaving #{csvp} to #{p}")
+            log(`cp #{csvp} #{p}`)
+            break
+          end
         end
       end
     end

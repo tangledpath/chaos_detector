@@ -215,7 +215,6 @@ module ChaosDetector
             n = @function_graph.nodes.index(node_info)
             n.nil? ? root_node_function : @function_graph.nodes[n]
           when :module
-            log("MMMMM*****NMMM #{node_info.class}")
             n = @module_nodes.index(node_info)
             n.nil? ? root_node_module : @module_nodes[n]
           when :domain

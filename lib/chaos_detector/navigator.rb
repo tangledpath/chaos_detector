@@ -57,7 +57,7 @@ module ChaosDetector
       @trace = TracePoint.new(*FRAME_ACTIONS) do |tracepoint|
         if @stopped
           @trace.disable
-          log("Tracing stoped; stopping immediately.")
+          log("Tracing stopped; stopping immediately.")
           next
         end
 
