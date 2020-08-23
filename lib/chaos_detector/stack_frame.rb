@@ -1,7 +1,7 @@
 require 'forwardable'
 
 require 'chaos_detector/utils'
-require 'chaos_detector/nodes/module_node'
+require 'chaos_detector/chaos_graphs/module_node'
 
 class ChaosDetector::StackFrame
   extend Forwardable
@@ -31,8 +31,14 @@ class ChaosDetector::StackFrame
     if mod_info
       @mod_info = mod_info
     elsif Kernel.aught?mod_name
-      @mod_info = ChaosDetector::Nodes::ModuleNode.new(mod_name:mod_name, mod_type: mod_type)
+      @mod_info = ChaosDetector::ChaosGraphs::ModuleNode.new(mod_name:mod_name, mod_type: mod_type)
     end
+  end
+
+  def ==(other)
+    self.domain_name == other.domain_name &&
+    self.fn_name == other.fn_name &&
+    self.fn_path == other.fn_path
   end
 
   def to_s

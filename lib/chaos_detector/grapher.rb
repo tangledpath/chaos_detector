@@ -4,7 +4,7 @@ require 'chaos_detector/atlas'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
-require 'chaos_detector/graph_theory'
+require 'graph_theory/appraiser'
 
 class ChaosDetector::Grapher
   extend ChaosDetector::Utils::ChaosAttr
@@ -71,7 +71,7 @@ class ChaosDetector::Grapher
     raise ArgumentError, "Atlas is required." if atlas.nil?
     @atlas = atlas
     @options = options
-    @graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(@atlas.graphus)
+    @graph_metrics = GraphTheory::Appraiser.new(@atlas.graphus)
   end
 
   def create_directed_graph(label)

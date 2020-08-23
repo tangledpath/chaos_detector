@@ -1,4 +1,5 @@
-module ChaosDetector::GraphTheory
+require 'graph_theory/graph_theory'
+module GraphTheory
   class EdgeMetrics
     attr_accessor :src_count
     attr_accessor :dep_count

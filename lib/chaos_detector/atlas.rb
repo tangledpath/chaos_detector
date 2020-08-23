@@ -1,14 +1,13 @@
 require 'forwardable'
-
 require 'digest'
 require 'matrix'
-require 'chaos_detector/edge'
-require 'chaos_detector/graphus'
-require 'chaos_detector/nodes/function_node'
+require 'graph_theory/edge'
+require 'graph_theory/graph'
+require 'chaos_detector/chaos_graphs/function_node'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
-require 'chaos_detector/graph_theory/stack_metrics'
+require 'chaos_detector/stack_metrics'
 
 # Maintains all nodes and edges as stack calls are pushed and popped via StackFrames.
 class ChaosDetector::Atlas
@@ -47,14 +46,14 @@ class ChaosDetector::Atlas
   end
 
   def reset
-    root_node = ChaosDetector::Nodes::FunctionNode.root_node(force_new: true)
-    @graphus = ChaosDetector::Graphus.new(root_node: root_node)
+    root_node = ChaosDetector::ChaosGraphs::FunctionNode.root_node(force_new: true)
+    @graphus = GraphTheory::Graph.new(root_node: root_node)
     @md5 = Digest::MD5.new
     @frame_stack = []
     @frames_nopop = []
     @offset = 0
 
-    @traversal_stats = ChaosDetector::GraphTheory::StackMetrics.new
+    @traversal_stats = ChaosDetector::StackMetrics.new
   end
 
   def stack_depth
@@ -65,7 +64,7 @@ class ChaosDetector::Atlas
   # that is returned, otherwise, a new one is created.
   def node_for_frame(frame)
     graphus.node_for(frame) do
-      ChaosDetector::Nodes::FunctionNode.new(
+      ChaosDetector::ChaosGraphs::FunctionNode.new(
         fn_name: frame.fn_name,
         fn_path: frame.fn_path,
         domain_name: frame.domain_name,
@@ -82,9 +81,10 @@ class ChaosDetector::Atlas
   def stack_match(current_frame)
     raise ArgumentError, "Current Frame is required" if current_frame.nil?
 
-    @frame_stack.index do |f|
-      ChaosDetector::Nodes::FunctionNode.key_attributes_match?(f, current_frame)
-    end
+    @frame_stack.index(current_frame)
+    #  do |f|
+    #   ChaosDetector::ChaosGraphs::FunctionNode.key_attributes_match?(f, current_frame)
+    # end
   end
 
   def open_frame(frame)

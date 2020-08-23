@@ -1,16 +1,17 @@
-require 'chaos_detector/nodes/nodes'
+require 'chaos_detector/chaos_graphs/chaos_graphs'
 
 # Consider putting action/event in this class and naming it accordingly
-class ChaosDetector::Nodes::ModuleNode
-  extend ChaosDetector::Utils::ChaosAttr
+class ChaosDetector::ChaosGraphs::ModuleNode < GraphTheory::Node
   ModuleType = ChaosDetector::Utils.enum(:module, :class, :unknown)
 
   attr_reader :mod_type#, ModuleType::UNKNOWN
-  attr_reader :mod_name
+  attr_reader :domain_name
+  alias_method :mod_name, :name
 
-  def initialize(mod_name:, mod_type:nil)
-    @mod_name = mod_name
+  def initialize(mod_name:, domain_name: nil, mod_type:nil)
+    super(name:mod_name)
     @mod_type = mod_type
+    @domain_name = domain_name
   end
 
   def ==(other)
@@ -23,12 +24,11 @@ class ChaosDetector::Nodes::ModuleNode
 
   def label
     # Shorten long module paths:
-    m = @mod_name.split("::").last(2).join("::")
+    m = mod_name.split("::").last(2).join("::")
     m << decorate(@mod_type, clamp: :parens)
-    # "#{m}\n#{@domain_name}"
   end
 
   def to_s
-    [@mod_name, @mod_type].join(', ')
+    [mod_name, @mod_type].join(', ')
   end
 end
