@@ -1,18 +1,14 @@
 require 'ruby-graphviz'
 
-require_relative 'options'
-require_relative 'stacker/frame'
-require 'graph_theory/appraiser'
-require 'tcs/refined_utils'
+require 'chaos_detector/options'
 require 'tcs/utils/str_util'
 
+require 'tcs/refined_utils'
 using TCS::RefinedUtils
 
 module ChaosDetector
   module Graphing
     class Grapher
-      extend TCS::Utils::CoreUtil::ChaosAttr
-
       EDGE_MIN = 0.5
       EDGE_BASELINE = 7.5
 

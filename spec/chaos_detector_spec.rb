@@ -1,7 +1,7 @@
 require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/grapher'
+require 'chaos_detector/graphing/grapher'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_graphs/chaos_graph'
 require 'tcs/refined_utils'
