@@ -1,9 +1,4 @@
 module ChaosDetector
-  # TODO: grade edge on relative difference in nodes:
-  #   domain, path, package?
-  # Overall check for
-  # Nodes that call back to themselves (identify unique patterns)
-  # Nodes that call back to themselves
   class Edge
     FnCall = Struct.new(:fn_name, :line_num)
     DEFAULT_FN = 'Root'.freeze
@@ -49,29 +44,17 @@ module ChaosDetector
       # @fn_calls[fn_call] = cnt + 1
     end
 
-    def self.arrowize_pair(src:, dest:, indent:0, style: :brace)
-      indented = (indent && indent > 0) ? "\t" * indent : nil
-      open, close = case(style)
-        when :bracket
-          ['[', ']']
-        else
-          ['{', '}']
-      end
-
-
-      "#{indented+open*2}`#{src}`#{close} -> #{open}`#{dest}`#{close*2}"
-    end
-
-    def to_s(show_nodes: true)
+    def to_s(show_nodes: true, show_fn_pairs: false)
 
       buffy = []
-      buffy << arrowize_pair(src:src_node, dest:dest_node) if show_nodes
 
-      if @fn_call_pairs.any?
+      buffy << ChaosDetector::Utils.decorate_pair(src_node, dep_node, clamp_style: :brace) if show_nodes
+
+      if show_fn_pairs && @fn_call_pairs.any?
         @fn_call_pairs.each do |f|
-          buffy << arrowize_pair(
-            src: "#{f.src.fn_name}:L##{f.src.line_num}",
-            dest: "#{f.dep.fn_name}:L##{f.dep.line_num}",
+          buffy << ChaosDetector::Utils.decorate_pair(
+            "#{f.src.fn_name}:L##{f.src.line_num}",
+            "#{f.dep.fn_name}:L##{f.dep.line_num}",
             indent: 1
           )
         end

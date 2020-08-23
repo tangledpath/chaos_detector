@@ -1,5 +1,6 @@
 require 'rake'
 require 'rake/extensiontask'
+require 'rspec/core/rake_task'
 require 'rubygems'
 
 NAME = "chaos_detector".freeze
@@ -33,6 +34,10 @@ Gem::PackageTask.new(gemspec) do |pkg|
 end
 
 task :gem => :write_gemspec
+
+RSpec::Core::RakeTask.new(:spec)
+
+task :default => :spec
 
 # task :gemspec => :compile
 # task :default => :gemspec
