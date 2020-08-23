@@ -1,27 +1,35 @@
 
-require 'chaos_detector/graph'
+require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
 require 'chaos_detector/stack_frame'
 
 
 describe "ChaosDetector" do
-  describe "ChaosDetector::Navigator" do
+  describe "Navigator" do
+    let (:dec1) { "#<Class:Authentication>"}
+    let (:dec2) { "#<Class:Person(id: integer)>"}
+    let (:dec3) { "#<ChaosDetector::Node:0x00007fdd5d2c6b08>"}
+
     # a="#<Class:Authentication>"
     # b="#<Class:Person(id: integer, first"
     # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
     it "should undecorate module names" do
-      dec1 = "#<Class:Authentication>"
-      dec2 = "#<Class:Person(id: integer)>"
-      dec3 = "#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
       ChaosDetector::Navigator.undecorate_module_name(dec2).should eq("Person")
       ChaosDetector::Navigator.undecorate_module_name(dec1).should eq("Authentication")
       ChaosDetector::Navigator.undecorate_module_name(dec3).should eq("ChaosDetector::Node")
+
+    end
+
+    it "should record and graph" do
+      ChaosDetector::Navigator.record(app_root_path: __dir__)
+      ChaosDetector::Navigator.undecorate_module_name(dec2).should eq("Person")
+      ChaosDetector::Navigator.build_graph
     end
   end
 
-  describe "ChaosDetector::Graph" do
+  describe "ChaosDetector::Atlas" do
     it "should do basic frame stacking" do
-      graph = ChaosDetector::Graph.new
+      graph = ChaosDetector::Atlas.new
       frame1 = ChaosDetector::StackFrame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', path: 'foo/bar', fn_name: 'baz', line_num: 2112)
       frame2 = ChaosDetector::StackFrame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', path: 'foo/mepper', fn_name: 'blop', line_num: 3112)
 

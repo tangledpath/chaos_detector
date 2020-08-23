@@ -8,10 +8,10 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib".freeze]
   s.authors = ["Steven Miers, Daniel Cadenas, other contribs".freeze]
-  s.date = "2020-08-04"
+  s.date = "2020-08-06"
   s.description = "Discover and graph dependencies for ruby and RoR apps".freeze
   s.email = "steven.miers@gmail.com".freeze
-  s.files = ["lib/chaos_detector.rb".freeze, "lib/chaos_detector/edge.rb".freeze, "lib/chaos_detector/graph.rb".freeze, "lib/chaos_detector/graph_test.rb".freeze, "lib/chaos_detector/navigator.rb".freeze, "lib/chaos_detector/node.rb".freeze, "lib/chaos_detector/stack_frame.rb".freeze]
+  s.files = ["lib/chaos_detector.rb".freeze, "lib/chaos_detector/atlas.rb".freeze, "lib/chaos_detector/edge.rb".freeze, "lib/chaos_detector/navigator.rb".freeze, "lib/chaos_detector/node.rb".freeze, "lib/chaos_detector/options.rb".freeze, "lib/chaos_detector/scratch.rb".freeze, "lib/chaos_detector/stack_frame.rb".freeze, "lib/chaos_detector/utils.rb".freeze]
   s.homepage = "http://github.com/tangledpath/chaos_detector".freeze
   s.licenses = ["MIT".freeze]
   s.rubygems_version = "3.0.8".freeze

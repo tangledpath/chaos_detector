@@ -1,21 +1,33 @@
-class ChaosDetector::StackFrame
+require 'chaos_detector/utils'
+module ChaosDetector
+class StackFrame
+  SimilarityRating = ChaosDetector::Utils.enum(:base, :partial, :full, :exact)
+#   nil on no match
+  #   :exact when all fields match
+  #   :full when all fields except line_num match
+  #   :partial domain and path match AND a module OR function match
+  #   :base when domain and path match
+  VERY_SIMILAR = [SimilarityRating::Exact, SimilarityRating::Full].freeze
+
   attr_reader :domain_name
   attr_reader :mod_name
   attr_reader :mod_type
   attr_reader :path
   attr_reader :fn_name
   attr_reader :line_num
+  attr_accessor :note
 
-  def initialize(mod_type:, mod_name:, path:, domain_name:nil, fn_name:nil, line_num: nil)
+  def initialize(mod_type:, mod_name:, path:, domain_name:nil, fn_name:nil, line_num: nil, note: nil)
     @mod_type = mod_type
     @mod_name = mod_name
     @path = path
     @domain_name = domain_name
     @fn_name = fn_name
     @line_num = line_num
+    @note = note
   end
 
-
+  # Returns nil if no match and SimilarityRating otherwise
   def match?(other)
     if !other.nil? && @domain_name == other.domain_name && @path == other.path
       # We found our minimum level of matching; see what else matches:
@@ -23,11 +35,11 @@ class ChaosDetector::StackFrame
       f = @fn_name == other.fn_name
       l = @line_num == other.line_num
       if m && f
-        l ? :exact : :full
-      elsif m || f
-        :partial
+        l ? SimilarityRating::Exact : SimilarityRating::Full
+      elsif m
+        SimilarityRating::Partial
       else
-        :base
+        SimilarityRating::Base
       end
     else
       nil
@@ -36,10 +48,10 @@ class ChaosDetector::StackFrame
 
   # Line number is not considered when comparing:
   def ==(other)
-    [:exact, :full].include?(match?(other))
+    VERY_SIMILAR.include?(match?(other))
   end
 
-  def to_s
+  def to_s(level=nil)
     hkey = "["
     hkey << "(#{@domain_name}) " unless @domain_name.nil? || @domain_name.empty?
     hkey << "#{@mod_type} " unless @mod_type.nil? || @mod_type.empty?
@@ -48,6 +60,8 @@ class ChaosDetector::StackFrame
     hkey << " '#{@path}'" unless @path.nil? || @path.empty?
     hkey << "]"
     hkey << "(L##{@line_num})" unless @line_num.nil?
+    hkey << " - #{@note}" if level==:high unless @note.nil?
 
   end
+end
 end

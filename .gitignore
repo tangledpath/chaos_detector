@@ -10,6 +10,7 @@ rdoc
 pkg
 tmp
 *.svg
+scratch.*
 
 ## PROJECT::SPECIFIC
 chaos_detector.dump
