@@ -1,7 +1,7 @@
 
 require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
-require 'chaos_detector/stack_frame'
+require 'chaos_detector/stacker/frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
 require 'chaos_detector/utils'
@@ -37,12 +37,12 @@ describe "ChaosDetector" do
       expect(ChaosDetector::Navigator.atlas).to_not be_nil
 
       atlas = ChaosDetector::Navigator.stop
-      ChaosDetector::Utils.print_line ("Nodes: #{atlas.graph_nodes.length}")
+      ChaosDetector::Utils.print_line ("Nodes: #{atlas.node_count}")
       expect(atlas).to eq(ChaosDetector::Navigator.atlas)
       grapher = ChaosDetector::Grapher.new(atlas)
       grapher.build_graphs()
 
-      atlas.graph_edges.each do |edge|
+      atlas.graph.edges.each do |edge|
         ChaosDetector::Utils.print_line "edge: #{edge}" if edge.src_node.is_root# =='root'
       end
     end
@@ -53,7 +53,7 @@ describe "ChaosDetector" do
       Fubar::Foo.foo
       atlas = ChaosDetector::Navigator.stop
 
-      graph_metrics = GraphTheory::Appraiser.new(atlas.graphus)
+      graph_metrics = GraphTheory::Appraiser.new(atlas.graph)
       graph_metrics.appraise
     end
 
@@ -101,23 +101,23 @@ describe "ChaosDetector" do
 
   describe "Atlas" do
     it "should do basic frame stacking" do
-      graph = ChaosDetector::Atlas.new
-      frame1 = ChaosDetector::StackFrame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', fn_path: 'foo/bar', fn_name: 'baz', line_num: 2112)
-      frame2 = ChaosDetector::StackFrame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', fn_path: 'foo/mepper', fn_name: 'blop', line_num: 3112)
+      atlas = ChaosDetector::Atlas.new
+      frame1 = ChaosDetector::Stacker::Frame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', fn_path: 'foo/bar', fn_name: 'baz', line_num: 2112)
+      frame2 = ChaosDetector::Stacker::Frame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', fn_path: 'foo/mepper', fn_name: 'blop', line_num: 3112)
 
-      expect(graph.stack_depth).to eq(0)
+      expect(atlas.stack_depth).to eq(0)
 
-      graph.open_frame(frame1)
-      expect(graph.stack_depth).to eq(1)
+      atlas.open_frame(frame1)
+      expect(atlas.stack_depth).to eq(1)
 
-      graph.open_frame(frame2)
-      expect(graph.stack_depth).to eq(2)
+      atlas.open_frame(frame2)
+      expect(atlas.stack_depth).to eq(2)
 
-      graph.close_frame(frame2)
-      expect(graph.stack_depth).to eq(1)
+      atlas.close_frame(frame2)
+      expect(atlas.stack_depth).to eq(1)
 
-      graph.close_frame(frame1)
-      expect(graph.stack_depth).to eq(0)
+      atlas.close_frame(frame1)
+      expect(atlas.stack_depth).to eq(0)
 
     end
   end

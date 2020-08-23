@@ -1,4 +1,4 @@
-class ChaosDetector::StackMetrics
+class ChaosDetector::AtlasMetrics
   def initialize
     @push_count = 0
     @pop_count = 0
@@ -11,13 +11,13 @@ class ChaosDetector::StackMetrics
     @push_count += 1
   end
 
-  def record_close_action(frame_n)
-    if frame_n.nil?
+  def record_close_action(n_frame)
+    if n_frame.nil?
       @close_count += 1
     else
       @pop_count += 1
       # @match_unideal_count += 1
-      @match_nonzero_count += 1 if frame_n > 0
+      @match_nonzero_count += 1 if n_frame > 0
     end
   end
 

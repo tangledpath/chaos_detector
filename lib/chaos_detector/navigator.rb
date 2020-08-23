@@ -2,7 +2,7 @@ require 'pathname'
 require 'chaos_detector/atlas'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_graphs/module_node'
-require 'chaos_detector/stack_frame'
+require 'chaos_detector/stacker/frame'
 require 'chaos_detector/utils'
 require 'chaos_detector/walkman'
 
@@ -28,11 +28,11 @@ class ChaosDetector::Navigator
     def apply_options(options)
       @options = options if options
 
-      @atlas = ChaosDetector::Atlas.new(options: @options)
+      @atlas = ChaosDetector::Atlas.new
       @walkman = ChaosDetector::Walkman.new(atlas: @atlas, options: @options)
 
       Kernel.with(@options.root_label) do |root_label|
-        @atlas.graphus.root_node.define_singleton_method(:label) { root_label }
+        @atlas.graph.root_node.define_singleton_method(:label) { root_label }
       end
 
       @app_root_path = ChaosDetector::Utils.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
@@ -113,18 +113,68 @@ class ChaosDetector::Navigator
     end
 
     def frame_at_trace(tracepoint)
-      mod_info = module_from_tracepoint(tracepoint)
+      mod_class = tracepoint.defined_class
+      mod_name = mod_name_from_class(mod_class)
+      mod_type = mod_type_from_class(mod_class)
       fn_path = localize_path(tracepoint.path)
       domain_name = domain_from_path(local_path: fn_path)
 
-      ChaosDetector::StackFrame.new(
+      ChaosDetector::Stacker::Frame.new(
         callee: tracepoint.callee_id,
         domain_name: domain_name,
         fn_path: fn_path,
         fn_name: tracepoint.method_id,
         line_num: tracepoint.lineno,
-        mod_info: mod_info
+        mod_name: mod_name,
+        mod_type: mod_type
       )
+    end
+
+    def stop
+      log("Stopping after total traces: #{@total_traces}")
+      @trace&.disable
+      @walkman.stop
+      @atlas.stop
+    end
+
+    def mod_type_from_class(clz)
+      case clz
+        when Class
+          :class
+        when Module
+          :module
+        else
+          log "Unknown mod_type: #{tp&.defined_class&.class}"
+          :nil
+      end
+    end
+
+    def mod_name_from_class(clz)
+      mod_name = clz.name
+      mod_name = clz.to_s if !check_name(mod_name)
+      undecorate_module_name(mod_name)
+    end
+
+    def localize_path(path)
+      # @app_root_path.relative_path_from(Pathname.new(path).cleanpath).to_s
+      p = Pathname.new(path).cleanpath.to_s
+      p.sub!(@app_root_path, '') unless ChaosDetector::Utils.naught?(@app_root_path)
+      p.start_with?('/') ? p[1..-1] : p
+    end
+
+    def log(msg)
+      ChaosDetector::Utils.log(msg, subject: "Navigator")
+    end
+
+    def domain_from_path(local_path:)
+      # puts "Looking for #{local_path} in [#{domain_hash.keys.join(',')}]"
+      key = domain_hash.keys.find{|k| local_path.start_with?(k)}
+      key ? domain_hash[key] : DEFAULT_GROUP
+      # p=@app_root_path.relative_path_from(path)
+
+      # p = path.lstrip(app_root_path)
+      # @app_root_path.relative_path_from(path)
+      # domain_hash.fetch(local_path, DEFAULT_GROUP)
     end
 
     # Undecorate all this junk:
@@ -154,61 +204,5 @@ class ChaosDetector::Navigator
       Kernel.aught?(mod_nm) && !mod_nm.strip.start_with?('#')
     end
 
-    def module_from_tracepoint(tp)
-      # if check_name?tp.defined_class.name
-      # elsif if check_name?tp.defined_class.name
-
-      clz = tp.defined_class #&.class #
-      mod_name = clz.name
-      # mod_name = tp.self.to_s if !check_name(mod_name) && check_name(tp.self.to_s)
-      mod_name = clz.to_s if !check_name(mod_name)
-      mod_name = undecorate_module_name(mod_name)
-
-      mod_type = case clz
-        when Class
-          :class
-        when Module
-          :module
-        else
-          log "Unknown mod_type: #{tp&.defined_class&.class}"
-          :nil
-        end
-
-      # Currently dealing with nil and empty modules at a higher level for tracking:
-      ChaosDetector::ChaosGraphs::ModuleNode.new(mod_name: mod_name, mod_type: mod_type)
-    end
-
-    def mod_nm(mod)
-      mod&.name || mod&.to_s
-    end
-
-    def stop
-      log("Stopping after total traces: #{@total_traces}")
-      @trace&.disable
-      @walkman.stop
-      @atlas.stop
-    end
-
-    def localize_path(path)
-      # @app_root_path.relative_path_from(Pathname.new(path).cleanpath).to_s
-      p = Pathname.new(path).cleanpath.to_s
-      p.sub!(@app_root_path, '') unless ChaosDetector::Utils.naught?(@app_root_path)
-      p.start_with?('/') ? p[1..-1] : p
-    end
-
-    def log(msg)
-      ChaosDetector::Utils.log(msg, subject: "Navigator")
-    end
-
-    def domain_from_path(local_path:)
-      # puts "Looking for #{local_path} in [#{domain_hash.keys.join(',')}]"
-      key = domain_hash.keys.find{|k| local_path.start_with?(k)}
-      key ? domain_hash[key] : DEFAULT_GROUP
-      # p=@app_root_path.relative_path_from(path)
-
-      # p = path.lstrip(app_root_path)
-      # @app_root_path.relative_path_from(path)
-      # domain_hash.fetch(local_path, DEFAULT_GROUP)
-    end
   end
 end

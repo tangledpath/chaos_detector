@@ -1,38 +1,25 @@
-require 'forwardable'
-
 require 'chaos_detector/utils'
-require 'chaos_detector/chaos_graphs/module_node'
 
-class ChaosDetector::StackFrame
-  extend Forwardable
+class ChaosDetector::Stacker::Frame
   attr_reader :domain_name
-  attr_reader :mod_info
+  attr_reader :mod_name
+  attr_reader :mod_type
   attr_reader :fn_path
   attr_reader :fn_name
   attr_reader :callee
   attr_reader :line_num
-  def_instance_delegators :@mod_info, :mod_name, :mod_type
 
-  def initialize(mod_info: nil, mod_name: nil, mod_type: nil, fn_path: nil, domain_name:nil, fn_name:nil, line_num: nil, callee: nil)
+  def initialize(mod_name: nil, mod_type: nil, fn_path: nil, domain_name:nil, fn_name:nil, line_num: nil, callee: nil)
 
-    if [mod_name, mod_info&.mod_name].all?("ChaosDetector::Utils.naught?")
-      raise ArgumentError, "Requires module name via mod_name or mod_info."
-    end
-
-    @mod_type = mod_type || mod_info&.mod_type
-    @mod_name = mod_name || mod_info&.mod_name
+    raise ArgumentError, "Frame init requires mod_name." unless Kernel.aught? mod_name
+    @mod_type = mod_type
+    @mod_name = mod_name
 
     @fn_path = fn_path
     @domain_name = domain_name
     @fn_name = fn_name
     @line_num = line_num
     @callee = callee
-
-    if mod_info
-      @mod_info = mod_info
-    elsif Kernel.aught?mod_name
-      @mod_info = ChaosDetector::ChaosGraphs::ModuleNode.new(mod_name:mod_name, mod_type: mod_type)
-    end
   end
 
   def ==(other)

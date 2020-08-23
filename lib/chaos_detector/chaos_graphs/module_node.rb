@@ -2,9 +2,7 @@ require 'chaos_detector/chaos_graphs/chaos_graphs'
 
 # Consider putting action/event in this class and naming it accordingly
 class ChaosDetector::ChaosGraphs::ModuleNode < GraphTheory::Node
-  ModuleType = ChaosDetector::Utils.enum(:module, :class, :unknown)
-
-  attr_reader :mod_type#, ModuleType::UNKNOWN
+  attr_reader :mod_type # :unknown, :module, :class
   attr_reader :domain_name
   alias_method :mod_name, :name
 

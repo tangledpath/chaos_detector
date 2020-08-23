@@ -2,7 +2,7 @@ require 'ruby-graphviz'
 
 require 'chaos_detector/atlas'
 require 'chaos_detector/options'
-require 'chaos_detector/stack_frame'
+require 'chaos_detector/stacker/frame'
 require 'chaos_detector/utils'
 require 'graph_theory/appraiser'
 
@@ -71,7 +71,7 @@ class ChaosDetector::Grapher
     raise ArgumentError, "Atlas is required." if atlas.nil?
     @atlas = atlas
     @options = options
-    @graph_metrics = GraphTheory::Appraiser.new(@atlas.graphus)
+    @graph_metrics = GraphTheory::Appraiser.new(@atlas.graph)
   end
 
   def create_directed_graph(label)
@@ -100,13 +100,14 @@ class ChaosDetector::Grapher
     ChaosDetector::Utils.log(msg, subject: "Grapher")
   end
 
+  # TODO: This has moved to chaos_graphs/....
   def build_module_graph
     # Create a new top-level graph:
 
     log("Creating a module-level dependency graph from atlas: #{@atlas}")
     graph = create_directed_graph("Module Dependencies")
     nodes = {}
-    domain_graphs = @atlas.graph_nodes.group_by(&:domain_name).map do |domain, dnodes|
+    domain_graphs = @atlas.graph.nodes.group_by(&:domain_name).map do |domain, dnodes|
       subg = add_domain_subgraph(graph, domain)
       dnodes.each do |domain_node|
         nodes[domain_node] = build_graph_node(subg, domain_node)
@@ -119,7 +120,7 @@ class ChaosDetector::Grapher
     # nodes = graph.nodes.zip(viz_nodes).to_h
 
     graph_edges = {}
-    @atlas.graph_edges.each do |edge|
+    @atlas.graph.edges.each do |edge|
       src = nodes.fetch(edge.src_node) do |n|
         log "src edge not found: #{n}"
         # TODO: Look up domain if necessarry.
