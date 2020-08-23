@@ -191,10 +191,10 @@ describe "ChaosDetector" do
       expect(graphs.atlas).to_not be_nil
 
       graphs.render_mod_dep()
-      graph_fs = `ls module-dep.png`
+      graph_fs = `ls spec/render/module-dep.png`
       p(decorate(graph_fs))
       expect(graph_fs).to be
-      expect(graph_fs.split.first).to eq("module-dep.png")
+      expect(graph_fs.split.first).to eq("spec/render/module-dep.png")
     end
 
   end
