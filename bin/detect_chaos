@@ -8,7 +8,6 @@ require 'chaos_detector/grapher'
 require 'chaos_detector/options'
 require 'chaos_detector/utils'
 
-
 module ChaosDetector
   class DetectChaos < Thor
     package_name "DetectChaos"
@@ -22,13 +21,14 @@ module ChaosDetector
     def playback
       ARGV.clear
       opts = ChaosDetector::Options.new
-      p "ChaosDetector::Navigator.playback with options: #{options}"
+      ChaosDetector.Utils.p("ChaosDetector::Navigator.playback with options: #{options}")
       opts.frame_csv_path = options[:opt_frame_csv].sub(options[:opt_app_root], "")
       opts.app_root_path = options[:opt_app_root]
       opts.module_filter = options[:opt_module_filter]
       ChaosDetector::Navigator.playback(options: opts)
 
-      grapher = ChaosDetector::Grapher.new(ChaosDetector::Navigator.atlas)
+      atlas = ChaosDetector::Navigator.atlas
+      grapher = ChaosDetector::Grapher.new(atlas)
       grapher.build_graphs()
     end
   end

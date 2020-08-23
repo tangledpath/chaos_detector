@@ -8,8 +8,6 @@ require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
 require 'chaos_detector/graph_theory/stack_metrics'
-require 'chaos_detector/graph_theory/node_metrics'
-require 'chaos_detector/graph_theory/edge_metrics'
 
 # Maintains all nodes and edges as stack calls are pushed and popped via StackFrames.
 class ChaosDetector::Atlas
@@ -31,39 +29,6 @@ class ChaosDetector::Atlas
   # chaos_attr :log_buffer, []
   chaos_attr :traversal_stats
 
-  DomainEdge = Struct.new(:src_domain, :dep_domain, :dep_count, :dep_count_norm)
-  def domain_deps
-    domain_edges = []
-
-    @edges.each do |edge|
-      src_domain = edge.src_node&.domain_name
-      dep_domain = edge.dep_node&.domain_name
-
-      # log("Checking edge: #{edge} : #{src_domain && dep_domain && src_domain != dep_domain}")
-      if src_domain && dep_domain && src_domain != dep_domain
-        domain_edge = domain_edges.find do |dedge|
-          dedge.src_domain == src_domain && dedge.dep_domain == dep_domain
-        end
-        if domain_edge.nil?
-          domain_edges << DomainEdge.new(src_domain, dep_domain, 1)
-        else
-          domain_edge.dep_count += 1
-        end
-        # domain_edges[domain_edge] = domain_edges.fetch(domain_edge, 0) + 1
-      end
-    end
-
-    normalize(domain_edges, :dep_count, :dep_count_norm)
-  end
-
-  def domain_names
-    @nodes.reduce(Set[]){|set, node| set << node.domain_name}
-  end
-
-  def domain_nodes(domain)
-    @nodes.find_all{|node|node.domain_name==domain}
-  end
-
   def stop
     log("Stopping:\n#{@traversal_stats}")
     self
@@ -73,42 +38,6 @@ class ChaosDetector::Atlas
     ChaosDetector::Utils.log(msg, subject: "Atlas")
   end
 
-  # TODO: x
-  # Report for each node
-  #   outgoing
-  #   incoming
-
-  #  Coupling: Each node couplet (Example for 100 nodes, we'd have 100 * 99 potential couplets)
-  #  Capture how many other nodes depend upon both nodes in couplet [directly, indirectly]
-  #  Capture how many other nodes from other domains depend upon both [directly, indirectly]
-  def node_metrics
-    node_matrix = Matrix.build(@nodes.length) do |row, col|
-
-    end
-    node_matrix
-  end
-
-  # Calculate
-  def edge_metrics
-  end
-
-  # @return positive integer indicating distance in number of edges
-  # from node_src to node_dep.  If multiple routes, calculate shortest:
-  def node_distance(node_src, node_dep)
-
-  end
-
-  #   Report edge on relative difference in its nodes:
-  #   domain, path, package?
-  # domain, path, package?
-  # Coupling
-  #
-  # Overall check for
-  # Edges that have a
-  # Engines that call back to t
-  # Report for all edges
-  #   Count all that span domains (weight by total hits AND distinct fn_call_coupletf)
-
   def initialize(options: nil)
     @options = options unless options.nil?
     reset
@@ -117,7 +46,7 @@ class ChaosDetector::Atlas
   def reset
     @root_node = ChaosDetector::Node.new(root: true)
     @md5 = Digest::MD5.new
-    @nodes = []
+    @nodes = [@root_node]
     @edges = []
     @frame_stack = []
     @frames_nopop = []
@@ -134,12 +63,12 @@ class ChaosDetector::Atlas
   # that is returned, otherwise, a new one is created.
   def node_for_frame(frame:)
     node = @nodes.find do |n|
-      n.domain_name == frame.domain_name &&
-        n.mod_name == frame.mod_name &&
-        n.mod_path == frame.mod_path
+      n.mod_name == frame.mod_name &&
+      (n.domain_name == frame.domain_name || n.mod_path == frame.mod_path)
     end
 
     unless node
+      puts "*****************Adding to nodes(#{@nodes.length}): #{frame.mod_name}(#{frame.domain_name}) -- #{frame.mod_path}:L#{frame.line_num}"
       @nodes << node=ChaosDetector::Node.new(domain_name: frame.domain_name, mod_name: frame.mod_name, mod_path: frame.mod_path)
     end
 
@@ -254,15 +183,6 @@ class ChaosDetector::Atlas
 
     def count_breadth
       -1
-    end
-
-    def normalize(ary, property, norm_property)
-      vector = Vector.elements(ary.map{|obj| obj.send(property)})
-      vector = vector.normalize
-      ary.each_with_index do |obj, i|
-        obj.send("#{norm_property}=", vector[i])
-      end
-      ary
     end
 
 end

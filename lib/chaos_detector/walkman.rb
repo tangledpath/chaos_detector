@@ -76,7 +76,7 @@ class ChaosDetector::Walkman
 
   def buffered_trigger
     if @log_buffer.length > @buffer_length
-      log("Triggering flush @#{@log_buffer.length} / @buffer_length")
+      # log("Triggering flush @#{@log_buffer.length} / @buffer_length")
       flush_csv
     end
   end
@@ -86,7 +86,7 @@ class ChaosDetector::Walkman
   end
 
   def flush_csv
-    log("Flushing...")
+    # log("Flushing...")
     if @log_buffer && @log_buffer.any?
       CSV.open(csv_path, "a") do |csv|
         @log_buffer.each do |log_line|

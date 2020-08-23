@@ -2,10 +2,10 @@ require 'matrix'
 
 module ChaosDetector::GraphTheory
   class NodeMetrics
+    # https://en.wikipedia.org/wiki/Software_package_metrics
     # https://en.wikipedia.org/wiki/Efferent_coupling
+
     # This metric is often used to calculate instability of a component in software architecture as
-    # I = Fan-out / (Fan-in + Fan-out). This metric has a range [0,1]. I = 0 is maximally stable while
-    # I = 1 is maximally unstable.
 
     # Fan-in of M: number of modules calling functions in M
     # Fan-out of M: number of modules called by M
@@ -18,31 +18,35 @@ module ChaosDetector::GraphTheory
     # * Coupling: calls
     #   between the
     #   modules
-    attr_accessor :src_count
-    attr_accessor :dep_count
+    attr_accessor :afferent_couplings
+    attr_accessor :efferent_couplings
 
     # https://en.wikipedia.org/wiki/Cyclomatic_complexity
     # M = E − N + 2P,
 
-    def initialize
-      @src_count = 0
-      @dep_count = 0
+    def initialize(afferent_couplings: 0, efferent_couplings: 0)
+      @afferent_couplings = afferent_couplings
+      @efferent_couplings = efferent_couplings
     end
 
-    class << self
-      def
-      def node_graph_metrics(nodes)
-        coupling_matrix = Matrix.build(@nodes.length) do |row, col|
+    # https://en.wikipedia.org/wiki/Software_package_metrics
+    # I = Ce / (Ce + Ca).
+    # I = efferent_couplings / (total couplings)
+    # Value from 0.0 to 1.0
+    # I = 0.0 is maximally stable while
+    # I = 1.0 is maximally unstable.
+    def instability
+      cT = total_couplings
+      cT == 0 ? 0.0 : @efferent_couplings / cT
+    end
 
-        end
-        coupling_matrix
-      end
+    def total_couplings
+      @afferent_couplings + @efferent_couplings
     end
 
     def to_s
-      "Dependent(from) Count: %d, Dependee(to) Count: %d, "
+      "Ce: #{@efferent_couplings}, Ca: #{@afferent_couplings}, I: #{instability}"
     end
-
 
   end
 end

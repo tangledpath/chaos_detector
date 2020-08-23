@@ -8,7 +8,7 @@ require 'chaos_detector/walkman'
 class ChaosDetector::Navigator
   REGEX_MODULE_UNDECORATE = /#<(Class:)?([a-zA-Z\:]*)(.*)>/.freeze
   DEFAULT_GROUP="default".freeze
-  FRAME_ACTIONS = [:call, :return]
+  FRAME_ACTIONS = [:call, :return, :class, :end]
 
   class << self
     extend ChaosDetector::Utils::ChaosAttr
@@ -62,16 +62,25 @@ class ChaosDetector::Navigator
     def record(options: nil)
       apply_options(options)
 
-      puts("Detecting chaos at #{@app_root_path}")
+      log("Detecting chaos at #{@app_root_path}")
 
       @walkman.record_start
 
       # setup_domain_hash(@options.path_domain_hash)
       @total_traces = 0
       @trace = TracePoint.new(*FRAME_ACTIONS) do |tracepoint|
+        if [:class, :end].include?tracepoint.event
+          # puts tracepoint.inspect
+          # FUN: TODO.
+          next
+        end
+
         @total_traces += 1
         next if full_path_skip?(tracepoint.path)
+
         frame = frame_at_trace(tracepoint)
+        # puts("#{tracepoint.event}: frame -> [#{frame.mod_name}] /  #{mod_nm(tracepoint.self.class)} / #{mod_nm(tracepoint.defined_class)} / #{tracepoint.path} / #{tracepoint.lineno}")
+
 
         # TODO: Generic module exclusion:
         next unless Kernel.ought?(frame.mod_name) && !frame.mod_name&.start_with?("ChaosDetector")
@@ -156,13 +165,17 @@ class ChaosDetector::Navigator
         when Module
           :module
         else
-          puts "Unknown mod_type: #{tp&.defined_class&.class}"
+          log "Unknown mod_type: #{tp&.defined_class&.class}"
           :nil
         end
 
       mod_path = localize_path(tp.path)
       # Currently dealing with nil and empty modules at a higher level for tracking:
       ChaosDetector::ModInfo.new(mod_name, mod_path: mod_path, mod_type: mod_type)
+    end
+
+    def mod_nm(mod)
+      mod&.name || mod&.to_s
     end
 
     def stop
