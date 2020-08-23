@@ -1,5 +1,5 @@
 require 'chaos_detector/navigator'
-require 'chaos_detector/grapher'
+require 'chaos_detector/graphing/grapher'
 require 'chaos_detector/options'
 
 # module ChaosDetector

@@ -1,8 +1,6 @@
 require 'ruby-graphviz'
 
-require_relative 'options'
-require_relative 'stacker/frame'
-require 'graph_theory/appraiser'
+require 'chaos_detector/options'
 require 'tcs/refined_utils'
 require 'tcs/utils/str_util'
 
