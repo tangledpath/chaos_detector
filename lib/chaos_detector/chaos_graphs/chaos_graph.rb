@@ -9,6 +9,8 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
 
   def initialize(function_graph)
     @function_graph = function_graph
+    @module_graph = nil
+    @domain_graph = nil
   end
 
   def build_derived_graphs
@@ -18,7 +20,6 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
 
   ## Derive domain-level graph from function-based graph
   def build_domain_graph
-
     domain_edges = edges_x_domains \
       .reduce(Set[]) { |set, e| set << [e.src_domain, e.dep_domain] }
       .map do |src_domain, dep_domain|

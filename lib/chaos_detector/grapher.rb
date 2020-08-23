@@ -66,7 +66,7 @@ class ChaosDetector::Grapher
     color: CLR_WHITE
   }
 
-  # TODO: integrate options:
+  # TODO: integrate options as needed:
   def initialize(atlas, options=nil)
     raise ArgumentError, "Atlas is required." if atlas.nil?
     @atlas = atlas

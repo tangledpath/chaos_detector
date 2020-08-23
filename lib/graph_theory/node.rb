@@ -4,13 +4,15 @@ class GraphTheory::Node
 
   attr_reader :name
   attr_reader :is_root
+  attr_reader :node_origin
 
-  def initialize(name: nil, root: false)
+  def initialize(name: nil, root: false, node_origin: nil)
     unless Kernel.aught?(name) || root
       raise ArgumentError, "Must have name or be root (name=#{name})"
     end
     @is_root = root
     @name = name
+    @node_origin = node_origin
   end
 
   def ==(other)
