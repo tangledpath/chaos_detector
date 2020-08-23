@@ -1,0 +1,27 @@
+## MAC OS
+.DS_Store
+
+## 3rdparty:
+*.png
+.vscode
+gems
+
+## PROJECT::GENERAL
+log
+*.csv*
+*.log
+coverage
+rdoc
+pkg
+tmp
+*.svg
+scratch.*
+
+## PROJECT::SPECIFIC
+chaos_detector.dump
+lib/*.bundle
+
+## Notebooks
+*.ipynb
+
+Gemfile.lock
