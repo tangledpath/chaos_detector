@@ -113,7 +113,6 @@ module ChaosDetector
         plain_name&.chomp!(':')
       end
 
-      puts "!!!!!!!!!!!!!!!!!!!! #{mod_name} -> #{plain_name}" unless naught?(plain_name)
       plain_name || mod_name
     end
 
@@ -129,7 +128,7 @@ module ChaosDetector
           offset = @atlas.close_frame(frame)
           frame_act = offset.nil? ? :close : :pop
           if offset
-            puts "Offset is #{offset} on closing frame #{frame}" if offset
+            puts "Offset is #{offset} on closing frame #{frame}" if offset && offset > 0
           end
           @walkman.write_frame(frame, action: frame_act, frame_offset: offset) if record
         else
