@@ -5,6 +5,25 @@
 # ChaosDetector::Utils.naught?(0)
 # ChaosDetector::Utils.naught?([])
 # module ChaosDetector
+
+def Kernel.with(obj)
+  ChaosDetector::Utils::with(obj) {yield obj}
+end
+
+def Kernel.naught?(obj)
+  ChaosDetector::Utils::naught?(obj)
+end
+
+def Kernel.ought?(obj)
+  !ChaosDetector::Utils::naught?(obj)
+end
+
+def decorate(text, *args)
+  ChaosDetector::Utils::decorate(text, args)
+end
+
+
+# = ChaosDetector::Utils::with
 module ChaosDetector::Utils
   STR_INDENT = '  '.freeze
   STR_BLANK = ''.freeze
@@ -53,21 +72,21 @@ module ChaosDetector::Utils
       end
     end
 
-    def decorate_pair(source, dest, indent_length: 0, clamp_style: :brace)
-      decorate("#{decorate(source)} -> #{decorate(dest)}", clamp_style:clamp_style, indent_length:indent_length)
+    def decorate_pair(source, dest, indent_length: 0, clamp: :brace)
+      decorate("#{decorate(source)} -> #{decorate(dest)}", clamp:clamp, indent_length:indent_length)
     end
 
-    def decorate(text, clamp_style: :brace, prefix: nil, suffix: nil, sep: nil, indent_length: 0)
+    def decorate(text, clamp: :brace, prefix: nil, suffix: nil, sep: nil, indent_length: 0)
       return STR_BLANK if naught?text
 
-      clamp_pre, clamp_post = clamp_chars(clamp_style: clamp_style)
+      clamp_pre, clamp_post = clamp_chars(clamp: clamp)
       indent("#{prefix}#{sep}#{clamp_pre}#{text}#{clamp_post}#{sep}#{suffix}", indent_length)
     end
 
     alias_method :d, :decorate
 
-    def clamp_chars(clamp_style: :brace)
-      case(clamp_style)
+    def clamp_chars(clamp: :brace)
+      case(clamp)
         when :angle, :arrow
           ['<', '>']
         when :brace
@@ -97,13 +116,14 @@ module ChaosDetector::Utils
     end
 
     # Simple logging, more later
-    def log(msg)
+    def log(msg, subject: nil)
+      message = naught?(subject) ? msg : d(msg, prefix:d(subject, clamp: :bracket))
       if block_given?
-        p(decorate(msg, prefix: 'Starting: '))
+        p(decorate(message, prefix: 'Starting: '))
         result = yield
-        p(d(msg, prefix: 'Complete: ', suffix: d(result)))
+        p(d(message, prefix: 'Complete: ', suffix: d(result)))
       else
-        p(msg)
+        p(message)
       end
     end
 
@@ -156,13 +176,3 @@ module ChaosDetector::Utils
   end
 
 end
-
-def Kernel.with(obj)
-  ChaosDetector::Utils::with(obj) {yield obj}
-end
-
-def Kernel.naught?(obj)
-  ChaosDetector::Utils::naught?(obj)
-end
-
-# = ChaosDetector::Utils::with
