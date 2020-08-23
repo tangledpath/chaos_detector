@@ -17,6 +17,25 @@ module ChaosDetector
         @edges = edges || []
       end
 
+      def traversal
+        to_enum(:traverse).map {|n| puts "TNode:#{n}"; n.label}
+      end
+
+      def traverse
+        # raise ArgumentError, "traverse requires block" unless block_given?
+
+        nodes_to_visit = [root_node];
+        while(nodes_to_visit.length > 0) do
+          node = nodes_to_visit.shift
+          yield node
+          nodes_to_visit = children(node) + nodes_to_visit #.unshift(*children(node))
+        end
+      end
+
+      def children(node)
+        @edges.select {|e|e.src_node == node}
+      end
+
       def node_for(obj)
         raise ArgumentError, "#node_for requires obj" unless obj
         node_n = @nodes.index(obj)

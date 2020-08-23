@@ -72,10 +72,20 @@ module ChaosDetector
         ChaosUtils::assert(r.length == @edges_ret.length, 'Ret Edges should be Set')
 
         ChaosUtils::assert(@edges_call.uniq == @edges_call, 'Call Edges should be unique')
-        ChaosUtils::assert(@edges_call.uniq == @edges_call, 'Call Edges should be unique')
+        ChaosUtils::assert(@edges_ret.uniq == @edges_ret, 'Call Edges should be unique')
 
-        log("Unique edges in call", object: (c - r).length)
-        log("Unique edges in return", object: (r - c).length)
+        log("FFF", object: (@edges_call + @edges_ret).uniq.length)
+        log("Unique edges in call (n/total)", object: [(c - r).length, c.length])
+        log("Unique edges in return (n/total)", object: [(r - c).length, r.length])
+
+        @edges_call.each do |e|
+          log("edges_call", object: e)
+        end
+
+        @edges_ret.each do |e|
+          log("edges_ret", object: e)
+        end
+
         c.union(r)
       end
 
@@ -111,7 +121,7 @@ module ChaosDetector
         end
 
         if edge.nil?
-          edges << edge=ChaosDetector::GraphTheory::Edge.new(src_node, dep_node)
+          edge=edges << ChaosDetector::GraphTheory::Edge.new(src_node, dep_node)
         end
         edge
 

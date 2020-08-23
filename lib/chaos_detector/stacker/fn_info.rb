@@ -17,6 +17,10 @@ module ChaosDetector
         ChaosDetector::Stacker::FnInfo.match?(self, other)
       end
 
+      def fn_info
+        self
+      end
+
       def to_s
         "#{fn_name}: #{fn_path}:L#{fn_line}"
       end

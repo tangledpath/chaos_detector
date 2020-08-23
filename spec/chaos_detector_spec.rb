@@ -125,6 +125,8 @@ describe "ChaosDetector" do
       end
       grapher.add_edges(chaos_graph.module_edges)
 
+      p("Traversal: #{graphing.traversal.join(' -> ')}")
+
       grapher.render_graph
       graph_fs = `ls module-test.png`
       p(ChaosUtils::decorate(graph_fs))
