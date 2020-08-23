@@ -19,7 +19,7 @@ gemspec = Gem::Specification.new do |s|
   s.add_development_dependency(%q<rake-compiler>, ["~> 1.1"])
   s.add_development_dependency(%q<rspec>, ["~> 3.9"])
   s.add_dependency(%q<ruby-graphviz>, ["~> 1.2.5"])
-  s.add_dependency(%q<thor>)
+  s.add_dependency(%q<thor>, ["~> 0.20.3"])
   s.version = File.read("VERSION")
   s.files = gemfiles # `git ls-files`.split
 end

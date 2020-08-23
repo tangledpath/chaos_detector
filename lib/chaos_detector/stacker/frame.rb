@@ -14,8 +14,15 @@ module ChaosDetector
       attr_reader :line_num
 
       def initialize(mod_name: nil, mod_type: nil, fn_path: nil, domain_name:nil, fn_name:nil, line_num: nil, callee: nil)
+        if naught?(mod_name)
+          msg = ("Frame init requires mod_name %s :: %s - %s" % [
+            decorate(domain_name),
+            decorate(fn_name),
+            decorate(fn_path)
+          ])
+          raise ArgumentError, msg
+        end
 
-        raise ArgumentError, "Frame init requires mod_name." unless Kernel.aught? mod_name
         @mod_type = mod_type
         @mod_name = mod_name
 

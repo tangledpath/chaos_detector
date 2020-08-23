@@ -1,9 +1,9 @@
-# TCS::Utils::CoreUtil.naught?("")
-# TCS::Utils::CoreUtil.naught?(0)
-# TCS::Utils::CoreUtil.naught?([])
-# TCS::Utils::CoreUtil.naught?("foobar")
-# TCS::Utils::CoreUtil.naught?(0)
-# TCS::Utils::CoreUtil.naught?([])
+# naught?("")
+# naught?(0)
+# naught?([])
+# naught?("foobar")
+# naught?(0)
+# naught?([])
 # module ChaosDetector
 
 # = TCS::Utils::CoreUtil::with
@@ -81,17 +81,17 @@ module TCS
         # TCS::Utils::CoreUtil.test
         def test
           puts("Testing TCS::Utils::CoreUtil")
-          assert(true, 'Naught detects blank string'){TCS::Utils::CoreUtil.naught?("")}
-          assert(true, 'Naught detects blank string with space'){TCS::Utils::CoreUtil.naught?(" ")}
-          assert(true, 'Naught detects int 0'){TCS::Utils::CoreUtil.naught?(0)}
-          assert(true, 'Naught detects float 0.0'){TCS::Utils::CoreUtil.naught?(0.0)}
-          assert(true, 'Naught detects empty array'){TCS::Utils::CoreUtil.naught?([])}
-          assert(true, 'Naught detects empty hash'){TCS::Utils::CoreUtil.naught?({})}
-          assert(false, 'Naught real string'){TCS::Utils::CoreUtil.naught?("foobar")}
-          assert(false, 'Naught non-zero int'){TCS::Utils::CoreUtil.naught?(1)}
-          assert(false, 'Naught non-zero float'){TCS::Utils::CoreUtil.naught?(33.33)}
-          assert(false, 'Naught non-empty array'){TCS::Utils::CoreUtil.naught?(['stuff'])}
-          assert(false, 'Naught non-empty hash'){TCS::Utils::CoreUtil.naught?({foo: 'bar'})}
+          assert(true, 'Naught detects blank string'){naught?("")}
+          assert(true, 'Naught detects blank string with space'){naught?(" ")}
+          assert(true, 'Naught detects int 0'){naught?(0)}
+          assert(true, 'Naught detects float 0.0'){naught?(0.0)}
+          assert(true, 'Naught detects empty array'){naught?([])}
+          assert(true, 'Naught detects empty hash'){naught?({})}
+          assert(false, 'Naught real string'){naught?("foobar")}
+          assert(false, 'Naught non-zero int'){naught?(1)}
+          assert(false, 'Naught non-zero float'){naught?(33.33)}
+          assert(false, 'Naught non-empty array'){naught?(['stuff'])}
+          assert(false, 'Naught non-empty hash'){naught?({foo: 'bar'})}
         end
       end
 

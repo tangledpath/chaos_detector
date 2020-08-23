@@ -39,7 +39,7 @@ module ChaosDetector
         # Add module info, if supplied:
         if mod_info
           add_module(mod_info)
-        elsif Kernel.aught?mod_name
+        elsif aught?mod_name
           add_module_attrs(mod_name:mod_name, mod_path: fn_path, mod_type: mod_type)
         end
       end

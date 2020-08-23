@@ -10,7 +10,7 @@ module GraphTheory
     attr_reader :node_origin
 
     def initialize(name: nil, root: false, node_origin: nil)
-      unless Kernel.aught?(name) || root
+      unless aught?(name) || root
         raise ArgumentError, "Must have name or be root (name=#{name})"
       end
       @is_root = root
