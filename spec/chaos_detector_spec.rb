@@ -5,7 +5,7 @@ require 'chaos_detector/stack_frame'
 require 'chaos_detector/grapher'
 require 'chaos_detector/options'
 require 'chaos_detector/utils'
-require 'chaos_detector/graph_theory'
+require 'graph_theory/appraiser'
 
 require 'fixtures/Fubar'
 describe "ChaosDetector" do
@@ -53,7 +53,7 @@ describe "ChaosDetector" do
       Fubar::Foo.foo
       atlas = ChaosDetector::Navigator.stop
 
-      graph_metrics = ChaosDetector::GraphTheory::GraphMetrics.new(atlas.graphus)
+      graph_metrics = GraphTheory::Appraiser.new(atlas.graphus)
       graph_metrics.appraise
     end
 

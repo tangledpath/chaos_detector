@@ -1,6 +1,6 @@
 require 'digest'
-require 'chaos_detector/edge'
-require 'chaos_detector/nodes/function_node'
+require 'graph_theory/edge'
+require 'chaos_detector/chaos_graphs/function_node'
 require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'

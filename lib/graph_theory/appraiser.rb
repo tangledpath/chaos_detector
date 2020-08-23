@@ -1,92 +1,76 @@
-# require 'matrix'
-require 'set'
-# require 'chaos_detector/graph_theory/domain_metrics'
-# require 'chaos_detector/graph_theory/edge_metrics'
-# require 'chaos_detector/graph_theory/node_metrics'
-# require 'chaos_detector/graph_theory/stack_metrics'
+require 'graph_theory/graph_theory'
+require 'graph_theory/edge_metrics'
+require 'graph_theory/node_metrics'
 
-# Encapsulate and aggregates graphs for dependency tracking
-#   * Function directed graph
-#   * Module directed graph - derived from function graph
-#   * Domain directed graph - derived from function graph
-class ChaosDetector::Nodes::ChaosGraph
-  attr_reader :function_graph
-  attr_reader :domain_graph
-  attr_reader :module_graph
+class GraphTheory::Appraiser
+  attr_reader :cyclomatic_complexity
 
   attr_reader :node_metrics
   attr_reader :edge_metrics
 
-  def initialize(function_graph)
-    @function_graph = function_graph
+  def initialize(graph)
+    @graph = graph
+    @cyclomatic_complexity = nil
+    @node_metrics = {}
+    @edge_metrics = {}
   end
 
-  ## Derive domain-level graph from function-based graph
-  def build_domain_graph
-
-    domain_edges = edges_x_domains \
-      .reduce(Set[]) { |set, e| set << [e.src_domain, e.dep_domain] }
-      .map do |src_domain, dep_domain|
-        dsrc_node = dom_node_hash[src_domain]
-        ddep_node = dom_node_hash[dep_domain]
-        raise "Node not found for src: '#{c}'" unless dsrc_node
-        raise "Node not found for dep: '#{dep_domain}'" unless ddep_node
-        ChaosDetector::Edge.new(dsrc_node, ddep_node)
-      end
-
-    @function_graph.edges.reduce(Set[]) do |set, edge|
-      set << [edge.src_domain_name, edge.dep_domain_name]
-    end
+  def appraise
+    log("Appraising nodes.")
+    appraise_nodes
+    log("Appraising edges.")
+    appraise_edges
+    # log("Measuring domain dependencies.")
+    # find_domain_edges
+    log("Measuring cyclomatic complexity.")
+    measure_cyclomatic_complexity
+    log("Performed appraisal: #{report}")
   end
 
-  ## Derive module-level graph from function-based graph
-  def build_module_graph
-  end
-
-  def domain_nodes
-    @function_graph.nodes.group_by(&:domain_name).map do |dom_nm, fn_nodes|
-      [
-        dom_nm,
-        ChaosDetector::Nodes::DomainNode.new(dom_name: dom_nm, fn_node_count: fn_nodes.length)
+  def to_s
+    msg = "N: %d, E: %d" % [@graph.nodes.length, @graph.edges.length]
+    if @cyclomatic_complexity.nil?
+      msg << "(Please run #appraise to gather metrics.)"
+    else
+      msg << " M: %d(cyclomatic_complexity), path_count = %d/%d(uniq), circular_paths = %d" % [
+        @cyclomatic_complexity,
+        @full_paths.length,
+        @path_count_uniq,
+        @circular_paths.length,
       ]
     end
   end
 
-  def domain_edges
-    dom_node_hash = domain_nodes
-    edges_x_domains\
-      .group_by { |e| [e.src_domain, e.dep_domain] }
-      .map do |dom_pair, fn_nodes|
-        src_domain, dep_domain = dom_pair
-        dsrc_node = dom_node_hash[src_domain]
-        ddep_node = dom_node_hash[dep_domain]
-        raise "Node not found for src: '#{src_domain}'" unless dsrc_node
-        raise "Node not found for dep: '#{dep_domain}'" unless ddep_node
-        ChaosDetector::Edge.new(dsrc_node, ddep_node).tap do |edge|
-          edge.weights[fn_node_count] = fn_nodes.length
-        end
-      end
-  end
+  def report
+    buffy = [to_s]
 
-  # Edges crossing domains:
-  def edges_x_domains
-    @function_graph.edges.select do |e|
-      aught?(e.src_domain_name) && aught?(e.dep_domain_name) &&
-      e.src_domain_name == e.dep_domain_name
-    end
+    buffy << "Circular References #{@circular_paths.length} / #{@circular_paths.uniq.length}"
+    buffy.concat(@circular_paths.map do |p|
+      "  " + p.map(&:label).join(' -> ')
+    end)
+
+    # Gather nodes:
+    buffy << "Nodes:"
+    buffy.concat(@node_metrics.map{|n, m| "  (#{n.domain_name})#{n.label}: #{m}" })
+
+    # Gather edges:
+    # buffy << "Edges:"
+    # buffy.append(@edge_metrics.map{|e, m| "  #{e}: #{m}" })
+
+    buffy.join("\n")
   end
 
   private
     def log(msg)
-      ChaosDetector::Utils.log(msg, subject: "ChaosGraph")
+      ChaosDetector::Utils.log(msg, subject: "GraphTheory")
     end
 
     def measure_cyclomatic_complexity
       @circular_paths = []
       @full_paths = []
-      traverse_nodes([@function_graph.root_node])
+      traverse_nodes([@graph.root_node])
       @path_count_uniq = @circular_paths.uniq.count + @full_paths.uniq.count
-      @cyclomatic_complexity = @function_graph.edges.count - @function_graph.nodes.count + (2 * @path_count_uniq)
+      @cyclomatic_complexity = @graph.edges.count - @graph.nodes.count + (2 * @path_count_uniq)
     end
 
     # TODO: Use edgestack instead of nodestack for easier debugging?:
@@ -149,34 +133,34 @@ class ChaosDetector::Nodes::ChaosGraph
     end
 
     def fan_out_edges(node)
-      @function_graph.edges.find_all{|e| e.src_node==node }
+      @graph.edges.find_all{|e| e.src_node==node }
     end
 
     def fan_out_nodes(node)
-      @function_graph.edges.find_all{|e| e.src_node==node }.map(&:dep_node)
+      @graph.edges.find_all{|e| e.src_node==node }.map(&:dep_node)
     end
 
     def fan_in_nodes(node)
-      @function_graph.edges.find_all{|e| e.dep_node==node }.map(&:src_node)
+      @graph.edges.find_all{|e| e.dep_node==node }.map(&:src_node)
     end
 
     def appraise_nodes
-      @node_metrics = @function_graph.nodes.map do |node|
+      @node_metrics = @graph.nodes.map do |node|
         [node, appraise_node(node)]
       end.to_h
     end
 
     def appraise_edges
-      @edge_metrics = @function_graph.edges.map do |edge|
+      @edge_metrics = @graph.edges.map do |edge|
         [edge, appraise_edge(edge)]
       end.to_h
     end
 
     # For each node, measure fan-in(Ca) and fan-out(Ce)
     def appraise_node(node)
-      ChaosDetector::ChaosGraph::NodeMetrics.new(
-        afferent_couplings: @function_graph.edges.count{|e| e.dep_node==node },
-        efferent_couplings: @function_graph.edges.count{|e| e.src_node==node }
+      GraphTheory::NodeMetrics.new(
+        afferent_couplings: @graph.edges.count{|e| e.dep_node==node },
+        efferent_couplings: @graph.edges.count{|e| e.src_node==node }
       )
     end
 
@@ -190,7 +174,7 @@ class ChaosDetector::Nodes::ChaosGraph
     #  Capture how many other nodes depend upon both nodes in couplet [directly, indirectly]
     #  Capture how many other nodes from other domains depend upon both [directly, indirectly]
     def node_matrix
-      node_matrix = Matrix.build(@function_graph.nodes.length) do |row, col|
+      node_matrix = Matrix.build(@graph.nodes.length) do |row, col|
 
       end
       node_matrix

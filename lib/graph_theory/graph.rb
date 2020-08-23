@@ -1,10 +1,8 @@
-require 'forwardable'
-require 'chaos_detector/utils'
+require 'graph_theory/graph_theory'
 
 # Maintains all nodes and edges as stack calls are pushed and popped via StackFrames.
-class ChaosDetector::Graphus
+class GraphTheory::Graph
   extend Forwardable
-  extend ChaosDetector::Utils::ChaosAttr
   attr_reader :root_node
   attr_reader :nodes
   attr_reader :edges
@@ -33,7 +31,7 @@ class ChaosDetector::Graphus
     end
 
     if edge.nil?
-      edges << edge=ChaosDetector::Edge.new(src_node, dep_node)
+      edges << edge=GraphTheory::Edge.new(src_node, dep_node)
     end
 
     edge

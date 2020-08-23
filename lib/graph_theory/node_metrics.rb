@@ -1,6 +1,5 @@
-require 'matrix'
-
-module ChaosDetector::GraphTheory
+require 'graph_theory/graph_theory'
+module GraphTheory
   class NodeMetrics
     # https://en.wikipedia.org/wiki/Software_package_metrics
     # https://en.wikipedia.org/wiki/Efferent_coupling

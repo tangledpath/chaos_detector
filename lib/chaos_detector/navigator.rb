@@ -1,7 +1,7 @@
 require 'pathname'
 require 'chaos_detector/atlas'
 require 'chaos_detector/options'
-require 'chaos_detector/nodes/module_node'
+require 'chaos_detector/chaos_graphs/module_node'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
 require 'chaos_detector/walkman'
@@ -175,7 +175,7 @@ class ChaosDetector::Navigator
         end
 
       # Currently dealing with nil and empty modules at a higher level for tracking:
-      ChaosDetector::Nodes::ModuleNode.new(mod_name: mod_name, mod_type: mod_type)
+      ChaosDetector::ChaosGraphs::ModuleNode.new(mod_name: mod_name, mod_type: mod_type)
     end
 
     def mod_nm(mod)
