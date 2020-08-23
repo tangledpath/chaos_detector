@@ -62,7 +62,7 @@ class GraphTheory::Appraiser
 
   private
     def log(msg)
-      ChaosDetector::Utils.log(msg, subject: "GraphTheory")
+      TCS::Utils::Util.log(msg, subject: "GraphTheory")
     end
 
     def measure_cyclomatic_complexity

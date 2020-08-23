@@ -3,11 +3,11 @@ require 'ruby-graphviz'
 require 'chaos_detector/atlas'
 require 'chaos_detector/options'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
 require 'graph_theory/appraiser'
 
 class ChaosDetector::Grapher
-  extend ChaosDetector::Utils::ChaosAttr
+  extend TCS::Utils::Util::ChaosAttr
 
   CLR_BLACK='black'
   CLR_DARKRED = 'red4'
@@ -66,7 +66,7 @@ class ChaosDetector::Grapher
     color: CLR_WHITE
   }
 
-  # TODO: integrate options:
+  # TODO: integrate options as needed:
   def initialize(atlas, options=nil)
     raise ArgumentError, "Atlas is required." if atlas.nil?
     @atlas = atlas
@@ -97,7 +97,7 @@ class ChaosDetector::Grapher
   end
 
   def log(msg)
-    ChaosDetector::Utils.log(msg, subject: "Grapher")
+    TCS::Utils::Util.log(msg, subject: "Grapher")
   end
 
   # TODO: This has moved to chaos_graphs/....

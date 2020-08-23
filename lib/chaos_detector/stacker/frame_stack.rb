@@ -1,5 +1,5 @@
 require 'chaos_detector/stacker/stacker'
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
 
 # Maintains stack of trace frames
 class ChaosDetector::Stacker::FrameStack
@@ -8,7 +8,7 @@ class ChaosDetector::Stacker::FrameStack
   end
 
   def log(msg)
-    ChaosDetector::Utils.log(msg, subject: "FrameStack")
+    TCS::Utils::Util.log(msg, subject: "FrameStack")
   end
 
   def depth

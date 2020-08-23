@@ -3,99 +3,119 @@ require 'chaos_detector/atlas'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_graphs/module_node'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
 require 'chaos_detector/walkman'
+
+# The main interface for intercepting tracepoints,
+# and converting them into recordable and playable
+# stack/trace frames
 
 class ChaosDetector::Navigator
   REGEX_MODULE_UNDECORATE = /#<(Class:)?([a-zA-Z\:]*)(.*)>/.freeze
   DEFAULT_GROUP="default".freeze
   FRAME_ACTIONS = [:call, :return, :class, :end]
 
-  class << self
-    extend ChaosDetector::Utils::ChaosAttr
-    chaos_attr (:options) { ChaosDetector::Options.new }
-    chaos_attr :atlas
-    attr_reader :app_root_path
-    attr_reader :domain_hash
-    attr_reader :module_module_hash
-    attr_reader :fn_fn_hash
-    attr_reader :walkman
+  attr_reader :options
+  attr_reader :atlas
+  attr_reader :app_root_path
+  attr_reader :domain_hash
+  attr_reader :module_module_hash
+  attr_reader :fn_fn_hash
+  attr_reader :walkman
+  attr_reader :stopped
 
-    def full_path_skip?(path)
-      !(@app_root_path && path.start_with?(@app_root_path))
-    end
+  def initialize(options:)
+    raise ArgumentError, "#initialize requires options" if options.nil?
+    @options = options
+    @stopped = false
+    apply_options
+  end
 
-    def apply_options(options)
-      @options = options if options
-
-      @atlas = ChaosDetector::Atlas.new
-      @walkman = ChaosDetector::Walkman.new(atlas: @atlas, options: @options)
-
-      Kernel.with(@options.root_label) do |root_label|
-        @atlas.graph.root_node.define_singleton_method(:label) { root_label }
-      end
-
-      @app_root_path = ChaosDetector::Utils.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
-      @domain_hash = {}
-      @options.path_domain_hash && options.path_domain_hash.each do |path, group|
-        dpath = Pathname.new(path.to_s).cleanpath.to_s
-        @domain_hash[dpath] = group
-      end
-
-    end
-
-    ### Playback of walkman CSV file:
-    def playback(options: nil)
-      log("Detecting chaos in playback via walkman")
-      apply_options(options)
-      @walkman.playback do |action, frame|
-        log("Performing :#{action} on frame: #{frame}")
-        frame_act = case action.to_sym
+  ### Playback of walkman CSV file:
+  def playback()
+    log("Detecting chaos in playback via walkman")
+    @walkman.playback do |action, frame|
+      log("Performing :#{action} on frame: #{frame}")
+      frame_act = case action.to_sym
         when :open
           :call
         when :close, :pop
           :return
-        end
-        perform_frame_action(frame, action: frame_act, record: false)
       end
-      @atlas
+      perform_frame_action(frame, action: frame_act, record: false)
     end
+    @atlas
+  end
 
-    def record(options: nil)
-      apply_options(options)
+  def record()
+    log("Detecting chaos at #{@app_root_path}")
 
-      log("Detecting chaos at #{@app_root_path}")
+    @walkman.record_start
+    @total_traces = 0
+    @trace = TracePoint.new(*FRAME_ACTIONS) do |tracepoint|
+      if @stopped
+        @trace.disable
+        log("Tracing stoped; stopping immediately.")
+        next
+      end
 
-      @walkman.record_start
+      if [:class, :end].include?tracepoint.event
+        # puts tracepoint.inspect
+        # FUN: TODO.
+        next
+      end
 
-      # setup_domain_hash(@options.path_domain_hash)
-      @total_traces = 0
-      @trace = TracePoint.new(*FRAME_ACTIONS) do |tracepoint|
-        if [:class, :end].include?tracepoint.event
-          # puts tracepoint.inspect
-          # FUN: TODO.
-          next
-        end
-
+      next if full_path_skip?(tracepoint.path)
+      tracepoint.disable do
         @total_traces += 1
-        next if full_path_skip?(tracepoint.path)
-
         frame = frame_at_trace(tracepoint)
-        # puts("#{tracepoint.event}: frame -> [#{frame.mod_name}] /  #{mod_nm(tracepoint.self.class)} / #{mod_nm(tracepoint.defined_class)} / #{tracepoint.path} / #{tracepoint.lineno}")
 
-
-        # TODO: Generic module exclusion:
-        next unless Kernel.aught?(frame.mod_name) && !frame.mod_name&.start_with?("ChaosDetector")
-
-        tracepoint.disable do
-          # DISABLE MORE OF ABOVE?
-          perform_frame_action(frame, action: tracepoint.event, record: true)
+        # Generic module exclusion:
+        if module_skip?(frame.mod_name)
+          puts "Skipping module #{frame.mod_name}"
+          break
         end
-      end
 
-      @trace.enable
-      @atlas
+        # DISABLE MORE OF ABOVE?
+        perform_frame_action(frame, action: tracepoint.event, record: true)
+      end
     end
+
+    @trace.enable
+    @atlas
+  end
+
+  def stop
+    @stopped = true
+    @trace&.disable
+    log("Stopping after total traces: #{@total_traces}")
+    @walkman.stop
+    @atlas.stop
+  end
+
+  # Undecorate all this junk:
+  # a="#<Class:Authentication>"
+  # b="#<Class:Person(id: integer, first"
+  # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
+  def undecorate_module_name(mod_name)
+    return '' if TCS::Utils::Util.naught?(mod_name)
+    return mod_name unless mod_name.start_with?('#')
+
+    plain_name = nil
+    caps = mod_name.match(REGEX_MODULE_UNDECORATE)&.captures
+    # puts "CAP #{mod_name}: #{caps}"
+    if caps && caps.length > 0
+      caps.delete("Class:")
+      caps.compact!
+      plain_name = caps.first
+      plain_name&.chomp!(':')
+    end
+
+    # puts "!!!!!!!!!!!!!!!!!!!! #{mod_name} -> #{plain_name}" unless TCS::Utils::Util.naught?(plain_name)
+    plain_name || mod_name
+  end
+
+  private
 
     def perform_frame_action(frame, action:, record: false)
       raise ArgumentError, "#perform_frame_action requires frame" if frame.nil?
@@ -104,9 +124,10 @@ class ChaosDetector::Navigator
         @atlas.open_frame(frame)
         @walkman.write_frame(frame, action: :open) if record
       elsif action == :return
-        match = @atlas.close_frame(frame)
-        frame_act = match.nil? ? :close : :pop
-        @walkman.write_frame(frame, action: frame_act) if record
+        offset = @atlas.close_frame(frame)
+        frame_act = offset.nil? ? :close : :pop
+        puts "Offset is #{offset} closing frame #{frame}"
+        @walkman.write_frame(frame, action: frame_act, frame_offset: offset) if record
       else
         raise ArgumentError, "Action should be one of: #{FRAME_ACTIONS.inspect}.  Actual value: #{action.inspect}"
       end
@@ -130,11 +151,30 @@ class ChaosDetector::Navigator
       )
     end
 
-    def stop
-      log("Stopping after total traces: #{@total_traces}")
-      @trace&.disable
-      @walkman.stop
-      @atlas.stop
+    def full_path_skip?(path)
+      !(@app_root_path && path.start_with?(@app_root_path))
+    end
+
+    def module_skip?(mod_name)
+      Kernel.naught?(mod_name) || @options.ignore_modules.any? { |m| mod_name.include?(m) }
+    end
+
+    def apply_options
+      @options = options
+
+      @atlas = ChaosDetector::Atlas.new
+      @walkman = ChaosDetector::Walkman.new(atlas: @atlas, options: @options)
+
+      Kernel.with(@options.root_label) do |root_label|
+        @atlas.graph.root_node.define_singleton_method(:label) { root_label }
+      end
+
+      @app_root_path = TCS::Utils::Util.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
+      @domain_hash = {}
+      @options.path_domain_hash && options.path_domain_hash.each do |path, group|
+        dpath = Pathname.new(path.to_s).cleanpath.to_s
+        @domain_hash[dpath] = group
+      end
     end
 
     def mod_type_from_class(clz)
@@ -158,51 +198,20 @@ class ChaosDetector::Navigator
     def localize_path(path)
       # @app_root_path.relative_path_from(Pathname.new(path).cleanpath).to_s
       p = Pathname.new(path).cleanpath.to_s
-      p.sub!(@app_root_path, '') unless ChaosDetector::Utils.naught?(@app_root_path)
+      p.sub!(@app_root_path, '') if @app_root_path
       p.start_with?('/') ? p[1..-1] : p
     end
 
     def log(msg)
-      ChaosDetector::Utils.log(msg, subject: "Navigator")
+      TCS::Utils::Util.log(msg, subject: "Navigator")
     end
 
     def domain_from_path(local_path:)
-      # puts "Looking for #{local_path} in [#{domain_hash.keys.join(',')}]"
       key = domain_hash.keys.find{|k| local_path.start_with?(k)}
       key ? domain_hash[key] : DEFAULT_GROUP
-      # p=@app_root_path.relative_path_from(path)
-
-      # p = path.lstrip(app_root_path)
-      # @app_root_path.relative_path_from(path)
-      # domain_hash.fetch(local_path, DEFAULT_GROUP)
-    end
-
-    # Undecorate all this junk:
-    # a="#<Class:Authentication>"
-    # b="#<Class:Person(id: integer, first"
-    # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
-    def undecorate_module_name(mod_name)
-      return '' if ChaosDetector::Utils.naught?(mod_name)
-      return mod_name unless mod_name.start_with?('#')
-
-      plain_name = nil
-      caps = mod_name.match(REGEX_MODULE_UNDECORATE)&.captures
-      # puts "CAP #{mod_name}: #{caps}"
-      if caps && caps.length > 0
-        # {"#<Class:Authentication>"=>["Class:", "Authentication", ""]}
-        caps.delete("Class:")
-        caps.compact!
-        plain_name = caps.first
-        plain_name&.chomp!(':')
-      end
-
-      # puts "!!!!!!!!!!!!!!!!!!!! #{mod_name} -> #{plain_name}" unless ChaosDetector::Utils.naught?(plain_name)
-      plain_name || mod_name
     end
 
     def check_name(mod_nm)
       Kernel.aught?(mod_nm) && !mod_nm.strip.start_with?('#')
     end
-
-  end
 end

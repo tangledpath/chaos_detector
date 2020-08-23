@@ -1,4 +1,5 @@
 source "http://rubygems.org"
+ruby '2.7.1'
 
 gem 'rake-compiler', "~> 1.1.1"
 gem 'rspec', "~> 3.9"

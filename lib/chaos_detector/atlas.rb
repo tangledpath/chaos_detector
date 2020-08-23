@@ -5,7 +5,7 @@ require 'graph_theory/graph'
 require 'chaos_detector/chaos_graphs/function_node'
 require 'chaos_detector/stacker/frame_stack'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
 require 'chaos_detector/atlas_metrics'
 
 # Maintains all nodes and edges as stack calls are pushed and popped via Frames.
@@ -28,7 +28,7 @@ class ChaosDetector::Atlas
   end
 
   def log(msg)
-    ChaosDetector::Utils.log(msg, subject: "Atlas")
+    TCS::Utils::Util.log(msg, subject: "Atlas")
   end
 
   def stop

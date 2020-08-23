@@ -1,11 +1,14 @@
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
 class ChaosDetector::Options
-  extend ChaosDetector::Utils::ChaosAttr
+  extend TCS::Utils::Util::ChaosAttr
 
+  IGNORE_CHAOS = 'ChaosDetector::'
+  IGNORE_RSPEC = 'RSpec::'
   # chaos_attr (:options) { ChaosDetector::Options.new }
   chaos_attr(:app_root_path, Dir.getwd)
   chaos_attr(:log_root_path, Dir.getwd)
   chaos_attr(:path_domain_hash)
+  chaos_attr(:ignore_modules, [IGNORE_CHAOS, IGNORE_RSPEC])
   chaos_attr(:atlas_log_path, "atlas_status.csv")
   chaos_attr(:module_filter, "todo")
   chaos_attr(:root_label, "App Container")

@@ -1,4 +1,4 @@
-require 'chaos_detector/utils'
+require 'tcs/utils/util'
 
 class ChaosDetector::Stacker::Frame
   attr_reader :domain_name

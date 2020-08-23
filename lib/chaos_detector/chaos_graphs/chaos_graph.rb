@@ -9,6 +9,17 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
 
   def initialize(function_graph)
     @function_graph = function_graph
+    @domain_nodes = nil
+    @module_modes = nil
+
+    @domain_edges = nil
+    @module_edges = nil
+    @module_domain_edges = nil
+    @domain_module_edges = nil
+    @function_domain_edges = nil
+    @domain_function_edges = nil
+    # @module_graph = nil
+    # @domain_graph = nil
   end
 
   def build_derived_graphs
@@ -19,61 +30,78 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
   ## Derive domain-level graph from function-based graph
   def build_domain_graph
 
-    domain_edges = edges_x_domains \
-      .reduce(Set[]) { |set, e| set << [e.src_domain, e.dep_domain] }
-      .map do |src_domain, dep_domain|
-        dsrc_node = dom_node_hash[src_domain]
-        ddep_node = dom_node_hash[dep_domain]
-        raise "Node not found for src: '#{c}'" unless dsrc_node
-        raise "Node not found for dep: '#{dep_domain}'" unless ddep_node
-        GraphTheory::Edge.new(dsrc_node, ddep_node)
-      end
-
-    @function_graph.edges.reduce(Set[]) do |set, edge|
-      set << [edge.src_domain_name, edge.dep_domain_name]
-    end
   end
 
   ## Derive module-level graph from function-based graph
   def build_module_graph
   end
 
-  def domain_nodes
-    @function_graph.nodes.group_by(&:domain_name).map do |dom_nm, fn_nodes|
-      [
-        dom_nm,
-        ChaosDetector::ChaosGraphs::DomainNode.new(dom_name: dom_nm, fn_node_count: fn_nodes.length)
-      ]
+  def build_domain_nodes
+    @domain_nodes = @function_graph.nodes.group_by(&:domain_name).map do |dom_nm, fn_nodes|
+      ChaosDetector::ChaosGraphs::DomainNode.new(dom_name: dom_nm, fn_node_count: fn_nodes.length)
     end
   end
 
-  def domain_edges
-    dom_node_hash = domain_nodes
-    edges_x_domains\
-      .group_by { |e| [e.src_domain, e.dep_domain] }
-      .map do |dom_pair, fn_nodes|
-        src_domain, dep_domain = dom_pair
-        dsrc_node = dom_node_hash[src_domain]
-        ddep_node = dom_node_hash[dep_domain]
-        raise "Node not found for src: '#{src_domain}'" unless dsrc_node
-        raise "Node not found for dep: '#{dep_domain}'" unless ddep_node
-        GraphTheory::Edge.new(dsrc_node, ddep_node).tap do |edge|
-          edge.weights[fn_node_count] = fn_nodes.length
-        end
-      end
+  def build_module_nodes
+    @module_nodes = @function_graph.nodes.group_by(&:mod_info_prime).map do |dom_nm, fn_nodes|
+      ChaosDetector::ChaosGraphs::ModuleNode.new(dom_name: dom_nm, fn_node_count: fn_nodes.length)
+    end
   end
 
-  # Edges crossing domains:
-  def edges_x_domains
-    @function_graph.edges.select do |e|
-      aught?(e.src_domain_name) && aught?(e.dep_domain_name) &&
-      e.src_domain_name == e.dep_domain_name
+  def build_domain_edges
+    @domain_edges = group_edges do |src_node, dep_node|
+      [src_node.domain_name, dep_node.domain_name]
+    end
+  end
+
+  def build_module_edges
+    @module_edges = group_edges do |src_node, dep_node|
+      [src_node.mod_info_prime, dep_node.mod_info_prime]
+    end
+  end
+
+  def build_module_to_domain_edges
+    @module_domain_edges = group_edges do |src_node, dep_node|
+      [src_node.mod_info_prime, dep_node.domain_name]
+    end
+  end
+
+  def build_domain_to_module_edges
+    @domain_module_edges = group_edges do |src_node, dep_node|
+      [src_node.domain_name, dep_node.mod_info_prime]
+    end
+  end
+
+  def build_function_to_domain_edges
+    @function_domain_edges = group_edges do |src_node, dep_node|
+      [src_node, dep_node.domain_name]
+    end
+  end
+
+  def build_domain_to_function_edges
+    @domain_function_edges = group_edges do |src_node, dep_node|
+      [src_node.domain_name, dep_node]
     end
   end
 
   private
+    def self.group_edges(edges)
+      raise ArgumentError, "edges argument required" unless edges
+      raise ArgumentError, "Block required" unless block_given?
+
+      edges \
+        .group_by { |e| yield(e.src_node, e.dep_node) } \
+        .map { |ee, g_edges| GraphTheory::Edge.new(ee[0], ee[1], reduce_cnt: g_edges.length) }
+    end
+    # Edges crossing domains:
+    def self.edges_x_domains(edges)
+      edges.select do |e|
+        aught?(e.src_domain_name) && aught?(e.dep_domain_name) &&
+        e.src_domain_name != e.dep_domain_name
+    end
+
     def log(msg)
-      ChaosDetector::Utils.log(msg, subject: "ChaosGraph")
+      TCS::Utils::Util.log(msg, subject: "ChaosGraph")
     end
 
     def measure_cyclomatic_complexity
@@ -168,6 +196,7 @@ class ChaosDetector::ChaosGraphs::ChaosGraph
     end
 
     # For each node, measure fan-in(Ca) and fan-out(Ce)
+    # TODO: Make edges parameter and appraise from different aspects
     def appraise_node(node)
       ChaosDetector::ChaosGraph::NodeMetrics.new(
         afferent_couplings: @function_graph.edges.count{|e| e.dep_node==node },

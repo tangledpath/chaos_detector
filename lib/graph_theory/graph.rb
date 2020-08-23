@@ -29,7 +29,7 @@ class GraphTheory::Graph
   end
 
   def edge_for_nodes(src_node, dep_node)
-    puts "EEEDGE_FOR_NODES::: #{src_node.class} / #{dep_node.class}"
+    puts "EEEDGE_FOR_NODES::: #{src_node.to_s} / #{dep_node.class.to_s}"
     edge = edges.find do |e|
       e.src_node == src_node && e.dep_node == dep_node
     end
