@@ -6,8 +6,7 @@ require_relative 'chaos_graphs/mod_info'
 require_relative 'chaos_graphs/module_node'
 require_relative 'stacker/frame'
 require_relative 'walkman'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 # The main interface for intercepting tracepoints,
 # and converting them into recordable and playable
@@ -78,14 +77,14 @@ module ChaosDetector
         puts "BOOMPaused=#{@paused}" if @paused
         begin
           @paused = true
-          if ['decorate', 'complete?'].include?(tracepoint.method_id.to_s)
+          if ['ChaosUtils::decorate', 'complete?'].include?(tracepoint.method_id.to_s)
             cl = tracepoint.binding.eval('caller_locations(0,19)')
 
             sep = tracepoint.event == :return ? '*' : '@'
 
             puts
             puts tracepoint.event.to_s.upcase
-            puts decorate(tracepoint.inspect)
+            puts ChaosUtils::decorate(tracepoint.inspect)
             puts sep * 50
             puts cl.join("\n\t->\t")
             puts ">" * 50
@@ -112,7 +111,7 @@ module ChaosDetector
             next
           end
 
-          @module_stack.unshift(frame.to_mod_info) if aught?frame.mod_name
+          @module_stack.unshift(frame.to_mod_info) if ChaosUtils.aught?frame.mod_name
 
           # DISABLE MORE OF ABOVE?
           perform_frame_action(frame, action: tracepoint.event, record: true)
@@ -142,7 +141,7 @@ module ChaosDetector
     # Blank class get mod_class for tracepoint. [#<Class:#<Parslet::Context:0x00007fa90ee06c80>>]
     # MMMM >>> (word), (default), (word), (lib/email_parser.rb):L106, (#<Parslet::Context:0x00007fa90ee06c80>)
     def undecorate_module_name(mod_name)
-      return nil if naught?(mod_name)
+      return nil if ChaosUtils.naught?(mod_name)
       return mod_name unless mod_name.start_with?('#')
 
       plain_name = nil
@@ -191,24 +190,24 @@ module ChaosDetector
 
         mod_type = mod_type_from_class(mod_class)
 
-        if naught?(mod_name) && (fn_path=="gems/chaos_detector/lib/chaos_detector/utils/str_util.rb")
+        if ChaosUtils.naught?(mod_name) && (fn_path=="gems/chaos_detector/lib/chaos_detector/utils/str_util.rb")
           puts
           log ("%sMOD%s >>> %s %s, %s:L%d" % [
-            decorate(domain_name, clamp: :parens),
-            decorate(mod_name, clamp: :bracket),
-            decorate(tracepoint.callee_id),
-            decorate(tracepoint.method_id, prefix: ' / '),
-            decorate(fn_path, clamp: :none, prefix: ' '),
+            ChaosUtils::decorate(domain_name, clamp: :parens),
+            ChaosUtils::decorate(mod_name, clamp: :bracket),
+            ChaosUtils::decorate(tracepoint.callee_id),
+            ChaosUtils::decorate(tracepoint.method_id, prefix: ' / '),
+            ChaosUtils::decorate(fn_path, clamp: :none, prefix: ' '),
             tracepoint.lineno,
           ])
 
           log (
-            decorate([
-              decorate(tracepoint.defined_class, clamp: :angle),
-              decorate(tracepoint.defined_class&.name, clamp: :brace),
-              decorate(tracepoint.self&.class, clamp: :angle),
-              decorate(tracepoint.self&.class&.name, clamp: :brace),
-              decorate(module_stack.first, clamp: :brace),
+            ChaosUtils::decorate([
+              ChaosUtils::decorate(tracepoint.defined_class, clamp: :angle),
+              ChaosUtils::decorate(tracepoint.defined_class&.name, clamp: :brace),
+              ChaosUtils::decorate(tracepoint.self&.class, clamp: :angle),
+              ChaosUtils::decorate(tracepoint.self&.class&.name, clamp: :brace),
+              ChaosUtils::decorate(module_stack.first, clamp: :brace),
             ].inspect, clamp: :none, indent_length: 2)
           )
           puts
@@ -219,7 +218,7 @@ module ChaosDetector
           domain_name: domain_name.to_s,
           fn_path: fn_path.to_s,
           fn_name: tracepoint.method_id.to_s,
-          line_num: tracepoint.lineno,
+          fn_line: tracepoint.lineno,
           mod_name: mod_name.to_s,
           mod_type: mod_type
         )
@@ -230,8 +229,8 @@ module ChaosDetector
       end
 
       def module_skip?(mod_name)
-        return false unless aught?mod_name
-        @options.ignore_modules.any? { |m| mod_name.include?(m) }
+        return false unless ChaosUtils.aught?mod_name
+        @options.ignore_modules.any? { |m| mod_name.start_with?(m) }
       end
 
       def apply_options
@@ -240,11 +239,11 @@ module ChaosDetector
         @atlas = ChaosDetector::Atlas.new
         @walkman = ChaosDetector::Walkman.new(atlas: @atlas, options: @options)
 
-        Kernel.with(@options.root_label) do |root_label|
+        ChaosUtils.with(@options.root_label) do |root_label|
           @atlas.graph.root_node.define_singleton_method(:label) { root_label }
         end
 
-        @app_root_path = ChaosDetector::Utils::CoreUtil.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
+        @app_root_path = ChaosUtils.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
         @domain_hash = {}
         @options.path_domain_hash && options.path_domain_hash.each do |path, group|
           dpath = Pathname.new(path.to_s).cleanpath.to_s
@@ -281,7 +280,7 @@ module ChaosDetector
       end
 
       def log(msg)
-        log_msg(msg, subject: "Navigator")
+        ChaosUtils::log_msg(msg, subject: "Navigator")
       end
 
       def domain_from_path(local_path:)
@@ -290,7 +289,7 @@ module ChaosDetector
       end
 
       def check_name(mod_nm)
-        aught?(mod_nm) && !mod_nm.strip.start_with?('#')
+        ChaosUtils.aught?(mod_nm) && !mod_nm.strip.start_with?('#')
       end
   end
 end

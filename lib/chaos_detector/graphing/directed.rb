@@ -2,8 +2,7 @@ require 'ruby-graphviz'
 
 require 'chaos_detector/utils/str_util'
 
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module Graphing
@@ -130,7 +129,7 @@ module ChaosDetector
         assert_graph_state
 
         @node_hash.each do |k, v|
-          log("NODE_HASH: Has value for #{decorate(k)} => #{decorate(v)}")
+          log("NODE_HASH: Has value for #{ChaosUtils::decorate(k)} => #{ChaosUtils::decorate(v)}")
         end
 
         max_reduce = edges.map(&:reduce_cnt).max
@@ -158,7 +157,7 @@ module ChaosDetector
       private
         def find_graph_node(node)
           assert_graph_state
-          log("NODE_HASH: LOOKING UP #{decorate(node)}")
+          log("NODE_HASH: LOOKING UP #{ChaosUtils::decorate(node)}")
           @node_hash[node.to_k] || @cluster_node_hash[node.to_k]
         end
 
@@ -167,7 +166,7 @@ module ChaosDetector
         end
 
         def log(msg)
-          log_msg(msg, subject: "Grapher")
+          ChaosUtils::log_msg(msg, subject: "Grapher")
         end
 
     end

@@ -1,6 +1,5 @@
 require_relative 'node_metrics'
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module GraphTheory
@@ -55,7 +54,7 @@ module ChaosDetector
 
       private
         def log(msg)
-          log_msg(msg, subject: "GraphTheory")
+          ChaosUtils::log_msg(msg, subject: "GraphTheory")
         end
 
         def measure_cyclomatic_complexity

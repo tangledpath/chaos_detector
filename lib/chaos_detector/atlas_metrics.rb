@@ -1,5 +1,4 @@
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   class AtlasMetrics
@@ -26,9 +25,9 @@ module ChaosDetector
     end
 
     def to_s
-      m << decorate(ROOT_NODE_NAME, clamp: :parens) if @is_root
+      m << ChaosUtils::decorate(ROOT_NODE_NAME, clamp: :parens) if @is_root
       "Total: %s [+push -pop (-close)] +%d -%d(%d) >> stack-pos-off: %d" % [
-        decorate(@push_count + @pop_count + @close_count, clamp: :bracket),
+        ChaosUtils::decorate(@push_count + @pop_count + @close_count, clamp: :bracket),
         @push_count,
         @pop_count,
         @close_count,

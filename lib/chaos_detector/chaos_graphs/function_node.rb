@@ -4,8 +4,7 @@ require 'forwardable'
 require 'chaos_detector/graph_theory/edge'
 require 'chaos_detector/graph_theory/node'
 
-require 'chaos_detector/refined_utils'
-using ChaosDetector::RefinedUtils
+require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module ChaosGraphs
@@ -40,7 +39,7 @@ module ChaosDetector
         # Add module info, if supplied:
         if mod_info
           add_module(mod_info)
-        elsif aught?mod_name
+        elsif ChaosUtils.aught?mod_name
           add_module_attrs(mod_name:mod_name, mod_path: fn_path, mod_type: mod_type)
         end
       end
@@ -54,15 +53,7 @@ module ChaosDetector
       end
 
       def ==(other)
-        raise "Domains differ, but fn_info is the same.  Weird." if \
-          self.fn_name == other.fn_name \
-          && self.fn_path == other.fn_path \
-          && self.domain_name != other.domain_name
-
-        self.domain_name == other.domain_name &&
-          self.fn_name == other.fn_name &&
-          self.fn_path == other.fn_path
-          # && (!match_line_num || self.line_num == other.line_num)
+        ChaosDetector::ChaosGraphs::FnInfo.match?(self, other)
       end
 
       def domain_name
@@ -75,11 +66,11 @@ module ChaosDetector
       end
 
       def to_info
-        FnInfo.new(fn_name: fn_name, fn_path: fn_path, domain_name: domain_name)
+        FnInfo.new(fn_name: fn_name, fn_line: fn_line, fn_path: fn_path, domain_name: domain_name)
       end
 
       def label
-        m = decorate(super, clamp: :parens, suffix:' ')
+        m = ChaosUtils::decorate(super, clamp: :parens, suffix:' ')
         m << short_path
         m
       end
@@ -94,6 +85,24 @@ module ChaosDetector
           @root_node = self.new(is_root: true) if force_new || @root_node.nil?
           @root_node
         end
+
+        def match?(obj1, obj2)
+          raise "Domains differ, but fn_info is the same.  Weird." if \
+            obj1.fn_name == obj2.fn_name \
+            && obj1.fn_path == obj2.fn_path \
+            && obj1.domain_name != other.domain_name
+
+          fn_path == other.fn_path &&
+            (fn_name == other.fn_name || line_match?(other.fn_line, fn_line))
+
+        end
+
+        def line_match?(l1, l2)
+          return false if l1.nil? || l2.nil?
+
+          (l2 - l1).between?(0, 1)
+        end
+
       end
     end
   end
