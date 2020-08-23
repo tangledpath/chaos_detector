@@ -17,11 +17,16 @@ module ChaosDetector
       self.path == other.path
     end
 
-    def to_s
+    def to_s(scope=nil)
       self.class.human_key(path: @path, mod_name: @mod_name, domain_name: @domain_name)
     end
 
-    def self.human_key(path:, mod_name:nil, domain_name:nil)
+    def label
+      m = @mod_name.split("::").last(2).join("::")
+      "#{m}\n#{@domain_name}"
+    end
+
+    def self.human_key(path:nil, mod_name:nil, domain_name:nil)
       hkey = "["
       hkey << "(#{domain_name}) " unless domain_name.nil? || domain_name.empty?
       hkey << mod_name unless mod_name.nil? || mod_name.empty?

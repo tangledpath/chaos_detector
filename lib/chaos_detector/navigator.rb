@@ -1,34 +1,88 @@
 require 'set'
-require 'chaos_detector/graph'
+require 'chaos_detector/atlas'
+require 'chaos_detector/options'
 require 'chaos_detector/stack_frame'
 require 'chaos_detector/utils'
 
 module ChaosDetector
 class Navigator
-  DEFAULT_GROUP="default"
+  REGEX_MODULE_UNDECORATE = /#<(Class:)?([a-zA-Z\:]*)(.*)>/.freeze
+  DEFAULT_GROUP="default".freeze
+  require 'ruby-graphviz'
+
   class << self
     attr_reader :app_root_path
     attr_reader :domain_hash
     attr_reader :module_module_hash
     attr_reader :fn_fn_hash
     attr_reader :module_counter
+    attr_reader :graph
 
-    def record(app_root_path:, domain_hash: nil)
+    def build_graph_node(graph, node)
+      graph.add_nodes(node.label)
+    end
+
+    def build_graph
+      raise "Graph isn't present!  Call record first." if @graph.nil?
+
+      # Create a new graph
+      g = GraphViz.new( :G, :type => :digraph )
+
+
+
+      nodes = {}
+      domain_graphs = graph.nodes.group_by(&:domain_name).map do |domain, dnodes|
+        subg = g.subgraph("cluster_#{domain}") do |sg|
+          dnodes.each do |domian_node|
+            nodes[domian_node] = build_graph_node(sg, domian_node)
+          end
+        end
+        [domain, subg]
+      end
+
+      # nodes = graph.nodes.zip(viz_nodes).to_h
+
+      graph.edges.each do |edge|
+        src = nodes.fetch(edge.src_node) do |n|
+          puts "src edge not found: #{n}"
+          # TODO: Look up domain if necessarry.
+          build_graph_node(g, n)
+        end
+
+        dep = nodes.fetch(edge.dep_node) do |n|
+          puts "Dep edge not found: #{n}"
+          build_graph_node(g, n)
+        end
+
+        # puts "SRC: #{src}"
+        # puts "DEP: #{dep}"
+        g.add_edges(src, dep)
+        # puts "-------------------------------------"
+      end
+
+       # Generate output image
+      g.output( :png => "dep.png" )
+    end
+
+    def record(app_root_path:, domain_hash: nil, options: nil)
+      @options = options
       @module_counter = Hash.new(0)
       @app_root_path = Pathname.new(app_root_path)
       @domain_hash = {}
       domain_hash && domain_hash.each do |path, group|
-        @domain_hash[Pathname.new(path).cleanpath.to_s] = group
+        dpath = Pathname.new(path).cleanpath.to_s
+        @domain_hash[dpath] = group
+        puts ("Setting #{dpath} : #{group}")
       end
 
-      graph = ChaosDetector::Graph.new
+      @graph = ChaosDetector::Atlas.new(options: @options)
 
       trace = TracePoint.new(:call, :return) do |tp|
-        next unless app_root_path && tp.path.starts_with?(app_root_path.to_s)
+        next unless app_root_path && tp.path.start_with?(app_root_path.to_s)
 
         mod_path = localize_path(path: tp.path)
         mod_name, mod_type = get_module(tp:tp)
-        next if mod_name.starts_with?('ChaosDetector')
+        next if mod_name.start_with?('ChaosDetector')
 
         @module_counter[mod_name] +=1
 
@@ -45,10 +99,11 @@ class Navigator
         end
 
         frame = StackFrame.new(mod_type:mod_type, mod_name: mod_name, domain_name: domain_name, path: mod_path, fn_name: tp.method_id, line_num: tp.lineno)
+        frame.note = "class: #{tp.defined_class} / #{tp.defined_class&.name} / #{mod_name}"
         if tp.event == :call
-          graph.open_frame(frame: frame)
+          @graph.open_frame(frame: frame)
         elsif tp.event == :return
-          graph.close_frame(frame: frame)
+          @graph.close_frame(frame: frame)
         end
       end
 
@@ -80,37 +135,30 @@ class Navigator
       if ChaosDetector::Utils.naught?(mod_name)
         mod_name = undecorate_module_name(tp.defined_class.to_s)
       end
-    end
 
-    REGEX_MODULE_UNDECORATE = /#<(Class:)?([a-zA-Z\:]*)(.*)>/
+      mod_name
+    end
 
     # Undecorate all this junk:
     # a="#<Class:Authentication>"
     # b="#<Class:Person(id: integer, first"
     # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
-#     exp3 = /#<(Class:)?([a-zA-Z\:]*)(.*)>/
-# mods = [dec1,dec2,dec3].map{|m| {m => m&.match(exp3)&.captures}}
-# mods.each {|m| p(m)}
-
     def undecorate_module_name(mod_name)
-      # puts "MOD!!!!!!!!! #{mod_name}"
       return '' if ChaosDetector::Utils.naught?(mod_name)
-      # return mod_name unless mod_name.start_with?('#')
+      return mod_name unless mod_name.start_with?('#')
 
       plain_name = nil
       caps = mod_name.match(REGEX_MODULE_UNDECORATE)&.captures
-      puts "CAP #{mod_name}: #{caps}"
+      # puts "CAP #{mod_name}: #{caps}"
       if caps && caps.length > 0
         # {"#<Class:Authentication>"=>["Class:", "Authentication", ""]}
-        # {"#<Class:Person(id: integer)>"=>["Class:", "Person", "(id: integer)"]}
-        # {"#<ChaosDetector::Node:0x00007fdd5d2c6b08>"=>[nil, "ChaosDetector::Node:", "0x00007fdd5d2c6b08"]}
         caps.delete("Class:")
         caps.compact!
         plain_name = caps.first
         plain_name&.chomp!(':')
       end
 
-      puts "!!!!!!!!!!!!!!!!!!!! #{mod_name} -> #{plain_name}" unless ChaosDetector::Utils.naught?(plain_name)
+      # puts "!!!!!!!!!!!!!!!!!!!! #{mod_name} -> #{plain_name}" unless ChaosDetector::Utils.naught?(plain_name)
       plain_name || mod_name
     end
 
@@ -147,12 +195,12 @@ class Navigator
     def localize_path(path:)
       # @app_root_path.relative_path_from(Pathname.new(path).cleanpath).to_s
       p = Pathname.new(path).cleanpath.to_s.sub(@app_root_path.to_s, '')
-      p.starts_with?('/') ? p[1..-1] : p
+      p.start_with?('/') ? p[1..-1] : p
     end
 
     def domain_from_path(local_path:)
       # puts "Looking for #{local_path} in [#{domain_hash.keys.join(',')}]"
-      key = domain_hash.keys.find{|k| local_path.starts_with?(k)}
+      key = domain_hash.keys.find{|k| local_path.start_with?(k)}
       key ? domain_hash[key] : DEFAULT_GROUP
       # p=@app_root_path.relative_path_from(path)
 

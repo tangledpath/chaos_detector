@@ -4,11 +4,23 @@
 # ChaosDetector::Utils.naught?("foobar")
 # ChaosDetector::Utils.naught?(0)
 # ChaosDetector::Utils.naught?([])
-module ChaosDetector::Utils
+module ChaosDetector
+module Utils
   STR_INDENT = '  '.freeze
   STR_BLANK = ''.freeze
 
   class << self
+
+    def enum(*values)
+      Module.new do |mod|
+        values.each_with_index{ |v,i| mod.const_set(v.to_s.capitalize, 2**i) }
+
+        def mod.inspect
+          "#{self.name} {#{self.constants.join(', ')}}"
+        end
+      end
+    end
+
     def naught?(obj)
       if obj.nil?
         true
@@ -102,4 +114,17 @@ module ChaosDetector::Utils
       end
     end
   end
+
+  module ChaosAttr
+    def chaos_attr(attribute_name, default_val=nil, &block)
+      # raise 'Default value or block required' unless !default_val.nil? || block
+      sym = attribute_name&.to_sym
+      raise ArgumentError, "attribute_name is required and convertible to symbol." if sym.nil?
+
+      define_method(sym) { instance_variable_get("@sym") || block_given? ? block.call : default_val }
+      define_method("#{sym}=") { |val|instance_variable_set("@#{sym}", val) }
+    end
+  end
+
+end
 end
