@@ -4,8 +4,8 @@
 # ChaosDetector::Utils.naught?("foobar")
 # ChaosDetector::Utils.naught?(0)
 # ChaosDetector::Utils.naught?([])
-module ChaosDetector
-module Utils
+# module ChaosDetector
+module ChaosDetector::Utils
   STR_INDENT = '  '.freeze
   STR_BLANK = ''.freeze
 
@@ -13,10 +13,12 @@ module Utils
 
     def enum(*values)
       Module.new do |mod|
-        values.each_with_index{ |v,i| mod.const_set(v.to_s.capitalize, 2**i) }
+        values.each_with_index do |v,i|
+          mod.const_set(v.to_s.upcase, 2**i)
+        end
 
-        def mod.inspect
-          "#{self.name} {#{self.constants.join(', ')}}"
+        def mod.values
+          self.constants
         end
       end
     end
@@ -24,6 +26,10 @@ module Utils
     def naught?(obj)
       if obj.nil?
         true
+      elsif obj.is_a?(FalseClass)
+        true
+      elsif obj.is_a?(TrueClass)
+        false
       elsif obj.is_a?(String)
         obj.strip.empty?
       elsif obj.is_a?(Enumerable)
@@ -47,12 +53,17 @@ module Utils
       end
     end
 
+    def decorate_pair(source, dest, indent_length: 0, clamp_style: :brace)
+      decorate("#{decorate(source)} -> #{decorate(dest)}", clamp_style:clamp_style, indent_length:indent_length)
+    end
+
     def decorate(text, clamp_style: :brace, prefix: nil, suffix: nil, sep: nil, indent_length: 0)
       return STR_BLANK if naught?text
 
       clamp_pre, clamp_post = clamp_chars(clamp_style: clamp_style)
       indent("#{prefix}#{sep}#{clamp_pre}#{text}#{clamp_post}#{sep}#{suffix}", indent_length)
     end
+
     alias_method :d, :decorate
 
     def clamp_chars(clamp_style: :brace)
@@ -98,7 +109,7 @@ module Utils
 
     def to_csv_row(ary)
       ary.map{|val| to_csv_item(val)}.join(", ")
-      # [@domain_name, @mod_name, @mod_type, @path, @fn_name, @line_num, @note]
+      # [@domain_name, @mod_name, @mod_type, @mod_path, @fn_name, @line_num, @note]
     end
 
     def to_csv_item(v)
@@ -136,10 +147,22 @@ module Utils
       sym = attribute_name&.to_sym
       raise ArgumentError, "attribute_name is required and convertible to symbol." if sym.nil?
 
-      define_method(sym) { instance_variable_get("@sym") || block_given? ? block.call : default_val }
+      define_method(sym) do
+        instance_variable_get("@#{sym}") || (block.nil? ? default_val : block.call)
+      end
+
       define_method("#{sym}=") { |val|instance_variable_set("@#{sym}", val) }
     end
   end
 
 end
+
+def Kernel.with(obj)
+  ChaosDetector::Utils::with(obj) {yield obj}
 end
+
+def Kernel.naught?(obj)
+  ChaosDetector::Utils::naught?(obj)
+end
+
+# = ChaosDetector::Utils::with

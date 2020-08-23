@@ -2,9 +2,9 @@
 require 'chaos_detector/atlas'
 require 'chaos_detector/navigator'
 require 'chaos_detector/stack_frame'
+require 'chaos_detector/grapher'
 require 'chaos_detector/options'
-
-
+require 'fixtures/Fubar'
 describe "ChaosDetector" do
   describe "Navigator" do
     let (:dec1) { "#<Class:Authentication>"}
@@ -18,39 +18,70 @@ describe "ChaosDetector" do
       ChaosDetector::Navigator.undecorate_module_name(dec2).should eq("Person")
       ChaosDetector::Navigator.undecorate_module_name(dec1).should eq("Authentication")
       ChaosDetector::Navigator.undecorate_module_name(dec3).should eq("ChaosDetector::Node")
-
     end
 
     it "should record and graph" do
       opts = ChaosDetector::Options.new
+      opts.app_root_path = __dir__
       opts.log_root_path = __dir__
-      ChaosDetector::Navigator.record(app_root_path: __dir__, options: opts)
-      ChaosDetector::Navigator.undecorate_module_name(dec2).should eq("Person")
-      ChaosDetector::Navigator.build_graph
+      opts.path_domain_hash = { 'fixtures': 'FuDomain' }
+      ChaosDetector::Navigator.record(options: opts)
+      Foo.foo
+      Fubar::Foo.foo
+      expect(ChaosDetector::Navigator.atlas).to_not be_nil
+
+      atlas = ChaosDetector::Navigator.stop
+      puts ("ATls: #{atlas.nodes.length}")
+      expect(atlas).to eq(ChaosDetector::Navigator.atlas)
+      grapher = ChaosDetector::Grapher.new(atlas)
+      grapher.build_graphs()
+
+      atlas.edges.each do |edge|
+        puts "edge: #{edge}" if edge.src_node.mod_name=='root'
+      end
+
     end
   end
 
-  describe "ChaosDetector::Atlas" do
+  describe "Atlas" do
     it "should do basic frame stacking" do
       graph = ChaosDetector::Atlas.new
-      frame1 = ChaosDetector::StackFrame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', path: 'foo/bar', fn_name: 'baz', line_num: 2112)
-      frame2 = ChaosDetector::StackFrame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', path: 'foo/mepper', fn_name: 'blop', line_num: 3112)
+      frame1 = ChaosDetector::StackFrame.new(mod_type: :class, mod_name: 'Bam', domain_name: 'bar', mod_path: 'foo/bar', fn_name: 'baz', line_num: 2112)
+      frame2 = ChaosDetector::StackFrame.new(mod_type: :module, mod_name: 'Gork', domain_name: 'MEP', mod_path: 'foo/mepper', fn_name: 'blop', line_num: 3112)
 
-      graph.stack_depth.should eq(0)
+      expect(graph.stack_depth).to eq(0)
 
       graph.open_frame(frame: frame1)
-      graph.stack_depth.should eq(1)
+      expect(graph.stack_depth).to eq(1)
 
       graph.open_frame(frame: frame2)
-      graph.stack_depth.should eq(2)
+      expect(graph.stack_depth).to eq(2)
 
       graph.close_frame(frame:frame2)
-      graph.stack_depth.should eq(1)
+      expect(graph.stack_depth).to eq(1)
 
       graph.close_frame(frame:frame1)
-      graph.stack_depth.should == 0
+      expect(graph.stack_depth).to eq(0)
 
     end
+  end
+end
+
+class Foo
+  def self.foo
+    Bar.bar
+  end
+end
+
+class Bar
+  def self.bar
+    Baz.baz
+  end
+end
+
+class Baz
+  def self.baz
+    puts "bazzzzzz"
   end
 end
 

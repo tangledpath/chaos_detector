@@ -10,8 +10,7 @@ module ChaosDetector
 class Atlas
   extend ChaosDetector::Utils::ChaosAttr
 
-  chaos_attr (:options) { ChaosDetector::Options.new }
-
+  CSV_HEADER = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE PATH LINE_NUM FN_NAME DEPTH OFFSET NODES EDGES MATCH}.join(', ')
   FULL_TOLERANCE = 6
   PARTIAL_TOLERANCE = 3
   BASE_TOLERANCE = 1
@@ -19,11 +18,15 @@ class Atlas
   INDENT = " ".freeze
   ROOT_NODE_NAME = "root".freeze
 
+  attr_reader :root_node
+  chaos_attr (:options) { ChaosDetector::Options.new }
   chaos_attr :nodes, []
   chaos_attr :edges, []
   chaos_attr :frame_stack, []
   chaos_attr :offset, 0
   chaos_attr :frames_nopop, []
+
+  # chaos_attr :log_buffer, []
   chaos_attr :graph_stats
 
   DomainEdge = Struct.new(:src_domain, :dep_domain)
@@ -43,23 +46,53 @@ class Atlas
     domain_edges
   end
 
+# TODO: x
+  # Report for each node
+  #   outgoing
+  #   incoming
+  #   How many
+
+  #  Each node couplet (Example for 100 nodes, we'd have 100 * 99 potential couplets)
+  #  Capture how many other nodes depend upon both nodes in couplet [directly, indirectly]
+  #  Capture how many other nodes from other domains depend upon both [directly, indirectly]
+  def node_stats
+  end
+
+  #   Report edge on relative difference in its nodes:
+  #   domain, path, package?
+  # domain, path, package?
+  # Coupling
+  #
+  # Overall check for
+  # Edges that have a
+  # Engines that call back to t
+  # Report for all edges
+  #   Count all that span domains (weight by total hits AND distinct fn_call_coupletf)
+  def edge_stats
+  end
   def initialize(options: nil)
     @options = options unless options.nil?
     reset
   end
 
   def reset
-    @root_node = ChaosDetector::Node.new(mod_name:ROOT_NODE_NAME, path:"", domain_name:nil)
+    stop
+    @root_node = ChaosDetector::Node.new(mod_name:ROOT_NODE_NAME, mod_path:"", domain_name:nil)
     @md5 = Digest::MD5.new
     @nodes = []
     @edges = []
     @frame_stack = []
     @frames_nopop = []
-
     @offset = 0
 
     @graph_stats = GraphStats.new
     init_status_csv
+  end
+
+  # Call when done to flush any buffers as necessary
+  def stop
+    flush_status_csv
+    self
   end
 
   def stack_depth
@@ -72,11 +105,11 @@ class Atlas
     node = @nodes.find do |n|
       n.domain_name == frame.domain_name &&
         n.mod_name == frame.mod_name &&
-        n.path == frame.path
+        n.mod_path == frame.mod_path
     end
 
     unless node
-      @nodes << node=ChaosDetector::Node.new(domain_name: frame.domain_name, mod_name: frame.mod_name, path: frame.path)
+      @nodes << node=ChaosDetector::Node.new(domain_name: frame.domain_name, mod_name: frame.mod_name, mod_path: frame.mod_path)
     end
 
     node
@@ -112,7 +145,7 @@ class Atlas
   end
 
   def stack_match(current_frame)
-    raise ArgumentError("Current Frame is required") if current_frame.nil?
+    raise ArgumentError, "Current Frame is required" if current_frame.nil?
 
     # Ranking to index:
     best_index = nil
@@ -124,9 +157,9 @@ class Atlas
       sim_rank = ChaosDetector::Utils.with(current_frame.match?(f)) do |similarity|
         if ChaosDetector::StackFrame::VERY_SIMILAR.include?(similarity)
           [similarity, FULL_TOLERANCE]
-        elsif similarity==ChaosDetector::StackFrame::SimilarityRating::Partial
+        elsif similarity==ChaosDetector::StackFrame::SimilarityRating::PARTIAL
           [similarity, PARTIAL_TOLERANCE]
-        elsif similarity==ChaosDetector::StackFrame::SimilarityRating::Base
+        elsif similarity==ChaosDetector::StackFrame::SimilarityRating::BASE
           [similarity, BASE_TOLERANCE]
         else
           nil
@@ -158,21 +191,39 @@ class Atlas
     File.join(options.log_root_path, options.atlas_log_path)
   end
 
-  def init_status_csv()
-    csv_status = %w{ACTION DOMAIN_NAME MOD_NAME MOD_TYPE PATH FN_NAME LINE_NUM DEPTH OFFSET NODES EDGES MATCH}.join(', ')
-    atlas_path = log_path
-    File.write(atlas_path, "#{csv_status}\n", mode: 'w')
+  def flush_status_csv
+    if @log_buffer && @log_buffer.any?
+      # puts @log_buffer.join('\n')
+      File.open(log_path, "a") do |log_file|
+        @log_buffer.each do |log_line|
+          log_file.puts(log_line)
+        end
+      end
+
+      @log_buffer.clear
+    end
+  end
+
+  def init_status_csv
+    flush_status_csv
+    @log_buffer = []
+    File.open(log_path, "w") {|f| f.puts CSV_HEADER}
+    # File.puts(atlas_path, "#{csv_status}\n", mode: 'w')
   end
 
   def write_frame_csv_row(frame, action:, match: nil)
-    atlas_path = log_path
     csv_row = frame.to_csv_row(supplement: [@frame_stack.length, @offset, @nodes.length, @edges.length, match])
     csv_row = "#{action}, #{csv_row}\n"
-    loc = File.exists?(atlas_path) ? File.size(atlas_path) : 0
-    File.write(atlas_path, csv_row, loc, mode: 'a')
+    buffer_status_csv(csv_row)
+  end
+
+  def buffer_status_csv(csv_row)
+    @log_buffer << csv_row
+    @log_buffer.length > 0 && flush_status_csv
   end
 
   def log_status(action:, indent: '', details: nil)
+    return
     indent = INDENT * [@frame_stack.length, 25].min
     # exit(false) if stack_len > 25
 
@@ -218,9 +269,9 @@ class Atlas
     frame_n, similarity = stack_match(frame)
 
     if frame_n.nil?
-      buffy << "No frame found: #{frame}"
-      buffy.concat(@frame_stack.first(50).map{|f| "  <- #{f}"})
-      write_frame_csv_row(frame, action: :close, match: match)
+      # buffy << "No frame found: #{frame}"
+      # buffy.concat(@frame_stack.first(50).map{|f| "  <- #{f}"})
+      write_frame_csv_row(frame, action: :close, match: similarity)
     else
       # if stack_frame.ma != frame
       #   buffy << "Pop Mismatch: #{frame} <> #{stack_frame}"
@@ -235,7 +286,7 @@ class Atlas
 
     # indent.chomp!(INDENT)
     @graph_stats.close_count += 1
-    log_status(action: "#>>>CLOSE@#{frame_n} <<#{similarity}>> (#{frame})", details: buffy)
+    # log_status(action: "#>>>CLOSE@#{frame_n} <<#{similarity}>> (#{frame})", details: buffy)
 
 
   end
