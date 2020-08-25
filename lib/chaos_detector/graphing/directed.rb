@@ -128,17 +128,17 @@ module ChaosDetector
       def add_edges(edges)
         assert_graph_state
 
-        @node_hash.each do |k, v|
-          log("NODE_HASH: Has value for #{ChaosUtils::decorate(k)} => #{ChaosUtils::decorate(v)}")
-        end
+        # @node_hash.each do |k, v|
+        #   log("NODE_HASH: Has value for #{ChaosUtils::decorate(k)} => #{ChaosUtils::decorate(v)}")
+        # end
 
         max_reduce = edges.map(&:reduce_cnt).max
 
         edges.each do |e|
-          log("DDDDDOMAIN EDGE: #{e}")
+          # log("DDDDDOMAIN EDGE: #{e}")
           src = find_graph_node(e.src_node)
           dep = find_graph_node(e.dep_node)
-          log("DOMAIN EDGE: #{src} -> #{dep}")
+          # log("DOMAIN EDGE: #{src} -> #{dep}")
           norm_reduce_cnt = e.reduce_cnt / max_reduce
           weight = edge_weight(norm_reduce_cnt)
           @root_graph.add_edges(src, dep)  #, {label: e.reduce_cnt, penwidth: weight})
@@ -157,7 +157,7 @@ module ChaosDetector
       private
         def find_graph_node(node)
           assert_graph_state
-          log("NODE_HASH: LOOKING UP #{ChaosUtils::decorate(node)}")
+          # log("NODE_HASH: LOOKING UP #{ChaosUtils::decorate(node)}")
           @node_hash[node.to_k] || @cluster_node_hash[node.to_k]
         end
 

@@ -12,6 +12,12 @@ module ChaosDetector
         @fn_node_count = fn_node_count
       end
 
+      def hash
+        self.domain_name.hash
+      end
+
+      def eql?(other); self == other; end
+
       def ==(other)
         self.domain_name == other&.domain_name
       end

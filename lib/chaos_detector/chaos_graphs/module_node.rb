@@ -20,6 +20,11 @@ module ChaosDetector
         @fn_node_count = fn_node_count
       end
 
+      def hash
+        [mod_name, mod_type, mod_path].hash
+      end
+
+      def eql?(other); self == other; end
       def ==(other)
         self.mod_name == other.mod_name &&
           self.mod_type == other.mod_type &&

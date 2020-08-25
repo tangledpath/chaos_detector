@@ -18,13 +18,14 @@ module ChaosDetector
       end
 
       def traversal
-        to_enum(:traverse).map {|n| puts "TNode:#{n}"; n.label}
+        to_enum(:traverse).map(&:itself) # {|n| puts "TNode:#{n}"; n.label}
       end
 
+      ### Depth-first traversal
+      # TODO: disallow circular visits
       def traverse
-        # raise ArgumentError, "traverse requires block" unless block_given?
-
-        nodes_to_visit = [root_node];
+        raise ArgumentError, "traverse requires block" unless block_given?
+        nodes_to_visit = [root_node]
         while(nodes_to_visit.length > 0) do
           node = nodes_to_visit.shift
           yield node
@@ -33,7 +34,8 @@ module ChaosDetector
       end
 
       def children(node)
-        @edges.select {|e|e.src_node == node}
+        @edges.select{|e|e.src_node == node} \
+              .map(&:dep_node)
       end
 
       def node_for(obj)

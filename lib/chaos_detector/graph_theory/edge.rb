@@ -17,8 +17,10 @@ module ChaosDetector
         [@src_node, @dep_node].hash
       end
 
+      def eql?(other); self == other; end
+
       def ==(other)
-        puts "Checking src and dep"
+        # puts "Checking src and dep"
         self.src_node == other.src_node && self.dep_node == other.dep_node
       end
 
