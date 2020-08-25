@@ -36,7 +36,7 @@ module ChaosDetector
         end
 
         chaos_graph.module_edges.each do |e|
-          p("ModEdge: #{ChaosUtils::decorate(e.src_node.class)} -> #{ChaosUtils::decorate(e.dep_node.class)}")
+          p("ModEdge: #{ChaosUtils::decorate(e.src_node.label)} -> #{ChaosUtils::decorate(e.dep_node.label)}")
         end
         dgraph.add_edges(chaos_graph.module_edges)
 

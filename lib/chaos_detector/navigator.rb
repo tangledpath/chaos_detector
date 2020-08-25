@@ -1,4 +1,3 @@
-require 'set'
 require 'pathname'
 require_relative 'options'
 require_relative 'stacker/mod_info'
@@ -33,9 +32,9 @@ module ChaosDetector
     ### Playback of walkman CSV file:
     def playback()
       log("Chaos playing through navigator.  Expected lines: ", object: @walkman.count)
-      @nodes = []
-      @edges_call = []
-      @edges_ret = []
+      @nodes = Set.new
+      @edges_call = Set.new
+      @edges_ret = Set.new
 
       @walkman.playback do |rownum, frame|
         perform_node_action(frame)
@@ -48,8 +47,8 @@ module ChaosDetector
 
       @graph = ChaosDetector::GraphTheory::Graph.new(
         root_node: ChaosDetector::ChaosGraphs::FunctionNode.root_node(force_new: true),
-        nodes: @nodes,
-        edges: merge_edges
+        nodes: @nodes.to_a,
+        edges: merge_edges.to_a
       )
     end
 
@@ -68,28 +67,31 @@ module ChaosDetector
         c = Set.new(@edges_call)
         r = Set.new(@edges_ret)
 
-        ChaosUtils::assert(c.length == @edges_call.length, 'Call Edges should be Set')
-        ChaosUtils::assert(r.length == @edges_ret.length, 'Ret Edges should be Set')
+        raise 'Call Edges should be Set' unless c.length == @edges_call.length
+        raise 'Ret Edges should be Set' unless r.length == @edges_ret.length
 
-        ChaosUtils::assert(@edges_call.uniq == @edges_call, 'Call Edges should be unique')
-        ChaosUtils::assert(@edges_ret.uniq == @edges_ret, 'Call Edges should be unique')
+        raise 'Call Edges should be unique' unless @edges_call.uniq.length == @edges_call.length
+        raise 'Call Edges should be unique' unless @edges_ret.uniq.length == @edges_ret.length
 
-        log("FFF", object: (@edges_call + @edges_ret).uniq.length)
+        # log("FFF", object: (@edges_call + @edges_ret).uniq.length)
+        # log("GGG", object: (c + r).uniq.length)
         log("Unique edges in call (n/total)", object: [(c - r).length, c.length])
         log("Unique edges in return (n/total)", object: [(r - c).length, r.length])
 
-        @edges_call.each do |e|
-          log("edges_call", object: e)
-        end
+        # @edges_call.each do |e|
+        #   log("edges_call", object: e)
+        # end
 
-        @edges_ret.each do |e|
-          log("edges_ret", object: e)
-        end
+        # @edges_ret.each do |e|
+        #   log("edges_ret ", object: e)
+        # end
 
         c.union(r)
       end
 
       def node_for(fn_info)
+        return nil unless fn_info&.fn_name
+
         @nodes.find do |n|
           n.fn_name == fn_info.fn_name &&
           n.fn_path == fn_info.fn_path
@@ -98,7 +100,7 @@ module ChaosDetector
 
       # @return Node matching given frame or create a new one.
       def node_for_frame(frame)
-        log("Calling node_for_frame", object: frame)
+        # log("Calling node_for_frame", object: frame)
         node = node_for(frame.fn_info)
 
         if node.nil? && frame.event == 'call'
@@ -139,14 +141,19 @@ module ChaosDetector
       end
 
       def perform_edge_action(frame)
-        return unless frame.fn_info && frame.caller_fn_info
+        return unless frame.fn_info #&& frame.caller_fn_info
 
+        dest_node = node_for(frame.fn_info)
+        raise "Couldn't find destination node" if dest_node.nil?
         caller_node = node_for(frame.caller_fn_info)
-        if caller_node
-          dest_node = node_for(frame.fn_info)
-          raise "Couldn't find main node" if dest_node.nil?
-          edge_for_nodes(caller_node, dest_node, event: frame.event)
-        end
+        if caller_node.nil?
+          caller_node = ChaosDetector::ChaosGraphs::FunctionNode.root_node
+          raise "Caller node is required (falls back to root)." if caller_node.nil?
+          log("Adding edge to root!")
+          @nodes << caller_node
+         end
+
+        edge_for_nodes(caller_node, dest_node, event: frame.event)
       end
 
       def domain_from_path(local_path:)

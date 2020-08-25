@@ -62,7 +62,7 @@ module ChaosDetector
       ## Derive module-level graph from function-based graph
       def build_module_graph(edges: @module_edges)
         assert_state
-        @domain_graph ||= ChaosDetector::GraphTheory::Graph.new(root_node: root_node_module, nodes: @domain_nodes, edges: edges)
+        @module_graph ||= ChaosDetector::GraphTheory::Graph.new(root_node: root_node_module, nodes: @domain_nodes, edges: edges)
       end
 
       private
@@ -123,7 +123,7 @@ module ChaosDetector
 
           grouped_nodes = @function_graph.nodes.group_by(&:mod_info_prime)
           mod_nodes = grouped_nodes.select do |mod_info, fn_nodes|
-            ChaosUtils.aught?(mod_info.mod_name)
+            ChaosUtils.aught?(mod_info&.mod_name)
           end
 
           @module_nodes = mod_nodes.map do |mod_info, fn_nodes|
@@ -163,21 +163,19 @@ module ChaosDetector
             ]
           end
 
-          valid_edges = groupedges.select do |src_dep_pair, g_edges|
-            src_dep_pair.all?
-          end
+          # valid_edges = groupedges.select do |src_dep_pair, g_edges|
+          #   src_dep_pair.all?
+          # end
 
-          valid_edges.map do |src_dep_pair, g_edges|
+          groupedges.filter_map do |src_dep_pair, g_edges|
             raise "Pair should have two exactly items." unless src_dep_pair.length==2
 
             log("Looking up pair: #{src_dep_pair.inspect}")
             edge_src_node = lookup_node_by(node_type: src, node_info: src_dep_pair.first)
             edge_dep_node = lookup_node_by(node_type: dep, node_info: src_dep_pair.last)
 
-
-
             log("Creating #{src_dep_pair.first.class} edge with #{ChaosUtils::decorate_pair(edge_src_node, edge_dep_node)}")
-            ChaosDetector::GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_cnt: g_edges.length)
+            (edge_src_node != edge_dep_node) && ChaosDetector::GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_cnt: g_edges.length)
           end
         end
 
@@ -187,9 +185,6 @@ module ChaosDetector
             ChaosUtils::decorate(node_type),
             ChaosUtils::decorate(node_type.class)
           ] unless NODE_TYPES.include?node_type
-
-
-
 
           case node_type
             when :function
@@ -207,14 +202,16 @@ module ChaosDetector
           # It is already a node:
           return node_info if node_info.is_a?ChaosDetector::GraphTheory::Node
 
-
           case node_type
           when :function
             # Look up by FnInfo
-            n = @function_graph.nodes.index(node_info)
+            n = node_info && @function_graph.nodes.index(node_info)
             n.nil? ? root_node_function : @function_graph.nodes[n]
           when :module
-            n = @module_nodes.index(node_info)
+            n = node_info && @module_nodes.index(node_info)
+            if n.nil?
+              puts "WTFFFFFFF: #{node_info}"
+            end
             n.nil? ? root_node_module : @module_nodes[n]
           when :domain
             # Look up by Domain name

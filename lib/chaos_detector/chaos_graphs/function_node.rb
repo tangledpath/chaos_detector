@@ -53,12 +53,17 @@ module ChaosDetector
         add_module(ChaosDetector::Stacker::ModInfo.new(mod_name:mod_name, mod_path: mod_path, mod_type: mod_type))
       end
 
+      def hash
+        [fn_name, fn_path].hash
+      end
+
+      def eql?(other); self == other; end
       def ==(other)
         ChaosDetector::Stacker::FnInfo.match?(self, other)
       end
 
       def domain_name
-        @domain_name || (@is_root ? ROOT_NODE_NAME.downcase : nil)
+        @domain_name || (@is_root ? ROOT_NODE_NAME : nil)
         # !@is_root ? @domain_name : @domain_name || ROOT_NODE_NAME.downcase
       end
 

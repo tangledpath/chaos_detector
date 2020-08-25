@@ -12,6 +12,27 @@ require 'chaos_detector/graph_theory/appraiser'
 require 'fixtures/foobar'
 require 'fixtures/fubarm'
 
+shared_examples_for 'playback traverses fn_calls' do |expected_traversal_str|
+  it 'should match traversal' do
+    options = ChaosDetector::Options.new
+    options.app_root_path = Dir.getwd
+    options.log_root_path = File.join('tmp', 'chaos_logs')
+    options.path_domain_hash = { 'fixtures': 'FuDomain' }
+
+    tracker = ChaosDetector::Tracker.new(options: options)
+    nav = ChaosDetector::Navigator.new(options: options)
+
+    tracker.record()
+    fn_calls
+    tracker.stop
+
+    nav_graph = nav.playback
+    traversal_str = nav_graph.traversal.map(&:fn_name).join(' -> ')
+    # expect(traversal_str).to eq('ROOT -> foo -> bar -> baz -> foom -> barm -> bazm')
+    expect(traversal_str).to eq(expected_traversal_str)
+  end
+end
+
 describe "ChaosDetector" do
   let (:opts) {
     opts = ChaosDetector::Options.new
@@ -79,7 +100,9 @@ describe "ChaosDetector" do
       playback_nav = ChaosDetector::Navigator.new(options: opts)
       playback_graph = playback_nav.playback()
       expect(playback_graph).to_not be_nil
-      expect(playback_graph.nodes.length).to eq(6)
+
+      # includes root node
+      expect(playback_graph.nodes.length).to eq(7)
     end
   end
 
@@ -108,6 +131,13 @@ describe "ChaosDetector" do
       expect(graph_fs.split.first).to eq("domain-test.png")
     end
 
+    it_should_behave_like 'playback traverses fn_calls', 'ROOT -> foo -> bar -> baz -> foom -> barm -> bazm' do
+      let(:fn_calls) do
+        Foo.foo
+        Fubarm::Foom.foom
+      end
+    end
+
     it "module graphs" do
       grapher = ChaosDetector::Graphing::Directed.new()
       grapher.create_directed_graph("module-test")
@@ -125,8 +155,6 @@ describe "ChaosDetector" do
       end
       grapher.add_edges(chaos_graph.module_edges)
 
-      p("Traversal: #{graphing.traversal.join(' -> ')}")
-
       grapher.render_graph
       graph_fs = `ls module-test.png`
       p(ChaosUtils::decorate(graph_fs))
@@ -134,7 +162,7 @@ describe "ChaosDetector" do
       expect(graph_fs.split.first).to eq("module-test.png")
     end
 
-    it "graphs using graphs" do
+    it "module deps using graphs" do
       chaos_tracker.record()
       Foo.foo
       Fubarm::Foom.foom
