@@ -21,9 +21,9 @@ module ChaosDetector
             #{naught(:foo).parameters
 
           #   %s :: %s - %s" % [
-          #   ChaosUtils::decorate(event),
-          #   ChaosUtils::decorate(fn_name),
-          #   ChaosUtils::decorate(fn_path)
+          #   ChaosUtils.decorate(event),
+          #   ChaosUtils.decorate(fn_name),
+          #   ChaosUtils.decorate(fn_path)
           # ])
         #   raise ArgumentError, msg
         # end

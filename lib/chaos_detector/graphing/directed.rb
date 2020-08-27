@@ -129,7 +129,7 @@ module ChaosDetector
         assert_graph_state
 
         # @node_hash.each do |k, v|
-        #   log("NODE_HASH: Has value for #{ChaosUtils::decorate(k)} => #{ChaosUtils::decorate(v)}")
+        #   log("NODE_HASH: Has value for #{ChaosUtils.decorate(k)} => #{ChaosUtils.decorate(v)}")
         # end
 
         max_reduce = edges.map(&:reduce_cnt).max
@@ -157,7 +157,7 @@ module ChaosDetector
       private
         def find_graph_node(node)
           assert_graph_state
-          # log("NODE_HASH: LOOKING UP #{ChaosUtils::decorate(node)}")
+          # log("NODE_HASH: LOOKING UP #{ChaosUtils.decorate(node)}")
           @node_hash[node.to_k] || @cluster_node_hash[node.to_k]
         end
 

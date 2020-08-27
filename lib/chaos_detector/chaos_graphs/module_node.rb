@@ -33,8 +33,8 @@ module ChaosDetector
 
       def label
         # Shorten long module paths:
-        m = ChaosUtils::decorate(super, clamp: :parens, suffix:' ')
-        m << ChaosUtils::decorate(@mod_type, clamp: :parens)
+        m = ChaosUtils.decorate(super, clamp: :parens, suffix:' ')
+        m << ChaosUtils.decorate(@mod_type, clamp: :parens)
         m << short_path
       end
 

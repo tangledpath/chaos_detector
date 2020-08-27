@@ -66,6 +66,7 @@ module ChaosDetector
       end
 
       private
+
         def assert_state(state=nil)
           raise "function_graph.nodes isn't set!" unless function_graph&.nodes
 
@@ -174,7 +175,7 @@ module ChaosDetector
             edge_src_node = lookup_node_by(node_type: src, node_info: src_dep_pair.first)
             edge_dep_node = lookup_node_by(node_type: dep, node_info: src_dep_pair.last)
 
-            log("Creating #{src_dep_pair.first.class} edge with #{ChaosUtils::decorate_pair(edge_src_node, edge_dep_node)}")
+            log("Creating #{src_dep_pair.first.class} edge with #{ChaosUtils.decorate_pair(edge_src_node, edge_dep_node)}")
             (edge_src_node != edge_dep_node) && ChaosDetector::GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_cnt: g_edges.length)
           end
         end
@@ -182,8 +183,8 @@ module ChaosDetector
         def node_group_prop(node, node_type:)
           raise "node_type should be one of symbols in %s, actual value: %s (%s)" % [
             NODE_TYPES.inspect,
-            ChaosUtils::decorate(node_type),
-            ChaosUtils::decorate(node_type.class)
+            ChaosUtils.decorate(node_type),
+            ChaosUtils.decorate(node_type.class)
           ] unless NODE_TYPES.include?node_type
 
           case node_type
@@ -222,7 +223,7 @@ module ChaosDetector
             name = node_info.to_s
             @domain_nodes.find{|n| n.name == name} || root_node_domain
           else
-            raise "node_type should be one of #{NODE_TYPES.inspect}, actual value: #{ChaosUtils::decorate(node_type)}"
+            raise "node_type should be one of #{NODE_TYPES.inspect}, actual value: #{ChaosUtils.decorate(node_type)}"
           end
         end
 
