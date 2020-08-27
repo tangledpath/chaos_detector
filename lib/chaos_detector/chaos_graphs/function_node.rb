@@ -76,7 +76,7 @@ module ChaosDetector
       end
 
       def label
-        m = ChaosUtils::decorate(super, clamp: :parens, suffix:' ')
+        m = ChaosUtils.decorate(super, clamp: :parens, suffix:' ')
         m << short_path
         m
       end

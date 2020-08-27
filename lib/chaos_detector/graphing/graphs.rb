@@ -7,11 +7,11 @@ require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module Graphing
+    ### Top-level Chaos-detection graphing and rendering
     class Graphs
       attr_reader :navigator
       attr_reader :chaos_graph
 
-      # TODO: actually use render path from options?
       def initialize(options: nil)
         @options = options || ChaosDetector::Options.new
         @render_path = @options.path_with_root(:graph_render_folder)
@@ -25,24 +25,33 @@ module ChaosDetector
         @chaos_graph.infer_all
       end
 
-      def render_mod_dep()
-        dgraph = ChaosDetector::Graphing::Directed.new(render_path: @render_path)
-        dgraph.create_directed_graph("module-dep")
-
-        dgraph.append_nodes(chaos_graph.module_nodes)
-
-        chaos_graph.module_nodes.each do |n|
-          p("ModNode: #{ChaosUtils::decorate(n.label)}")
-        end
-
-        chaos_graph.module_edges.each do |e|
-          p("ModEdge: #{ChaosUtils::decorate(e.src_node.label)} -> #{ChaosUtils::decorate(e.dep_node.label)}")
-        end
-        dgraph.add_edges(chaos_graph.module_edges)
-
-        dgraph.render_graph
-
+      def render_fn_dep
+        fn_graph = chaos_graph.function_graph
+        build_dgraph('fn-dep', fn_graph.nodes, fn_graph.edges)
       end
+
+      def render_mod_dep
+        build_dgraph('module-dep', chaos_graph.module_nodes, chaos_graph.module_edges)
+      end
+
+      def build_dgraph(label, nodes, edges)
+
+        nodes.each do |n|
+          p("#{label} Nodes: #{ChaosUtils.decorate(n.label)}")
+        end
+
+        edges.each do |e|
+          p("#{label} Edges: #{ChaosUtils.decorate(e.src_node.label)} -> #{ChaosUtils.decorate(e.dep_node.label)}")
+        end
+
+
+        dgraph = ChaosDetector::Graphing::Directed.new(render_path: @render_path)
+        dgraph.create_directed_graph(label)
+        dgraph.append_nodes(nodes)
+        dgraph.add_edges(edges)
+        dgraph.render_graph
+      end
+
     end
   end
 end

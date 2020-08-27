@@ -15,14 +15,14 @@ require 'fixtures/fubarm'
 shared_examples_for 'playback traverses fn_calls' do |expected_traversal_str|
   it 'should match traversal' do
     options = ChaosDetector::Options.new
-    options.app_root_path = Dir.getwd
+    options.app_root_path = File.expand_path(__dir__)
     options.log_root_path = File.join('tmp', 'chaos_logs')
     options.path_domain_hash = { 'fixtures': 'FuDomain' }
 
     tracker = ChaosDetector::Tracker.new(options: options)
     nav = ChaosDetector::Navigator.new(options: options)
 
-    tracker.record()
+    tracker.record
     fn_calls
     tracker.stop
 
@@ -36,7 +36,7 @@ end
 describe 'ChaosDetector' do
   let (:opts) {
     opts = ChaosDetector::Options.new
-    opts.app_root_path = __dir__
+    opts.app_root_path = File.expand_path(__dir__)
     opts.log_root_path = File.join('tmp', 'chaos_logs')
     opts.path_domain_hash = { 'fixtures': 'FuDomain' }
     opts
@@ -126,7 +126,7 @@ describe 'ChaosDetector' do
 
       grapher.render_graph
       graph_fs = `ls domain-test.png`
-      p(ChaosUtils::decorate(graph_fs))
+      p(ChaosUtils.decorate(graph_fs))
       expect(graph_fs).to be
       expect(graph_fs.split.first).to eq('domain-test.png')
     end
@@ -147,25 +147,25 @@ describe 'ChaosDetector' do
     end
 
     describe 'nested traversals' do
-      it_should_behave_like 'playback traverses fn_calls', 'ROOT -> nester1 -> nest2 -> nest3 -> nest4 -> nest4' do
-        let(:fn_calls) do
-          Fubarm::Bazm.nester1
-        end
-      end
+      # it_should_behave_like 'playback traverses fn_calls', 'ROOT -> nester1 -> nest2 -> nest3 -> nest4 -> nest4' do
+      #   let(:fn_calls) do
+      #     Fubarm::Bazm.nester1
+      #   end
+      # end
 
       it_should_behave_like 'playback traverses fn_calls', 'ROOT -> nester1 -> nest2 -> nest3 -> nest2 -> nest4 -> nest2 -> nest4 -> nest2' do
         let(:fn_calls) do
           Fubarm::Bazm.nester1(recurse: true)
         end
 
-        it "should graph" do
+        it "should do fn graph" do
           graphs = ChaosDetector::Graphing::Graphs.new(options: opts)
           expect(graphs.navigator).to_not be_nil
 
           graphs.playback()
           expect(graphs.chaos_graph).to_not be_nil
 
-          graphs.render_mod_dep()
+          graphs.render_fn_dep()
 
         end
       end
@@ -184,13 +184,13 @@ describe 'ChaosDetector' do
       end
 
       chaos_graph.module_edges.each do |e|
-        p("ModEdge: #{ChaosUtils::decorate(e.src_node.class)} -> #{ChaosUtils::decorate(e.dep_node.class)}")
+        p("ModEdge: #{ChaosUtils.decorate(e.src_node.class)} -> #{ChaosUtils.decorate(e.dep_node.class)}")
       end
       grapher.add_edges(chaos_graph.module_edges)
 
       grapher.render_graph
       graph_fs = `ls module-test.png`
-      p(ChaosUtils::decorate(graph_fs))
+      p(ChaosUtils.decorate(graph_fs))
       expect(graph_fs).to be
       expect(graph_fs.split.first).to eq('module-test.png')
     end

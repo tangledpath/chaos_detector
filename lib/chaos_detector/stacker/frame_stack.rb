@@ -54,7 +54,7 @@ module ChaosDetector
 
       def inspect
         msg = "#{to_s}\n"
-        msg << ChaosUtils::decorate_tuple(@stack.map{|f| f.to_s}, join_str: " -> \n", indent_length: 2, clamp: :none)
+        msg << ChaosUtils.decorate_tuple(@stack.map{|f| f.to_s}, join_str: " -> \n", indent_length: 2, clamp: :none)
         msg
       end
 

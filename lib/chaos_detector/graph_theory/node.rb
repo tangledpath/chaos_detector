@@ -31,7 +31,7 @@ module GraphTheory
 
     def to_s(scope=nil)
       mod = ChaosDetector::Utils::StrUtil.humanize_module(self.class.name, max_segments:1)
-      ChaosUtils::decorate_pair(mod, name)
+      ChaosUtils.decorate_pair(mod, name)
     end
 
     def label
