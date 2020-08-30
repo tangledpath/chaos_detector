@@ -34,8 +34,9 @@ module ChaosDetector
       end
 
       def children(node)
-        @edges.select{|e|e.src_node == node} \
-              .map(&:dep_node)
+        nn = @edges.select{ |e| e.src_node == node }.map(&:dep_node)
+        puts "Found children for #{node.label}: #{nn}"
+        nn
       end
 
       def node_for(obj)

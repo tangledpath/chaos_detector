@@ -128,8 +128,8 @@ module ChaosDetector
       def frame_csv_fields(f)
         [
           f.event,
-          f.mod_info.mod_name,
-          f.mod_info.mod_type,
+          f.mod_info&.mod_name,
+          f.mod_info&.mod_type,
           f.fn_info.fn_path,
           f.fn_info.fn_line,
           f.fn_info.fn_name,

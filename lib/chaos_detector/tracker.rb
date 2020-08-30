@@ -73,7 +73,7 @@ module ChaosDetector
         next if full_path_skip?(tracepoint.path)
 
         mod_info = mod_info_at(tracepoint)
-        next if module_skip?(mod_info.mod_name)
+        next if module_skip?(mod_info)
 
         fn_info = fn_info_at(tracepoint)
         e = tracepoint.event
@@ -128,11 +128,19 @@ module ChaosDetector
     private
 
       def mod_info_at(tracepoint)
+        modinfo = nil
         mod_class = tracepoint.defined_class
-        mod_name = mod_name_from_class(tracepoint.defined_class)
-        mod_type = mod_type_from_class(mod_class)
-        mod_path = localize_path(tracepoint.path)
-        ChaosDetector::Stacker::ModInfo.new(mod_name: mod_name, mod_path: mod_path, mod_type: mod_type)
+        mod_name = mod_name_from_class(mod_class)
+        if mod_name
+          mod_type = mod_type_from_class(mod_class)
+          mod_path = localize_path(tracepoint.path)
+          modinfo = ChaosDetector::Stacker::ModInfo.new(
+            mod_name: mod_name,
+            mod_path: mod_path,
+            mod_type: mod_type
+          )
+        end
+        modinfo
       end
 
       def fn_info_at(tracepoint)
@@ -151,9 +159,10 @@ module ChaosDetector
         end
       end
 
-      def module_skip?(mod_name)
-        return false unless ChaosUtils.aught?(mod_name)
-        @options.ignore_modules.any? { |m| mod_name.start_with?(m) }
+      def module_skip?(mod_info)
+        ChaosUtils.with(mod_info&.mod_name) do |modname|
+          @options.ignore_modules.any? {|m| modname.start_with?(m)}
+        end
       end
 
       def apply_options
