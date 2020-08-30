@@ -26,9 +26,7 @@ module ChaosDetector
         fn_line: nil,
         domain_name:nil,
         is_root: false,
-        mod_info: nil,
-        mod_name:nil,
-        mod_type:nil
+        mod_info: nil
       )
         super(name: fn_name, root: is_root)
 
@@ -38,11 +36,7 @@ module ChaosDetector
         @mod_infos = []
 
         # Add module info, if supplied:
-        if mod_info
-          add_module(mod_info)
-        elsif ChaosUtils.aught?mod_name
-          add_module_attrs(mod_name:mod_name, mod_path: fn_path, mod_type: mod_type)
-        end
+        add_module(mod_info)
       end
 
       def add_module(mod_info)

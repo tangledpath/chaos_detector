@@ -13,20 +13,8 @@ module ChaosDetector
 
       def initialize(event:, mod_info:, fn_info:, caller_fn_info:)
         raise ArgumentError, "event is required" if ChaosUtils.naught?(event)
-        raise ArgumentError, "mod_info is required" if ChaosUtils.naught?(mod_info)
+        # raise ArgumentError, "mod_info is required" if ChaosUtils.naught?(mod_info)
         raise ArgumentError, "fn_info is required" if ChaosUtils.naught?(fn_info)
-        # raise ArgumentError, "fn_name is required"
-
-            #{naught(:foo).parameters.values
-            #{naught(:foo).parameters
-
-          #   %s :: %s - %s" % [
-          #   ChaosUtils.decorate(event),
-          #   ChaosUtils.decorate(fn_name),
-          #   ChaosUtils.decorate(fn_path)
-          # ])
-        #   raise ArgumentError, msg
-        # end
 
         @mod_info = mod_info
         @fn_info = fn_info

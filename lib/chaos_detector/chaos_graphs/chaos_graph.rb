@@ -56,13 +56,13 @@ module ChaosDetector
       ## Derive domain-level graph from function-based graph
       def build_domain_graph(edges)
         assert_state
-        @domain_graph ||= ChaosDetector::GraphTheory::Graph.new(root_node: root_node_domain, nodes: @domain_nodes, edges: edges)
+        ChaosDetector::GraphTheory::Graph.new(root_node: root_node_domain, nodes: @domain_nodes, edges: edges)
       end
 
       ## Derive module-level graph from function-based graph
       def build_module_graph(edges: @module_edges)
         assert_state
-        @module_graph ||= ChaosDetector::GraphTheory::Graph.new(root_node: root_node_module, nodes: @domain_nodes, edges: edges)
+        ChaosDetector::GraphTheory::Graph.new(root_node: root_node_module, nodes: @domain_nodes, edges: edges)
       end
 
       private
@@ -145,10 +145,6 @@ module ChaosDetector
           edges = @function_graph.edges
           @domain_edges = group_edges_by(edges, :domain, :domain)
           @module_edges = group_edges_by(edges, :module, :module)
-          # @module_domain_edges = group_edges_by(edges, :mod_info_prime, :domain_name)
-          # @domain_module_edges = group_edges_by(edges, :domain_name, :mod_info_prime)
-          # @function_domain_edges = group_edges_by(edges, nil, :domain_name)
-          # @domain_function_edges = group_edges_by(edges, :domain_name, nil)
         end
 
         def group_edges_by(edges, src, dep)
@@ -171,11 +167,11 @@ module ChaosDetector
           groupedges.filter_map do |src_dep_pair, g_edges|
             raise "Pair should have two exactly items." unless src_dep_pair.length==2
 
-            log("Looking up pair: #{src_dep_pair.inspect}")
+            # log("Looking up pair: #{src_dep_pair.inspect}")
             edge_src_node = lookup_node_by(node_type: src, node_info: src_dep_pair.first)
             edge_dep_node = lookup_node_by(node_type: dep, node_info: src_dep_pair.last)
 
-            log("Creating #{src_dep_pair.first.class} edge with #{ChaosUtils.decorate_pair(edge_src_node, edge_dep_node)}")
+            # log("Creating #{src_dep_pair.first.class} edge with #{ChaosUtils.decorate_pair(edge_src_node, edge_dep_node)}")
             (edge_src_node != edge_dep_node) && ChaosDetector::GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_cnt: g_edges.length)
           end
         end
@@ -210,9 +206,6 @@ module ChaosDetector
             n.nil? ? root_node_function : @function_graph.nodes[n]
           when :module
             n = node_info && @module_nodes.index(node_info)
-            if n.nil?
-              puts "WTFFFFFFF: #{node_info}"
-            end
             n.nil? ? root_node_module : @module_nodes[n]
           when :domain
             # Look up by Domain name
