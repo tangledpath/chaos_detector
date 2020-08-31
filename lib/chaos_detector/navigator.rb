@@ -36,12 +36,12 @@ module ChaosDetector
       @edges_call = Set.new
       @edges_ret = Set.new
 
-      @walkman.playback do |rownum, frame|
+      @walkman.playback do |_rownum, frame|
         perform_node_action(frame)
       end
       log("Found nodes.", object: @nodes.length)
 
-      @walkman.playback do |rownum, frame|
+      @walkman.playback do |_rownum, frame|
         perform_edge_action(frame)
       end
 
