@@ -4,7 +4,7 @@ require 'chaos_detector/chaos_utils'
 
 require 'fixtures/foobar'
 require 'fixtures/fubarm'
-require 'fixtures/fix_mixed_in'
+require 'fixtures/fixture_mixed_in'
 
 describe 'Tracker' do
   let(:chaos_options) do
@@ -17,6 +17,7 @@ describe 'Tracker' do
   end
 
   let(:chaos_tracker) { ChaosDetector::Tracker.new(options: chaos_options) }
+  let(:chaos_walkman) { ChaosDetector::Walkman.new(options: chaos_options) }
   # let(:tracked_csv_path) { @options.path_with_log_root(:frame_csv_path) }
 
   describe 'internal' do
@@ -66,18 +67,10 @@ describe 'Tracker' do
     describe 'mixins' do
       it 'should record mixed-in module' do
         chaos_tracker.record
-        fix_mixed = FixMixedIn.new
-        fix_mixed.mixed_foo(2112)
-        walkman = chaos_tracker.stop
-
-        csv_content = `cat #{walkman.csv_path}`
-        csv_lines = csv_content.split
-        puts csv_lines.length
-        puts '-' * 50
-        puts csv_lines
-        puts '-' * 50
-
-        # tracked_csv_path
+        mixed = FixtureMixedIn.new
+        mixed.mixed_foo(2112)
+        chaos_tracker.stop
+        foo_frame = chaos_walkman.frame_at(row_index: 0)
       end
     end
 
