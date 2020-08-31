@@ -35,19 +35,18 @@ module ChaosDetector
       init_file_with_header(csv_path)
     end
 
-    # Play back CSV configured in Walkman options
+    # Play back CSV from path configured in Walkman options
+    # @param row_range optionally specify range of rows.  Leave nil for all.
     # yields each row as
     #   frame A Frame object with its attributes contained in the CSV row
-    def playback
+    def playback(row_range: nil)
       log("Walkman replaying CSV with #{count} lines: #{csv_path}")
       @rownum = 0
       row_cur = nil
       CSV.foreach(csv_path, headers: true) do |row|
-        @rownum += 1
         row_cur = row
-        frame = playback_row(row)
-        # log("playback_row= [#{action}]: #{frame}")
-        yield @rownum, frame
+        yield @rownum, playback_row(row) unless row_range&.include?(@rownum)
+        @rownum += 1
       end
     rescue StandardError => x
       raise ScriptError, log(PLAYBACK_MSG % [@rownum, csv_path, row_cur, x.inspect])

@@ -14,46 +14,17 @@ require 'chaos_detector/chaos_utils'
 module ChaosDetector
   class Tracker
     REGEX_MODULE_UNDECORATE = /#<(Class:)?([a-zA-Z\:]*)(.*)>/.freeze
-    DEFAULT_GROUP="default".freeze
-    FRAME_ACTIONS = [:call, :return]#, :return, :class, :end]
+    DEFAULT_GROUP = 'default'.freeze
+    TRACE_METHOD_EVENTS = %i[call return].freeze
 
     attr_reader :options
     attr_reader :walkman
 
     def initialize(options:)
-      raise ArgumentError, "#initialize requires options" if options.nil?
+      raise ArgumentError, '#initialize requires options' if options.nil?
       @options = options
-      @module_stack = []
       @total_traces = 0
       apply_options
-    end
-
-    def extract_caller(tracepoint, fn_info)
-      callers = tracepoint.self.send(:caller_locations)
-      callers = callers.select do |bt|
-        !full_path_skip?(bt.absolute_path) &&
-        ChaosUtils.aught?(bt.base_label) &&
-        !bt.base_label.start_with?('<')
-      end
-
-      cc =  callers.map do |bt|
-            "(%s) (%s:%d)" % [
-              bt.base_label,
-              bt.path,
-              bt.lineno
-            ]
-          end
-      # log(fn_info)
-      # log(cc.join("\n\t->\t"))
-      frame_at = callers.index{|bt| bt.base_label==fn_info.fn_name && localize_path(bt.absolute_path)==fn_info.fn_path }
-      bt_caller = frame_at.nil? ? nil : callers[frame_at+1]
-      ChaosUtils.with(bt_caller) do |bt|
-        ChaosDetector::Stacker::FnInfo.new(
-          fn_name: bt.base_label,
-          fn_line: bt.lineno,
-          fn_path: localize_path(bt.absolute_path)
-        )
-      end
     end
 
     def record()
@@ -63,15 +34,16 @@ module ChaosDetector
       @stopped = false
       @walkman.record_start
       @total_traces = 0
-      @trace = TracePoint.new(*FRAME_ACTIONS) do |tracepoint|
+      @trace = TracePoint.new(*TRACE_METHOD_EVENTS) do |tracepoint|
         if @stopped
           @trace.disable
-          log("Tracing stopped; stopping immediately.")
+          log('Tracing stopped; stopping immediately.')
           next
         end
 
         next if full_path_skip?(tracepoint.path)
 
+        # trace_mod_details(tracepoint)
         mod_info = mod_info_at(tracepoint)
         next if module_skip?(mod_info)
 
@@ -127,20 +99,53 @@ module ChaosDetector
 
     private
 
+      def extract_caller(tracepoint, fn_info)
+        callers = tracepoint.self.send(:caller_locations)
+        callers = callers.select do |bt|
+          !full_path_skip?(bt.absolute_path) &&
+          ChaosUtils.aught?(bt.base_label) &&
+          !bt.base_label.start_with?('<')
+        end
+
+        cc =  callers.map do |bt|
+          "(%s) (%s:%d)" % [
+            bt.base_label,
+            bt.path,
+            bt.lineno
+          ]
+        end
+        # log(fn_info)
+        # log(cc.join("\n\t->\t"))
+        frame_at = callers.index{|bt| bt.base_label==fn_info.fn_name && localize_path(bt.absolute_path)==fn_info.fn_path }
+        bt_caller = frame_at.nil? ? nil : callers[frame_at+1]
+        ChaosUtils.with(bt_caller) do |bt|
+          ChaosDetector::Stacker::FnInfo.new(
+            fn_name: bt.base_label,
+            fn_line: bt.lineno,
+            fn_path: localize_path(bt.absolute_path)
+          )
+        end
+      end
+
+      # TODO: Also store tracepoint.self.class&.name
+      # as "associated module" under the following conditions:
+      # * mod_type is 'MODULE' vs. 'CLASS'
+      # * not the same as tracepoint.defined_class
+      # * valid name
       def mod_info_at(tracepoint)
-        modinfo = nil
+        mod_info = nil
         mod_class = tracepoint.defined_class
         mod_name = mod_name_from_class(mod_class)
         if mod_name
           mod_type = mod_type_from_class(mod_class)
           mod_path = localize_path(tracepoint.path)
-          modinfo = ChaosDetector::Stacker::ModInfo.new(
+          mod_info = ChaosDetector::Stacker::ModInfo.new(
             mod_name: mod_name,
             mod_path: mod_path,
             mod_type: mod_type
           )
         end
-        modinfo
+        mod_info
       end
 
       def fn_info_at(tracepoint)
@@ -177,7 +182,6 @@ module ChaosDetector
           when Module
             :module
           else
-            # log "Unknown mod_type: #{tp&.defined_class&.class}"
             log "Unknown mod_type: #{clz}"
             :nil
         end
@@ -199,7 +203,18 @@ module ChaosDetector
       end
 
       def log(msg, **opts)
-        ChaosUtils::log_msg(msg, subject: "Tracker", **opts)
+        ChaosUtils::log_msg(msg, subject: 'Tracker', **opts)
+      end
+
+      def trace_mod_details(tp, label: 'ModDetails')
+        log 'Tracepoint [%s] (%s): %s / %s [%s / %s]' % [
+          label,
+          tp.event,
+          tp.defined_class,
+          tp.self.class,
+          tp.defined_class&.name,
+          tp.self.class&.name
+        ]
       end
 
       def check_name(mod_nm)
