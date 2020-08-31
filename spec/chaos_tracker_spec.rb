@@ -1,16 +1,10 @@
-require 'chaos_detector/navigator'
 require 'chaos_detector/tracker'
-require 'chaos_detector/stacker/frame'
-require 'chaos_detector/graphing/directed'
-require 'chaos_detector/graphing/graphs'
 require 'chaos_detector/options'
-require 'chaos_detector/chaos_graphs/chaos_graph'
 require 'chaos_detector/chaos_utils'
-
-require 'chaos_detector/graph_theory/appraiser'
 
 require 'fixtures/foobar'
 require 'fixtures/fubarm'
+require 'fixtures/fix_mixed_in'
 
 describe 'Tracker' do
   let(:opts) {
@@ -23,12 +17,10 @@ describe 'Tracker' do
 
   let(:chaos_tracker) { ChaosDetector::Tracker.new(options: opts) }
 
-  let(:dec1) { '#<Class:Authentication>'}
-  let(:dec2) { '#<Class:Person(id: integer)>'}
-  let(:dec3) { '#<ChaosDetector::Node:0x00007fdd5d2c6b08>'}
-
-
   describe 'internal' do
+    let(:dec1) { '#<Class:Authentication>'}
+    let(:dec2) { '#<Class:Person(id: integer)>'}
+    let(:dec3) { '#<ChaosDetector::Node:0x00007fdd5d2c6b08>'}
     # a="#<Class:Authentication>"
     # b="#<Class:Person(id: integer, first"
     # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
@@ -41,16 +33,16 @@ describe 'Tracker' do
 
   describe 'basic' do
     it 'should record' do
-      chaos_tracker.record()
+      chaos_tracker.record
       Fubarm::Foom.foom
       Foo.foo
       chaos_tracker.stop
     end
   end
 
-  describe 'integrates with walkman do' do
+  describe 'integrates with walkman' do
     it 'should persist' do
-      chaos_tracker.record()
+      chaos_tracker.record
       Foo.foo
       Fubarm::Foom.foom
       chaos_tracker.stop
@@ -73,15 +65,15 @@ describe 'Tracker' do
   end
 
   describe 'Meta-programming' do
-    it 'should record mixin' do
-      chaos_tracker.record()
-      Foo.foo
-      Fubarm::Foom.foom
+    it 'should record mixed-in module' do
+      chaos_tracker.record
+      fix_mixed = FixMixedIn.new
+      fix_mixed.mixed_foo(2112)
       chaos_tracker.stop
     end
 
     it 'should record metaprogramming' do
-      chaos_tracker.record()
+      chaos_tracker.record
       Foo.foo
       Fubarm::Foom.foom
       chaos_tracker.stop
