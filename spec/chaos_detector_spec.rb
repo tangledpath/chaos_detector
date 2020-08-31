@@ -34,16 +34,16 @@ shared_examples_for 'playback traverses fn_calls' do |expected_traversal_str|
 end
 
 describe 'ChaosDetector' do
-  let(:opts) {
-    opts = ChaosDetector::Options.new
-    opts.app_root_path = File.expand_path(__dir__)
-    opts.log_root_path = File.join('tmp', 'chaos_logs')
-    opts.path_domain_hash = { 'fixtures': 'FuDomain' }
-    opts
-  }
+  let(:chaos_options) do
+    ChaosDetector::Options.new.tap do |opts|
+      opts.app_root_path = File.expand_path(__dir__)
+      opts.log_root_path = File.join('tmp', 'chaos_logs')
+      opts.path_domain_hash = { 'fixtures': 'FuDomain' }
+    end
+  end
 
-  let(:chaos_tracker) { ChaosDetector::Tracker.new(options: opts) }
-  let(:chaos_nav) { ChaosDetector::Navigator.new(options: opts) }
+  let(:chaos_tracker) { ChaosDetector::Tracker.new(options: chaos_options) }
+  let(:chaos_nav) { ChaosDetector::Navigator.new(options: chaos_options) }
 
   let(:simple_tracking) do
     chaos_tracker.record()
@@ -55,7 +55,7 @@ describe 'ChaosDetector' do
   describe 'Navigator' do
     it 'should playback from file' do
       simple_tracking
-      playback_nav = ChaosDetector::Navigator.new(options: opts)
+      playback_nav = ChaosDetector::Navigator.new(options: chaos_options)
       playback_graph = playback_nav.playback()
       expect(playback_graph).to_not be_nil
 
@@ -114,7 +114,7 @@ describe 'ChaosDetector' do
         end
 
         it "should do fn graph" do
-          graphs = ChaosDetector::Graphing::Graphs.new(options: opts)
+          graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
           expect(graphs.navigator).to_not be_nil
 
           graphs.playback()
@@ -155,7 +155,7 @@ describe 'ChaosDetector' do
       expect(walkman).to_not be_nil
 
       # Playback should graph:
-      graphs = ChaosDetector::Graphing::Graphs.new(options: opts)
+      graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
       expect(graphs.navigator).to_not be_nil
 
       graphs.playback()
