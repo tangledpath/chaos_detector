@@ -35,6 +35,16 @@ module ChaosDetector
       init_file_with_header(csv_path)
     end
 
+    # Return frame at given index or nil if nothing:
+    def frame_at(row_index:)
+      frames_within(row_range: row_index..row_index).first
+    end
+
+    # Return any frames within specified row range; empty array if not found:
+    def frames_within(row_range: nil)
+      to_enum(:playback, row_range: row_range).map{ |_r, frame| frame }
+    end
+
     # Play back CSV from path configured in Walkman options
     # @param row_range optionally specify range of rows.  Leave nil for all.
     # yields each row as
