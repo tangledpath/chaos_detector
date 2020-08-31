@@ -12,19 +12,20 @@ describe 'Tracker' do
       opts.app_root_path = File.expand_path(__dir__)
       opts.log_root_path = File.join('tmp', 'chaos_logs')
       opts.path_domain_hash = { 'fixtures': 'FuDomain' }
+      opts.frame_csv_path = 'csv/chaos_tracking.csv'
     end
   end
 
   let(:chaos_tracker) { ChaosDetector::Tracker.new(options: chaos_options) }
-  let(:tracked_csv_path) { @options.path_with_log_root(:frame_csv_path) }
+  # let(:tracked_csv_path) { @options.path_with_log_root(:frame_csv_path) }
 
   describe 'internal' do
     let(:dec1) { '#<Class:Authentication>'}
     let(:dec2) { '#<Class:Person(id: integer)>'}
     let(:dec3) { '#<ChaosDetector::Node:0x00007fdd5d2c6b08>'}
-    # a="#<Class:Authentication>"
-    # b="#<Class:Person(id: integer, first"
-    # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
+    # a='#<Class:Authentication>'
+    # b='#<Class:Person(id: integer, first'
+    # c='#<ChaosDetector::Node:0x00007fdd5d2c6b08>'
     it 'should undecorate module names' do
       expect(chaos_tracker.undecorate_module_name(dec2)).to eq('Person')
       expect(chaos_tracker.undecorate_module_name(dec1)).to eq('Authentication')
@@ -57,23 +58,30 @@ describe 'Tracker' do
       expect(csv_content).to_not be_nil
       expect(csv_content).to_not be_empty
       csv_lines = csv_content.split
-      puts csv_lines.length
-      puts '-' * 50
-      puts csv_lines
-      puts '-' * 50
       expect(csv_lines.length).to eq(13)
     end
   end
 
-  describe 'Meta-programming' do
-    it 'should record mixed-in module' do
-      chaos_tracker.record
-      fix_mixed = FixMixedIn.new
-      fix_mixed.mixed_foo(2112)
-      chaos_tracker.stop
+  describe 'Metaprogramming' do
+    describe 'mixins' do
+      it 'should record mixed-in module' do
+        chaos_tracker.record
+        fix_mixed = FixMixedIn.new
+        fix_mixed.mixed_foo(2112)
+        walkman = chaos_tracker.stop
+
+        csv_content = `cat #{walkman.csv_path}`
+        csv_lines = csv_content.split
+        puts csv_lines.length
+        puts '-' * 50
+        puts csv_lines
+        puts '-' * 50
+
+        # tracked_csv_path
+      end
     end
 
-    it 'should record metaprogramming' do
+    it 'dynamic' do
       chaos_tracker.record
       Foo.foo
       Fubarm::Foom.foom

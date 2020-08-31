@@ -151,7 +151,7 @@ module ChaosDetector
           assert_state
           raise ArgumentError, "edges argument required" unless edges
 
-          log("GROUPING EDGES by #{src} and #{dep}")
+          # log("GROUPING EDGES by #{src} and #{dep}")
 
           groupedges = edges.group_by do |e|
             [

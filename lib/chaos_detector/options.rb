@@ -4,6 +4,7 @@ module ChaosDetector
   class Options
     extend ChaosDetector::Utils::CoreUtil::ChaosAttr
 
+    # TODO: Ability to run on self:
     IGNORE_MODULES = [
       'ChaosDetector',
       'ChaosUtils',

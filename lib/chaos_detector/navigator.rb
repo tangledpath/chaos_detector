@@ -149,7 +149,7 @@ module ChaosDetector
         if caller_node.nil?
           caller_node = ChaosDetector::ChaosGraphs::FunctionNode.root_node
           raise "Caller node is required (falls back to root)." if caller_node.nil?
-          log("Adding edge to root!")
+          # log("Adding edge to root!")
           @nodes << caller_node
          end
 
