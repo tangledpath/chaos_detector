@@ -34,7 +34,7 @@ shared_examples_for 'playback traverses fn_calls' do |expected_traversal_str|
 end
 
 describe 'ChaosDetector' do
-  let (:opts) {
+  let(:opts) {
     opts = ChaosDetector::Options.new
     opts.app_root_path = File.expand_path(__dir__)
     opts.log_root_path = File.join('tmp', 'chaos_logs')
@@ -42,61 +42,19 @@ describe 'ChaosDetector' do
     opts
   }
 
-  let (:chaos_tracker) { ChaosDetector::Tracker.new(options: opts) }
-  let (:chaos_nav) { ChaosDetector::Navigator.new(options: opts) }
+  let(:chaos_tracker) { ChaosDetector::Tracker.new(options: opts) }
+  let(:chaos_nav) { ChaosDetector::Navigator.new(options: opts) }
 
-  describe 'Tracker' do
-    let (:dec1) { '#<Class:Authentication>'}
-    let (:dec2) { '#<Class:Person(id: integer)>'}
-    let (:dec3) { '#<ChaosDetector::Node:0x00007fdd5d2c6b08>'}
-    # a="#<Class:Authentication>"
-    # b="#<Class:Person(id: integer, first"
-    # c="#<ChaosDetector::Node:0x00007fdd5d2c6b08>"
-    it 'should undecorate module names' do
-      expect(chaos_tracker.undecorate_module_name(dec2)).to eq('Person')
-      expect(chaos_tracker.undecorate_module_name(dec1)).to eq('Authentication')
-      expect(chaos_tracker.undecorate_module_name(dec3)).to eq('ChaosDetector::Node')
-    end
-
-    it 'should record' do
-      chaos_tracker.record()
-      Foo.foo
-      Fubarm::Foom.foom
-      chaos_tracker.stop
-    end
-
-    it 'should save recording to walkman' do
-      chaos_tracker.record()
-      Foo.foo
-      Fubarm::Foom.foom
-      chaos_tracker.stop
-
-      expect(chaos_tracker.walkman).to_not be_nil
-      walkman = chaos_tracker.walkman
-      expect(walkman).to_not be_nil
-      expect(walkman.csv_path).to_not be_nil
-      expect(walkman.csv_path).to_not be_empty
-      csv_content = `cat #{walkman.csv_path}`
-      expect(csv_content).to_not be_nil
-      expect(csv_content).to_not be_empty
-      csv_lines = csv_content.split
-      csv_lines = csv_content.split
-      puts csv_lines.length
-      puts '-' * 50
-      puts csv_lines
-      puts '-' * 50
-      expect(csv_lines.length).to eq(13)
-
-    end
+  let(:simple_tracking) do
+    chaos_tracker.record()
+    Foo.foo
+    Fubarm::Foom.foom
+    chaos_tracker.stop
   end
 
   describe 'Navigator' do
     it 'should playback from file' do
-      chaos_tracker.record()
-      Foo.foo
-      Fubarm::Foom.foom
-      chaos_tracker.stop
-
+      simple_tracking
       playback_nav = ChaosDetector::Navigator.new(options: opts)
       playback_graph = playback_nav.playback()
       expect(playback_graph).to_not be_nil
@@ -107,11 +65,8 @@ describe 'ChaosDetector' do
   end
 
   describe 'Grapher' do
-    let (:graphing) do
-      chaos_tracker.record()
-      Foo.foo
-      Fubarm::Foom.foom
-      chaos_tracker.stop
+    let(:graphing) do
+      simple_tracking
       chaos_nav.playback
     end
 
@@ -196,11 +151,8 @@ describe 'ChaosDetector' do
     end
 
     it 'module deps using graphs' do
-      chaos_tracker.record()
-      Foo.foo
-      Fubarm::Foom.foom
-      graph = chaos_tracker.stop
-      expect(graph).to_not be_nil
+      walkman = simple_tracking
+      expect(walkman).to_not be_nil
 
       # Playback should graph:
       graphs = ChaosDetector::Graphing::Graphs.new(options: opts)
