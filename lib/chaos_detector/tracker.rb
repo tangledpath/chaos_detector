@@ -144,7 +144,7 @@ module ChaosDetector
       end
 
       def fn_info_at(tracepoint)
-        ChaosDetector::Stacker::FnInfo.new(fn_name: tracepoint.callee_id.to_s , fn_line: tracepoint.lineno, fn_path: localize_path(tracepoint.path))
+        ChaosDetector::Stacker::FnInfo.new(fn_name: tracepoint.callee_id.to_s, fn_line: tracepoint.lineno, fn_path: localize_path(tracepoint.path))
       end
 
       def full_path_skip?(path)
