@@ -7,15 +7,16 @@ require 'fixtures/fubarm'
 require 'fixtures/fix_mixed_in'
 
 describe 'Tracker' do
-  let(:opts) {
-    opts = ChaosDetector::Options.new
-    opts.app_root_path = File.expand_path(__dir__)
-    opts.log_root_path = File.join('tmp', 'chaos_logs')
-    opts.path_domain_hash = { 'fixtures': 'FuDomain' }
-    opts
-  }
+  let(:chaos_options) do
+    ChaosDetector::Options.new.tap do |opts|
+      opts.app_root_path = File.expand_path(__dir__)
+      opts.log_root_path = File.join('tmp', 'chaos_logs')
+      opts.path_domain_hash = { 'fixtures': 'FuDomain' }
+    end
+  end
 
-  let(:chaos_tracker) { ChaosDetector::Tracker.new(options: opts) }
+  let(:chaos_tracker) { ChaosDetector::Tracker.new(options: chaos_options) }
+  let(:tracked_csv_path) { @options.path_with_log_root(:frame_csv_path) }
 
   describe 'internal' do
     let(:dec1) { '#<Class:Authentication>'}
