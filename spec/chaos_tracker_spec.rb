@@ -71,14 +71,17 @@ describe 'Tracker' do
         mixed.mixed_foo(2112)
         chaos_tracker.stop
         foo_frame = chaos_walkman.frame_at(row_index: 0)
-      end
-    end
 
-    it 'dynamic' do
-      chaos_tracker.record
-      Foo.foo
-      Fubarm::Foom.foom
-      chaos_tracker.stop
+        expect(foo_frame).to_not be_nil
+        expect(foo_frame.mod_info).to_not be_nil
+        expect(foo_frame.fn_info).to_not be_nil
+
+        expect(foo_frame.fn_info.fn_name).to eq('mixed_foo')
+        expect(foo_frame.fn_info.fn_path).to eq('fixtures/fixture_module.rb')
+        expect(foo_frame.mod_info.mod_name).to eq('FixtureModule')
+        expect(foo_frame.mod_info.mod_path).to eq('fixtures/fixture_module.rb')
+        expect(foo_frame.mod_info.mod_type).to eq('module')
+      end
     end
   end
 end

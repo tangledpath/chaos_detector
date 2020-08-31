@@ -55,7 +55,7 @@ module ChaosDetector
       row_cur = nil
       CSV.foreach(csv_path, headers: true) do |row|
         row_cur = row
-        yield @rownum, playback_row(row) unless row_range&.include?(@rownum)
+        yield @rownum, playback_row(row) if row_range.nil? || row_range&.include?(@rownum)
         @rownum += 1
       end
     rescue StandardError => x
