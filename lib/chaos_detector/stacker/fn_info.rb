@@ -22,7 +22,7 @@ module ChaosDetector
       end
 
       def to_s
-        "#{fn_name}: #{fn_path}:L#{fn_line}"
+        "##{fn_name}: #{fn_path}:L#{fn_line}"
       end
 
       class << self
