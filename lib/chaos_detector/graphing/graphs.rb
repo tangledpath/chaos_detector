@@ -36,13 +36,13 @@ module ChaosDetector
 
       def build_dgraph(label, nodes, edges)
 
-        nodes.each do |n|
-          p("#{label} Nodes: #{ChaosUtils.decorate(n.label)}")
-        end
+        # nodes.each do |n|
+        #   p("#{label} Nodes: #{ChaosUtils.decorate(n.label)}")
+        # end
 
-        edges.each do |e|
-          p("#{label} Edges: #{ChaosUtils.decorate(e.src_node.label)} -> #{ChaosUtils.decorate(e.dep_node.label)}")
-        end
+        # edges.each do |e|
+        #   p("#{label} Edges: #{ChaosUtils.decorate(e.src_node.label)} -> #{ChaosUtils.decorate(e.dep_node.label)}")
+        # end
 
 
         dgraph = ChaosDetector::Graphing::Directed.new(render_path: @render_path)
