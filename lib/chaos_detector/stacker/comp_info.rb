@@ -8,7 +8,7 @@ module ChaosDetector
       attr_accessor :name
       attr_accessor :info
 
-      def initialize(name:, info: nil, path: nil)
+      def initialize(name:, path: nil, info: nil)
         @name = name
         @path = path
         @info = info
