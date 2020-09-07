@@ -1,16 +1,14 @@
 require 'chaos_detector/chaos_utils'
-
+require_relative 'comp_info'
 module ChaosDetector
   module Stacker
-    class FnInfo
-      attr_accessor :fn_path
-      attr_accessor :fn_name
-      attr_accessor :fn_line
+    class FnInfo < ChaosDetector::Stacker::CompInfo
+      alias_method :fn_name, :name
+      alias_method :fn_line, :info
+      alias_method :fn_path, :path
 
       def initialize(fn_name:, fn_line: nil, fn_path: nil)
-        @fn_name = fn_name
-        @fn_line = fn_line
-        @fn_path = fn_path
+        super(name:fn_name, path: fn_path, info: fn_line)
       end
 
       def ==(other)
