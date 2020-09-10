@@ -21,6 +21,11 @@ module MixinAB
   def mix_b;end
 end
 
+module MixinAD
+  def mix_a;end
+  def mix_d;end
+end
+
 module MixinCD
   # class << self
     def mix_c; end
@@ -28,11 +33,17 @@ module MixinCD
   # end
 end
 
-# class Outer
-#   prepend MixinAB
-#   extend MixinCD
-# end
+class Out
+  def frack; end
+end
 
+class Outer < Out
+  prepend MixinAB # Adds to instance (strongly)
+  include MixinAD # Adds to instance
+  extend MixinCD # Adds to class methods
+end
+Outer.ancestors
+Outer.superclass
 # Outer.included_modules
 # Outer.class.included_modules
 # Outer.ancestors

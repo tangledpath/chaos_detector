@@ -10,17 +10,23 @@ require 'chaos_detector/chaos_utils'
 module ChaosDetector
   module ChaosGraphs
     class ChaosEdge < GraphTheory::Edge
+      attr_reader :dep_type
 
       # association
-      REF_TYPES = %i{ generalization association aggregation composition }.freeze
-      def initialize(src_node, dep_node, reduce_cnt:1)
+      DEP_TYPES = %i{ association generalization aggregation composition }.freeze
+      def initialize(src_node, dep_node, reduce_cnt:1, dep_type: :association)
         super
-        # @domain_graph = nil
+        @dep_type = dep_type
+      end
+
+      def to_s
+        m = ChaosUtils.decorate(super, clamp: :parens, suffix:' ')
+        m << ChaosUtils.decorate(@dep_type, clamp: :parens)
       end
 
       def log(msg)
         ChaosUtils::log_msg(msg, subject: "ChaosEdge")
       end
-  end
+    end
   end
 end

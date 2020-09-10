@@ -23,6 +23,10 @@ module ChaosDetector
         "##{fn_name}: #{fn_path}:L#{fn_line}"
       end
 
+      def component_type
+        :function
+      end
+
       class << self
         def match?(obj1, obj2, line_matching:false)
           obj1.fn_path == obj2.fn_path && obj1.fn_name == obj2.fn_name

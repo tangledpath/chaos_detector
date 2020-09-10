@@ -12,6 +12,10 @@ module ChaosDetector
         super(name:mod_name, path: mod_path, info: mod_type)
       end
 
+      def component_type
+        :module
+      end
+
       def to_s
         "(%s) %s - %s" % [
           mod_type.to_s[0].upcase,

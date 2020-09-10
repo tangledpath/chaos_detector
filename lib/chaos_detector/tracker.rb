@@ -1,4 +1,4 @@
-  require 'set'
+require 'set'
 require 'pathname'
 require_relative 'options'
 require_relative 'stacker/mod_info'
@@ -24,7 +24,16 @@ module ChaosDetector
       raise ArgumentError, '#initialize requires options' if options.nil?
       @options = options
       @total_traces = 0
+      # ModInfo -> Set(ModInfo)?
+      @class_supers = Hash.new([])
+      @class_mixins = Hash.new([])
       apply_options
+    end
+
+    def publish_association(mod_info, mod_info_assoc, association)
+    end
+
+    def publish_super_relation(mod_info, mod_info_super)
     end
 
     def record()
@@ -46,17 +55,17 @@ module ChaosDetector
         # trace_mod_details(tracepoint)
         mod_info = mod_info_at(tracepoint)
         next if module_skip?(mod_info)
-
+        mod_info_super = mod_info_superclass(tracepoint.defined_class)
         fn_info = fn_info_at(tracepoint)
         e = tracepoint.event
         @trace.disable do
-          caller_fn_info = extract_caller(tracepoint, fn_info)
+          caller_info = extract_caller(tracepoint, fn_info)
           @total_traces += 1
           frame = ChaosDetector::Stacker::Frame.new(
             event: e,
             mod_info: mod_info,
             fn_info: fn_info,
-            caller_fn_info: caller_fn_info
+            caller_info: caller_info
           )
           @walkman.write_frame(frame)
         end
@@ -127,6 +136,26 @@ module ChaosDetector
         end
       end
 
+      def mod_info_superclass(clz)
+        return nil unless clz&.respond_to?(:superclass)
+
+        sup_clz = clz.superclass
+        if sup_clz
+          mod_name = mod_name_from_class(sup_clz)
+          mod_type = mod_type_from_class(sup_clz)
+          mod_path = localize_path(sup_clz.const_source_location(mod_name)&.last)
+
+          ChaosDetector::Stacker::ModInfo.new(
+            mod_name: mod_name,
+            mod_path: mod_path,
+            mod_type: mod_type
+          )
+        end
+      end
+
+      def mod_info_ancestors(clz)
+      end
+
       # TODO: Also store tracepoint.self.class&.name
       # as "associated module" under the following conditions:
       # * mod_type is 'MODULE' vs. 'CLASS'
@@ -135,6 +164,15 @@ module ChaosDetector
       def mod_info_at(tracepoint)
         mod_info = nil
         mod_class = tracepoint.defined_class
+        ancestry = mod_class&.ancestors
+        if ancestry.any?
+          puts '-' * 50
+          puts ancestry.first&.class
+          puts ancestry.inspect
+          puts ancestry.class&.superclass
+          puts '-' * 50
+        end
+
         mod_name = mod_name_from_class(mod_class)
         if mod_name
           mod_type = mod_type_from_class(mod_class)
@@ -196,6 +234,7 @@ module ChaosDetector
 
       def localize_path(path)
         # @app_root_path.relative_path_from(Pathname.new(path).cleanpath).to_s
+        return '' unless ChaosUtils.aught?(path)
         p = Pathname.new(path).cleanpath.to_s
         p.sub!(@app_root_path, '') if @app_root_path
         local_path = p.start_with?('/') ? p[1..-1] : p

@@ -141,11 +141,11 @@ module ChaosDetector
       end
 
       def perform_edge_action(frame)
-        return unless frame.fn_info #&& frame.caller_fn_info
+        return unless frame.fn_info #&& frame.caller_info
 
         dest_node = node_for(frame.fn_info)
         raise "Couldn't find destination node" if dest_node.nil?
-        caller_node = node_for(frame.caller_fn_info)
+        caller_node = node_for(frame.caller_info)
         if caller_node.nil?
           caller_node = ChaosDetector::ChaosGraphs::FunctionNode.root_node
           raise "Caller node is required (falls back to root)." if caller_node.nil?
