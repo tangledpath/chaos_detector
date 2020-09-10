@@ -11,7 +11,7 @@ require_relative 'stacker/frame'
 module ChaosDetector
   class Walkman
     PLAYBACK_MSG = "Playback error on line number %d of pre-recorded CSV %s:\n  %s\n  %s".freeze
-    CSV_HEADER = %w{ROWNUM EVENT MOD_NAME MOD_TYPE FN_PATH FN_LINE FN_NAME CALLER_PATH CALLER_LINE CALLER_NAME }
+    CSV_HEADER = %w{ROWNUM EVENT MOD_NAME MOD_TYPE FN_PATH FN_LINE FN_NAME CALLER_TYPE CALLER_PATH CALLER_INFO CALLER_NAME }
     COL_COUNT = CSV_HEADER.length
     COL_INDEXES = CSV_HEADER.map.with_index {|col, i| [col.downcase.to_sym, i]}.to_h
 
@@ -142,9 +142,10 @@ module ChaosDetector
           f.fn_info.fn_path,
           f.fn_info.fn_line,
           f.fn_info.fn_name,
-          f.caller_fn_info&.fn_path,
-          f.caller_fn_info&.fn_line,
-          f.caller_fn_info&.fn_name
+          f.caller_info&.component_type,
+          f.caller_info&.path,
+          f.caller_info&.info,
+          f.caller_info&.name
         ]
       end
 
@@ -172,19 +173,27 @@ module ChaosDetector
           fn_path: fn_path
         )
 
-        caller_fn_info = ChaosUtils.with(csv_row_val(row, :caller_name)) do |fn_nm|
-          ChaosDetector::Stacker::FnInfo.new(
-            fn_name: fn_nm,
-            fn_line: csv_row_val(row, :caller_line)&.to_i,
-            fn_path: csv_row_val(row, :caller_path)
-          )
+        caller_info = ChaosUtils.with(csv_row_val(row, :caller_type)) do |caller_type|
+          if caller_type.to_sym == :function
+            ChaosDetector::Stacker::FnInfo.new(
+              fn_name: csv_row_val(row, :caller_name),
+              fn_line: csv_row_val(row, :caller_info)&.to_i,
+              fn_path: csv_row_val(row, :caller_path)
+            )
+          else
+            ChaosDetector::Stacker::ModInfo.new(
+              mod_name: sv_row_val(row, :caller_name),
+              mod_path: csv_row_val(row, :caller_info),
+              mod_type: csv_row_val(row, :caller_path)
+            )
+          end
         end
 
          ChaosDetector::Stacker::Frame.new(
           event: event,
           mod_info: mod_info,
           fn_info: fn_info,
-          caller_fn_info: caller_fn_info
+          caller_info: caller_info
         )
       end
   end

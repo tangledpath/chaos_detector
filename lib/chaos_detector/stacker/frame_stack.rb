@@ -5,8 +5,9 @@ require 'chaos_detector/chaos_utils'
 module ChaosDetector
   module Stacker
     class FrameStack
-      def initialize()
-        @stack = []
+      def initialize
+        @methods = []
+        @modules = []
       end
 
       def log(msg)
