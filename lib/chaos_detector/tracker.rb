@@ -24,20 +24,12 @@ module ChaosDetector
       raise ArgumentError, '#initialize requires options' if options.nil?
 
       @options = options
+      @total_frames = 0
       @total_traces = 0
-      # ModInfo -> Set(ModInfo)?
-      @class_supers = Hash.new([])
-      @class_mixins = Hash.new([])
       apply_options
     end
 
-    def publish_association(mod_info, mod_info_assoc, association)
-    end
-
-    def publish_super_relation(mod_info, mod_info_super)
-    end
-
-    def record()
+    def record
       log("Detecting chaos at #{@app_root_path}")
       # log(caller_locations.join("\n\t->\t"))
       # log("")
@@ -51,33 +43,48 @@ module ChaosDetector
           next
         end
 
-        next if full_path_skip?(tracepoint.path)
+        tp_path = tracepoint.path
+        next if full_path_skip?(tp_path)
+
+        tp_class = tracepoint.defined_class
 
         # trace_mod_details(tracepoint)
-        mod_info = mod_info_at(tracepoint)
+        mod_info = mod_info_at(tp_class, mod_full_path: tp_path)
         puts "mod_info: #{mod_info} "
-        next if !mod_info || module_skip?(mod_info.mod_name)
-
-        # Detect associations:
-        mod_info_super = mod_info_superclass(tracepoint.defined_class)
+        next unless mod_info
 
         fn_info = fn_info_at(tracepoint)
         e = tracepoint.event
         @trace.disable do
-          caller_info = extract_caller(tracepoint, fn_info)
           @total_traces += 1
-          frame = ChaosDetector::Stacker::Frame.new(
-            event: e,
-            mod_info: mod_info,
-            fn_info: fn_info,
-            caller_info: caller_info
-          )
-          @walkman.write_frame(frame)
-        end
+          caller_info = extract_caller(tracepoint, fn_info)
+          write_event_frame(e, fn_info: fn_info, mod_info: mod_info, caller_info: caller_info)
 
+          # Detect superclass association:
+          ChaosUtils.with(superclass_mod_info(tp_class)) do |super_mod_info|
+            puts "Would superclass with #{super_mod_info}"
+          end
+
+          # # Detect composition associations:
+          # ancestor_mod_infos(tp_class).each do |agg_mod_info|
+          #   puts "Would ancestors with #{agg_mod_info}"
+          # end
+        end
       end
       @trace.enable
       true
+    end
+
+    def write_event_frame(event, fn_info:, mod_info:, caller_info:)
+      ChaosDetector::Stacker::Frame.new(
+        event: event,
+        mod_info: mod_info,
+        fn_info: fn_info,
+        caller_info: caller_info
+      ).tap do |frame|
+        @walkman.write_frame(frame)
+        @total_frames += 1
+      end
     end
 
     def stop
@@ -113,6 +120,11 @@ module ChaosDetector
 
     private
 
+      def apply_options
+        @walkman = ChaosDetector::Walkman.new(options: @options)
+        @app_root_path = ChaosUtils.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
+      end
+
       def extract_caller(tracepoint, fn_info)
         callers = tracepoint.self.send(:caller_locations)
         callers = callers.select do |bt|
@@ -121,15 +133,6 @@ module ChaosDetector
           !bt.base_label.start_with?('<')
         end
 
-        cc =  callers.map do |bt|
-          "(%s) (%s:%d)" % [
-            bt.base_label,
-            bt.path,
-            bt.lineno
-          ]
-        end
-        # log(fn_info)
-        # log(cc.join("\n\t->\t"))
         frame_at = callers.index{|bt| bt.base_label==fn_info.fn_name && localize_path(bt.absolute_path)==fn_info.fn_path }
         bt_caller = frame_at.nil? ? nil : callers[frame_at+1]
         ChaosUtils.with(bt_caller) do |bt|
@@ -141,58 +144,36 @@ module ChaosDetector
         end
       end
 
-      def mod_info_superclass(clz)
+      def superclass_mod_info(clz)
         return nil unless clz&.respond_to?(:superclass)
 
         sup_clz = clz.superclass
         return nil unless ChaosUtils.aught?(sup_clz)
 
-        mod_name = mod_name_from_class(sup_clz)
-        mod_type = mod_type_from_class(sup_clz)
-
-        mod_full_path = sup_clz.const_source_location(mod_name)&.last
-        unless full_path_skip?(mod_full_path)
-          mod_path = localize_path(mod_full_path)
-
-          mod_info = ChaosDetector::Stacker::ModInfo.new(
-            mod_name: mod_name,
-            mod_path: mod_path,
-            mod_type: mod_type
-          )
-
-          mod_info unless module_skip?(mod_info)
-        end
+        mod_info_at(sup_clz)
       end
 
-      def mod_info_ancestors(clz)
+      def ancestor_mod_infos(clz)
+        clz.ancestors.map { |c| puts ['AAA', c].inspect; mod_info_at(c) }.compact
       end
 
-      # TODO: Also store tracepoint.self.class&.name
-      # as "associated module" under the following conditions:
-      # * mod_type is 'MODULE' vs. 'CLASS'
-      # * not the same as tracepoint.defined_class
-      # * valid name
-      def mod_info_at(tracepoint)
-        mod_info = nil
-        mod_class = tracepoint.defined_class
-        ancestry = mod_class&.ancestors
-        if ancestry.any?
-          puts '-' * 50
-          puts ancestry.first&.class
-          puts ancestry.inspect
-          puts ancestry.class&.superclass
-          puts '-' * 50
-        end
+      def mod_info_at(mod_class, mod_full_path: nil)
+        return nil unless mod_class
 
         mod_name = mod_name_from_class(mod_class)
-        mod_type = mod_type_from_class(mod_class)
-        safe_mod_info(mod_name, mod_type, tracepoint.path)
+        if ChaosUtils.aught?(mod_name)
+          mod_type = mod_type_from_class(mod_class)
+          mod_fp = ChaosUtils.aught?(mod_full_path) ? mod_full_path : nil
+          mod_fp ||= (mod_class.const_source_location(mod_name)&.last)
+          safe_mod_info(mod_name, mod_type, mod_fp)
+        end
       end
 
       def fn_info_at(tracepoint)
         ChaosDetector::Stacker::FnInfo.new(fn_name: tracepoint.callee_id.to_s, fn_line: tracepoint.lineno, fn_path: localize_path(tracepoint.path))
       end
 
+      # TODO: MAKE more LIKE module_skip below:
       def full_path_skip?(path)
         return true unless ChaosUtils.aught?(path)
 
@@ -209,11 +190,6 @@ module ChaosDetector
         ChaosUtils.with(mod_name) do |mod|
           @options.ignore_modules.any? {|m| mod.start_with?(m)}
         end
-      end
-
-      def apply_options
-        @walkman = ChaosDetector::Walkman.new(options: @options)
-        @app_root_path = ChaosUtils.with(@options.app_root_path) {|p| Pathname.new(p)&.to_s}
       end
 
       def mod_type_from_class(clz)
@@ -273,5 +249,5 @@ module ChaosDetector
           mod_type: mod_type
         )
       end
-  end
+    end
 end

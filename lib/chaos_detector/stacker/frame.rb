@@ -6,7 +6,7 @@ require 'chaos_detector/stacker/fn_info'
 module ChaosDetector
   module Stacker
     class Frame
-      attr_reader :event # 'call', 'return', 'dependency'
+      attr_reader :event # 'call', 'return', 'superclass', 'ancestor'
       attr_reader :mod_info
       attr_reader :fn_info
       attr_reader :caller_info
