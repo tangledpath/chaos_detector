@@ -11,3 +11,6 @@
 # inherit_from: .rubocop_todo.yml
 Style/HashSyntax:
   EnforcedStyle: ruby19_no_mixed_keys
+
+Layout/AccessModifierIndentation:
+  IndentationWidth: 4
