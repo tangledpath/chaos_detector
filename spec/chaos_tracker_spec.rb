@@ -5,6 +5,7 @@ require 'chaos_detector/chaos_utils'
 require 'fixtures/foobar'
 require 'fixtures/fubarm'
 require 'fixtures/fixture_mixed_in'
+require 'fixtures/fixture_relations'
 
 describe 'Tracker' do
   let(:chaos_options) do
@@ -77,9 +78,9 @@ describe 'Tracker' do
         expect(foo_frame.fn_info).to_not be_nil
 
         expect(foo_frame.fn_info.fn_name).to eq('mixed_foo')
-        expect(foo_frame.fn_info.fn_path).to eq('fixtures/fixture_module.rb')
+        expect(foo_frame.fn_info.fn_path).to eq('fixtures/fixture_mixed_in.rb')
         expect(foo_frame.mod_info.mod_name).to eq('FixtureModule')
-        expect(foo_frame.mod_info.mod_path).to eq('fixtures/fixture_module.rb')
+        expect(foo_frame.mod_info.mod_path).to eq('fixtures/fixture_mixed_in.rb')
         expect(foo_frame.mod_info.mod_type).to eq('module')
       end
     end
