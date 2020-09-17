@@ -84,5 +84,18 @@ describe 'Tracker' do
         expect(foo_frame.mod_info.mod_type).to eq('module')
       end
     end
+
+    describe 'inheritance relationships' do
+      it 'is discovered' do
+
+        chaos_tracker.record
+        fracker = DerivedFracker.new
+        fracker.frack
+        chaos_tracker.stop
+
+        puts ['FFFFRAME', chaos_walkman.frame_at(row_index: 0)]
+      end
+    end
+
   end
 end
