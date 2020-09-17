@@ -108,7 +108,6 @@ module ChaosDetector
 
           root_node = @module_nodes.find(&:is_root)
           root_node || ChaosDetector::ChaosGraphs::ModuleNode.root_node
-
         end
 
         def infer_domain_nodes

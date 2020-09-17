@@ -189,7 +189,7 @@ module ChaosDetector
           end
         end
 
-         ChaosDetector::Stacker::Frame.new(
+        ChaosDetector::Stacker::Frame.new(
           event: event,
           mod_info: mod_info,
           fn_info: fn_info,
