@@ -36,6 +36,11 @@ class DerivedFracker < SuperFracker
   prepend MixinAB # Adds to instance (strongly)
   include MixinAD # Adds to instance
   extend MixinCD # Adds to class methods
+
+  def initialize
+    super
+    @hmmm = true
+  end
 end
 
 # DerivedFracker.superclass # SuperFracker

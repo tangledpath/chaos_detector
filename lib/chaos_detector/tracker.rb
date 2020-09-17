@@ -50,7 +50,7 @@ module ChaosDetector
 
         # trace_mod_details(tracepoint)
         mod_info = mod_info_at(tp_class, mod_full_path: tp_path)
-        puts "mod_info: #{mod_info} "
+        puts "mod_info: #{mod_info} #{tp_class.respond_to?(:superclass) && tp_class.superclass}"
         next unless mod_info
 
         fn_info = fn_info_at(tracepoint)
@@ -148,7 +148,11 @@ module ChaosDetector
       return nil unless clz&.respond_to?(:superclass)
 
       sup_clz = clz.superclass
+
+      puts "BOOOO::: #{clz.superclass} <> #{sup_clz} ~> ChaosUtils.aught?(sup_clz)"
       return nil unless ChaosUtils.aught?(sup_clz)
+
+      puts "DDDDDDDDDDD::: #{sup_clz&.name}"
 
       mod_info_at(sup_clz)
     end
@@ -164,7 +168,7 @@ module ChaosDetector
       if ChaosUtils.aught?(mod_name)
         mod_type = mod_type_from_class(mod_class)
         mod_fp = ChaosUtils.aught?(mod_full_path) ? mod_full_path : nil
-        mod_fp ||= mod_class.const_source_location(mod_name)&.last
+        mod_fp ||= mod_class.const_source_location(mod_name)&.first
         safe_mod_info(mod_name, mod_type, mod_fp)
       end
     end
@@ -234,6 +238,7 @@ module ChaosDetector
     end
 
     def safe_mod_info(mod_name, mod_type, mod_full_path)
+      puts ['mod_full_path', mod_full_path].inspect
       return nil if full_path_skip?(mod_full_path)
       return nil if module_skip?(mod_name)
 
