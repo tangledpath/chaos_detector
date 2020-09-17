@@ -62,7 +62,7 @@ module ChaosDetector
 
           # Detect superclass association:
           ChaosUtils.with(superclass_mod_info(tp_class)) do |super_mod_info|
-            puts "Would superclass with #{super_mod_info}"
+            puts "Would superclass #{mod_info} with  #{super_mod_info}"
           end
 
           # # Detect composition associations:
