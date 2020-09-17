@@ -2,59 +2,55 @@ require_relative 'node_metrics'
 require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
-module GraphTheory
-  class Appraiser
-    attr_reader :cyclomatic_complexity
-    attr_reader :node_metrics
+  module GraphTheory
+    class Appraiser
+      attr_reader :cyclomatic_complexity
+      attr_reader :node_metrics
 
-    def initialize(graph)
-      @graph = graph
-      @cyclomatic_complexity = nil
-      @node_metrics = {}
-    end
-
-    def appraise
-      log("Appraising nodes.")
-      appraise_nodes
-
-      log("Measuring cyclomatic complexity.")
-      measure_cyclomatic_complexity
-
-      log("Performed appraisal: #{report}")
-    end
-
-    def to_s
-      msg = "N: %d, E: %d" % [@graph.nodes.length, @graph.edges.length]
-      if @cyclomatic_complexity.nil?
-        msg << "(Please run #appraise to gather metrics.)"
-      else
-        msg << " M: %d(cyclomatic_complexity), path_count = %d/%d(uniq), circular_paths = %d" % [
-          @cyclomatic_complexity,
-          @full_paths.length,
-          @path_count_uniq,
-          @circular_paths.length,
-        ]
+      def initialize(graph)
+        @graph = graph
+        @cyclomatic_complexity = nil
+        @node_metrics = {}
       end
-    end
 
-    def report
-      buffy = [to_s]
+      def appraise
+        log('Appraising nodes.')
+        appraise_nodes
 
-      buffy << "Circular References #{@circular_paths.length} / #{@circular_paths.uniq.length}"
-      buffy.concat(@circular_paths.map do |p|
-        "  " + p.map(&:label).join(' -> ')
-      end)
+        log('Measuring cyclomatic complexity.')
+        measure_cyclomatic_complexity
 
-      # Gather nodes:
-      buffy << "Nodes:"
-      buffy.concat(@node_metrics.map{|n, m| "  (#{n.domain_name})#{n.label}: #{m}" })
+        log("Performed appraisal: #{report}")
+      end
 
-      buffy.join("\n")
-    end
+      def to_s
+        msg = format('N: %d, E: %d', @graph.nodes.length, @graph.edges.length)
+        msg << if @cyclomatic_complexity.nil?
+                 '(Please run #appraise to gather metrics.)'
+               else
+                 format(' M: %d(cyclomatic_complexity), path_count = %d/%d(uniq), circular_paths = %d', @cyclomatic_complexity, @full_paths.length, @path_count_uniq, @circular_paths.length)
+               end
+      end
+
+      def report
+        buffy = [to_s]
+
+        buffy << "Circular References #{@circular_paths.length} / #{@circular_paths.uniq.length}"
+        buffy.concat(@circular_paths.map do |p|
+          '  ' + p.map(&:label).join(' -> ')
+        end)
+
+        # Gather nodes:
+        buffy << 'Nodes:'
+        buffy.concat(@node_metrics.map { |n, m| "  (#{n.domain_name})#{n.label}: #{m}" })
+
+        buffy.join("\n")
+      end
 
     private
+
       def log(msg)
-        ChaosUtils::log_msg(msg, subject: "GraphTheory")
+        ChaosUtils.log_msg(msg, subject: 'GraphTheory')
       end
 
       def measure_cyclomatic_complexity
@@ -68,7 +64,7 @@ module GraphTheory
       # TODO: Use edgestack instead of nodestack for easier debugging?:
       def traverse_nodes(nodestack=[get_root_node])
         node = nodestack.last
-        if nodestack.index(node) < nodestack.length-1
+        if nodestack.index(node) < nodestack.length - 1
           # if (@circular_paths.length % 100).zero?
           #   p("@CCCCCCCCcircular_paths.length: #{@circular_paths.length} (#{@circular_paths.uniq.length}) / Nodestack [#{nodestack.length}]: #{nodestack.map(&:mod_name).join(' -> ')}")
 
@@ -77,10 +73,8 @@ module GraphTheory
           # log("Node stack is circular: #{nodestack}")
           @circular_paths << nodestack
 
-          if (@circular_paths.length % 100).zero?
-            log("Circular deps@#{@circular_paths.length}")
-          end
-          if @circular_paths.length > 20000
+          log("Circular deps@#{@circular_paths.length}") if (@circular_paths.length % 100).zero?
+          if @circular_paths.length > 20_000
             log("Circular deps@#{@circular_paths.length} exceeded threshold; exiting!")
             puts(report)
           end
@@ -125,15 +119,15 @@ module GraphTheory
       end
 
       def fan_out_edges(node)
-        @graph.edges.find_all{|e| e.src_node==node }
+        @graph.edges.find_all { |e| e.src_node == node }
       end
 
       def fan_out_nodes(node)
-        @graph.edges.find_all{|e| e.src_node==node }.map(&:dep_node)
+        @graph.edges.find_all { |e| e.src_node == node }.map(&:dep_node)
       end
 
       def fan_in_nodes(node)
-        @graph.edges.find_all{|e| e.dep_node==node }.map(&:src_node)
+        @graph.edges.find_all { |e| e.dep_node == node }.map(&:src_node)
       end
 
       def appraise_nodes
@@ -146,25 +140,24 @@ module GraphTheory
       def appraise_node(node)
         circular_routes, terminal_routes = appraise_node_routes(node)
         ChaosDetector::GraphTheory::NodeMetrics.new(
-          afferent_couplings: @graph.edges.count{|e| e.dep_node==node },
-          efferent_couplings: @graph.edges.count{|e| e.src_node==node },
+          afferent_couplings: @graph.edges.count { |e| e.dep_node == node },
+          efferent_couplings: @graph.edges.count { |e| e.src_node == node },
           circular_routes: circular_routes,
-          terminal_routes: terminal_routes,
+          terminal_routes: terminal_routes
         )
       end
 
-      def appraise_node_routes(node)
+      def appraise_node_routes(_node)
         # Traverse starting at each node to see if
         # and how many ways we come back to ourselves
         terminal_routes = []
         circular_routes = []
 
-        return [terminal_routes, circular_routes]
+        [terminal_routes, circular_routes]
       end
 
       def adjacency_matrix
         adj_matrix = Matrix.build(@graph.nodes.length) do |row, col|
-
         end
         adj_matrix
       end
@@ -174,27 +167,22 @@ module GraphTheory
       #  Capture how many other nodes from other domains depend upon both [directly, indirectly]
       def node_matrix
         node_matrix = Matrix.build(@graph.nodes.length) do |row, col|
-
         end
         node_matrix
       end
 
       # @return positive integer indicating distance in number of vertices
       # from node_src to node_dep.  If multiple routes, calculate shortest:
-      def node_distance(node_src, node_dep)
-
-      end
+      def node_distance(node_src, node_dep); end
 
       def normalize(ary, property, norm_property)
-        vector = Vector.elements(ary.map{|obj| obj.send(property)})
+        vector = Vector.elements(ary.map { |obj| obj.send(property)})
         vector = vector.normalize
         ary.each_with_index do |obj, i|
           obj.send("#{norm_property}=", vector[i])
         end
         ary
       end
-
-
+    end
   end
-end
 end

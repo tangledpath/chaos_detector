@@ -6,7 +6,6 @@ module ChaosDetector
       attr_accessor :terminal_routes
       attr_accessor :circular_routes
 
-
       def initialize(afferent_couplings: 0, efferent_couplings: 0, terminal_routes:, circular_routes:)
         @afferent_couplings = afferent_couplings
         @efferent_couplings = efferent_couplings
@@ -32,7 +31,6 @@ module ChaosDetector
       def to_s
         "Ce: #{@efferent_couplings}, Ca: #{@afferent_couplings}, I: #{instability}"
       end
-
     end
   end
 end

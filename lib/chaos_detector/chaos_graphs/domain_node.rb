@@ -4,22 +4,24 @@ require 'chaos_detector/graph_theory/node'
 module ChaosDetector
   module ChaosGraphs
     class DomainNode < ChaosDetector::GraphTheory::Node
-      alias_method :domain_name, :name
+      alias domain_name name
       attr_reader :fn_node_count
 
-      def initialize(domain_name:nil, node_origin: nil, is_root: false, fn_node_count: nil)
+      def initialize(domain_name: nil, node_origin: nil, is_root: false, fn_node_count: nil)
         super(name: domain_name, root: is_root, node_origin: node_origin)
         @fn_node_count = fn_node_count
       end
 
       def hash
-        self.domain_name.hash
+        domain_name.hash
       end
 
-      def eql?(other); self == other; end
+      def eql?(other)
+        self == other
+      end
 
       def ==(other)
-        self.domain_name == other&.domain_name
+        domain_name == other&.domain_name
       end
 
       def label
@@ -33,7 +35,7 @@ module ChaosDetector
       class << self
         attr_reader :root_node
         def root_node(force_new: false)
-          @root_node = self.new(is_root: true) if force_new || @root_node.nil?
+          @root_node = new(is_root: true) if force_new || @root_node.nil?
           @root_node
         end
       end

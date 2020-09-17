@@ -12,6 +12,6 @@ end
 
 class Baz
   def self.baz
-    puts "bazzzzzz"
+    puts 'bazzzzzz'
   end
 end

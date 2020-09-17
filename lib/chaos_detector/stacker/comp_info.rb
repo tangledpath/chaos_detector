@@ -3,7 +3,7 @@ require 'chaos_detector/chaos_utils'
 module ChaosDetector
   module Stacker
     # Base class for Component (Module, FN) Infos
-    COMPONENT_TYPES = [:function, :module, :domain].freeze
+    COMPONENT_TYPES = %i[function module domain].freeze
     class CompInfo
       attr_accessor :path
       attr_accessor :name
@@ -16,9 +16,9 @@ module ChaosDetector
       end
 
       def ==(other)
-        self.name == other.name &&
-        self.path == other.path &&
-        self.info == other.info
+        name == other.name &&
+          path == other.path &&
+          info == other.info
       end
 
       def to_s
@@ -28,7 +28,6 @@ module ChaosDetector
       def component_type
         raise NotImplementedError, 'Deriving class should implement #component_type'
       end
-
     end
   end
 end

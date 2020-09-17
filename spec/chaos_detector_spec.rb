@@ -46,7 +46,7 @@ describe 'ChaosDetector' do
   let(:chaos_nav) { ChaosDetector::Navigator.new(options: chaos_options) }
 
   let(:simple_tracking) do
-    chaos_tracker.record()
+    chaos_tracker.record
     Foo.foo
     Fubarm::Foom.foom
     chaos_tracker.stop
@@ -56,7 +56,7 @@ describe 'ChaosDetector' do
     it 'should playback from file' do
       simple_tracking
       playback_nav = ChaosDetector::Navigator.new(options: chaos_options)
-      playback_graph = playback_nav.playback()
+      playback_graph = playback_nav.playback
       expect(playback_graph).to_not be_nil
 
       # includes root node
@@ -71,7 +71,7 @@ describe 'ChaosDetector' do
     end
 
     it 'domain graphs' do
-      grapher = ChaosDetector::Graphing::Directed.new()
+      grapher = ChaosDetector::Graphing::Directed.new
       grapher.create_directed_graph('domain-test')
 
       chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(graphing)
@@ -113,21 +113,20 @@ describe 'ChaosDetector' do
           Fubarm::Bazm.nester1(recurse: true)
         end
 
-        it "should do fn graph" do
+        it 'should do fn graph' do
           graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
           expect(graphs.navigator).to_not be_nil
 
-          graphs.playback()
+          graphs.playback
           expect(graphs.chaos_graph).to_not be_nil
 
-          graphs.render_fn_dep()
-
+          graphs.render_fn_dep
         end
       end
     end
 
     it 'module graphs' do
-      grapher = ChaosDetector::Graphing::Directed.new()
+      grapher = ChaosDetector::Graphing::Directed.new
       grapher.create_directed_graph('module-test')
 
       chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(graphing)
@@ -158,16 +157,15 @@ describe 'ChaosDetector' do
       graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
       expect(graphs.navigator).to_not be_nil
 
-      graphs.playback()
+      graphs.playback
       expect(graphs.chaos_graph).to_not be_nil
 
-      graphs.render_mod_dep()
+      graphs.render_mod_dep
       graph_fs = `ls spec/render/module-dep.png`
       p(ChaosUtils.decorate(graph_fs))
       expect(graph_fs).to be
       expect(graph_fs.split.first).to eq('spec/render/module-dep.png')
     end
-
   end
 
   describe 'Utils' do

@@ -11,10 +11,10 @@ module ChaosDetector
       attr_reader :mod_path # :unknown, :module, :class
       attr_reader :domain_name
       attr_reader :fn_node_count
-      alias_method :mod_name, :name
+      alias mod_name name
 
-      def initialize(mod_name: nil, mod_path:nil, is_root: false, node_origin: nil, domain_name: nil, mod_type:nil, fn_node_count: nil)
-        super(name:mod_name, root: is_root, node_origin: node_origin)
+      def initialize(mod_name: nil, mod_path: nil, is_root: false, node_origin: nil, domain_name: nil, mod_type: nil, fn_node_count: nil)
+        super(name: mod_name, root: is_root, node_origin: node_origin)
         @mod_path = mod_path
         @mod_type = mod_type
         @fn_node_count = fn_node_count
@@ -24,16 +24,19 @@ module ChaosDetector
         [mod_name, mod_type, mod_path].hash
       end
 
-      def eql?(other); self == other; end
+      def eql?(other)
+        self == other
+      end
+
       def ==(other)
-        self.mod_name == other.mod_name &&
-          self.mod_type == other.mod_type &&
-          self.mod_path == other.mod_path
+        mod_name == other.mod_name &&
+          mod_type == other.mod_type &&
+          mod_path == other.mod_path
       end
 
       def label
         # Shorten long module paths:
-        m = ChaosUtils.decorate(super, clamp: :parens, suffix:' ')
+        m = ChaosUtils.decorate(super, clamp: :parens, suffix: ' ')
         m << ChaosUtils.decorate(@mod_type, clamp: :parens)
         m << short_path
       end
@@ -43,7 +46,7 @@ module ChaosDetector
       end
 
       def to_info
-        ChaosDetector::Stacker::ModInfo.new(mod_name:mod_name, mod_path: mod_path, mod_type: mod_type)
+        ChaosDetector::Stacker::ModInfo.new(mod_name: mod_name, mod_path: mod_path, mod_type: mod_type)
       end
 
       def to_k
@@ -57,7 +60,7 @@ module ChaosDetector
       class << self
         attr_reader :root_node
         def root_node(force_new: false)
-          @root_node = self.new(is_root: true) if force_new || @root_node.nil?
+          @root_node = new(is_root: true) if force_new || @root_node.nil?
           @root_node
         end
       end

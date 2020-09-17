@@ -10,19 +10,19 @@ module ChaosDetector
       EDGE_MIN = 0.5
       EDGE_BASELINE = 7.5
 
-      CLR_BLACK='black'
-      CLR_DARKRED = 'red4'
-      CLR_DARKGREEN = 'darkgreen'
-      CLR_BRIGHTGREEN = 'yellowgreen'
-      CLR_CYAN = 'cyan'
-      CLR_GREY = 'snow3'
-      CLR_ORANGE = 'orange'
-      CLR_NICEGREY = 'snow4'
-      CLR_PALEGREEN = 'palegreen'
-      CLR_PINK = 'deeppink1'
-      CLR_PURPLE = '#662D91'
-      CLR_SLATE = "#778899"
-      CLR_WHITE='white'
+      CLR_BLACK = 'black'.freeze
+      CLR_DARKRED = 'red4'.freeze
+      CLR_DARKGREEN = 'darkgreen'.freeze
+      CLR_BRIGHTGREEN = 'yellowgreen'.freeze
+      CLR_CYAN = 'cyan'.freeze
+      CLR_GREY = 'snow3'.freeze
+      CLR_ORANGE = 'orange'.freeze
+      CLR_NICEGREY = 'snow4'.freeze
+      CLR_PALEGREEN = 'palegreen'.freeze
+      CLR_PINK = 'deeppink1'.freeze
+      CLR_PURPLE = '#662D91'.freeze
+      CLR_SLATE = '#778899'.freeze
+      CLR_WHITE = 'white'.freeze
 
       GRAPH_OPTS = {
         type: :digraph,
@@ -46,7 +46,7 @@ module ChaosDetector
         # size: '10,8',
         # splines: 'spline',
         strict: 'true'
-      }
+      }.freeze
 
       SUBDOMAIN_ATTRS = {
         bgcolor: CLR_NICEGREY,
@@ -56,16 +56,16 @@ module ChaosDetector
         labelloc: 't',
         pencolor: CLR_GREY,
         penwidth: '2'
-      }
+      }.freeze
 
-      NODE_ATTR={
+      NODE_ATTR = {
         shape: 'egg',
         fontname: 'Verdana',
         fontsize: '12',
         # fillcolor: CLR_WHITE,
         fontcolor: CLR_WHITE,
         color: CLR_WHITE
-      }
+      }.freeze
 
       # TODO: integrate options as needed:
       def initialize(render_path: nil)
@@ -83,28 +83,28 @@ module ChaosDetector
       end
 
       def assert_graph_state
-        raise "@root_graph is not set yet.  Call create_directed_graph." unless @root_graph
+        raise '@root_graph is not set yet.  Call create_directed_graph.' unless @root_graph
       end
 
       # Add node to given parent_node, assuming parent_node is a subgraph
       def add_node_to_parent(node, parent_node:, as_cluster: false)
         assert_graph_state
-        raise "node is required" unless node
+        raise 'node is required' unless node
 
         parent_graph = if parent_node
-          find_graph_node(parent_node).tap do |pnode|
-            raise "Couldn't find parent node: #{parent_node}" unless pnode
-          end
-        else
-          @root_graph
-        end
+                         find_graph_node(parent_node).tap do |pnode|
+                           raise "Couldn't find parent node: #{parent_node}" unless pnode
+                         end
+                       else
+                         @root_graph
+                       end
 
         add_node_to_graph(node, graph: parent_graph, as_cluster: as_cluster)
       end
 
-      def add_node_to_graph(node, graph:nil, as_cluster: false)
+      def add_node_to_graph(node, graph: nil, as_cluster: false)
         assert_graph_state
-        raise "node is required" unless node
+        raise 'node is required' unless node
 
         parent_graph = graph || @root_graph
 
@@ -117,7 +117,7 @@ module ChaosDetector
 
       def append_nodes(nodes, as_cluster: false)
         assert_graph_state
-        raise "node is required" unless nodes
+        raise 'node is required' unless nodes
 
         nodes.each do |node|
           parent_node = block_given? ? yield(node) : nil
@@ -141,7 +141,7 @@ module ChaosDetector
           # log("DOMAIN EDGE: #{src} -> #{dep}")
           norm_reduce_cnt = e.reduce_cnt / max_reduce
           weight = edge_weight(norm_reduce_cnt)
-          @root_graph.add_edges(src, dep)  #, {label: e.reduce_cnt, penwidth: weight})
+          @root_graph.add_edges(src, dep) # , {label: e.reduce_cnt, penwidth: weight})
         end
       end
 
@@ -150,25 +150,25 @@ module ChaosDetector
         filename = "#{@label}.png"
         filename = File.join(@render_path, filename).to_s if @render_path
         log("Rendering to #{filename}")
-        @root_graph.output(:png => filename )
+        @root_graph.output(png: filename)
         #:path => @render_path,
       end
 
-      private
-        def find_graph_node(node)
-          assert_graph_state
-          # log("NODE_HASH: LOOKING UP #{ChaosUtils.decorate(node)}")
-          @node_hash[node.to_k] || @cluster_node_hash[node.to_k]
-        end
+    private
 
-        def edge_weight(n, edge_min: EDGE_MIN, edge_baseline: EDGE_BASELINE)
-          edge_min + n * edge_baseline
-        end
+      def find_graph_node(node)
+        assert_graph_state
+        # log("NODE_HASH: LOOKING UP #{ChaosUtils.decorate(node)}")
+        @node_hash[node.to_k] || @cluster_node_hash[node.to_k]
+      end
 
-        def log(msg)
-          ChaosUtils::log_msg(msg, subject: "Grapher")
-        end
+      def edge_weight(n, edge_min: EDGE_MIN, edge_baseline: EDGE_BASELINE)
+        edge_min + n * edge_baseline
+      end
 
+      def log(msg)
+        ChaosUtils.log_msg(msg, subject: 'Grapher')
+      end
     end
   end
 end

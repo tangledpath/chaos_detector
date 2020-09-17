@@ -15,12 +15,12 @@ module ChaosDetector
       def initialize(options: nil)
         @options = options || ChaosDetector::Options.new
         @render_path = @options.path_with_root(:graph_render_folder)
-        ChaosDetector::Utils::FSUtil::ensure_dirpath(@render_path)
+        ChaosDetector::Utils::FSUtil.ensure_dirpath(@render_path)
         @navigator = ChaosDetector::Navigator.new(options: @options)
       end
 
-      def playback()
-        fn_graph = @navigator.playback()
+      def playback
+        fn_graph = @navigator.playback
         @chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(fn_graph)
         @chaos_graph.infer_all
       end
@@ -35,7 +35,6 @@ module ChaosDetector
       end
 
       def build_dgraph(label, nodes, edges)
-
         # nodes.each do |n|
         #   p("#{label} Nodes: #{ChaosUtils.decorate(n.label)}")
         # end
@@ -44,14 +43,12 @@ module ChaosDetector
         #   p("#{label} Edges: #{ChaosUtils.decorate(e.src_node.label)} -> #{ChaosUtils.decorate(e.dep_node.label)}")
         # end
 
-
         dgraph = ChaosDetector::Graphing::Directed.new(render_path: @render_path)
         dgraph.create_directed_graph(label)
         dgraph.append_nodes(nodes)
         dgraph.add_edges(edges)
         dgraph.render_graph
       end
-
     end
   end
 end
