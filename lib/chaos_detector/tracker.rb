@@ -50,7 +50,7 @@ module ChaosDetector
 
         # trace_mod_details(tracepoint)
         mod_info = mod_info_at(tp_class, mod_full_path: tp_path)
-        puts "mod_info: #{mod_info} #{tp_class.respond_to?(:superclass) && tp_class.superclass}"
+        # puts "mod_info: #{mod_info} #{tp_class.respond_to?(:superclass) && tp_class.superclass}"
         next unless mod_info
 
         fn_info = fn_info_at(tracepoint)
@@ -62,12 +62,27 @@ module ChaosDetector
 
           # Detect superclass association:
           ChaosUtils.with(superclass_mod_info(tp_class)) do |super_mod_info|
-            puts "Would superclass #{mod_info} with  #{super_mod_info}"
+            # puts "Would superclass #{mod_info} with  #{super_mod_info}"
+            write_event_frame(:superclass, fn_info: fn_info, mod_info: mod_info, caller_info: super_mod_info)
           end
 
-          # # Detect composition associations:
+          # Detect associations:
+          # puts "UGGGGG: #{tp_class.singleton_class.included_modules}"
+          ancestor_mod_infos(tp_class, tp_class.included_modules).each do |agg_mod_info|
+            # puts "Would ancestors with #{agg_mod_info}"
+            write_event_frame(:association, fn_info: fn_info, mod_info: mod_info, caller_info: agg_mod_info)
+          end
+
+          # DerivedFracker.singleton_class.included_modules # MixinCD, Kernel
+          ancestor_mod_infos(tp_class, tp_class.singleton_class.included_modules).each do |agg_mod_info|
+            # puts "WOULD CLASS ancestors with #{agg_mod_info}"
+            write_event_frame(:class_association, fn_info: fn_info, mod_info: mod_info, caller_info: agg_mod_info)
+          end
+
+          # Detect class associations:
           # ancestor_mod_infos(tp_class).each do |agg_mod_info|
           #   puts "Would ancestors with #{agg_mod_info}"
+          #   write_event_frame(:association, fn_info: fn_info, mod_info: mod_info, caller_info: super_mod_info)
           # end
         end
       end
@@ -149,16 +164,24 @@ module ChaosDetector
 
       sup_clz = clz.superclass
 
-      puts "BOOOO::: #{clz.superclass} <> #{sup_clz} ~> ChaosUtils.aught?(sup_clz)"
+      # puts "BOOOO::: #{clz.superclass} <> #{sup_clz} ~> ChaosUtils.aught?(sup_clz)"
       return nil unless ChaosUtils.aught?(sup_clz)
 
-      puts "DDDDDDDDDDD::: #{sup_clz&.name}"
+      # puts "DDDDDDDDDDD::: #{sup_clz&.name}"
 
       mod_info_at(sup_clz)
     end
 
-    def ancestor_mod_infos(clz)
-      clz.ancestors.map { |c| puts ['AAA', c].inspect; mod_info_at(c) }.compact
+    def ancestor_mod_infos(clz, clz_modules)
+      sup_clz = clz.superclass rescue nil
+
+      ancestors = clz_modules.filter_map do |c|
+        if c != clz && (sup_clz.nil? || c != sup_clz)
+          mod_info_at(c)
+        end
+      end
+
+      ancestors.compact
     end
 
     def mod_info_at(mod_class, mod_full_path: nil)
@@ -183,10 +206,12 @@ module ChaosDetector
 
       if !(@app_root_path && path.start_with?(@app_root_path))
         true
-      elsif path.start_with?('/Users/stevenmiers/src/sci-ex/sciex3/lib/mixins')
-        true
+      # elsif path.start_with?('/Users/stevenmiers/src/sci-ex/sciex3/lib/mixins')
+      #   false
       else
-        false
+        rel_path = localize_path(path)
+        @options.ignore_paths.any? { |p| rel_path.start_with?(p)}
+        # false
       end
     end
 
@@ -238,9 +263,9 @@ module ChaosDetector
     end
 
     def safe_mod_info(mod_name, mod_type, mod_full_path)
-      puts ['mod_full_path', mod_full_path].inspect
       return nil if full_path_skip?(mod_full_path)
       return nil if module_skip?(mod_name)
+      # puts ['mod_full_path', mod_full_path].inspect
 
       ChaosDetector::Stacker::ModInfo.new(
         mod_name: mod_name,

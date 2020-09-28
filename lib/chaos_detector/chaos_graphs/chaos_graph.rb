@@ -17,6 +17,7 @@ module ChaosDetector
       STATES = %i[initialized inferred].freeze
 
       attr_reader :function_graph
+      attr_reader :mod_rel_graph
       attr_reader :domain_nodes
       attr_reader :module_nodes
 
@@ -27,8 +28,9 @@ module ChaosDetector
       attr_reader :function_domain_edges
       attr_reader :domain_function_edges
 
-      def initialize(function_graph)
+      def initialize(function_graph, mod_rel_graph)
         @function_graph = function_graph
+        @mod_rel_graph = mod_rel_graph
         @domain_nodes = nil
         @module_nodes = nil
 
@@ -119,6 +121,7 @@ module ChaosDetector
       end
 
       def infer_module_nodes
+        puts "INFERRING!!!"
         assert_state
 
         grouped_nodes = @function_graph.nodes.group_by(&:mod_info_prime)
@@ -126,7 +129,7 @@ module ChaosDetector
           ChaosUtils.aught?(mod_info&.mod_name)
         end
 
-        @module_nodes = mod_nodes.map do |mod_info, fn_nodes|
+        mod_nodes = mod_nodes.map do |mod_info, fn_nodes|
           node_fn = fn_nodes.first
           ChaosDetector::ChaosGraphs::ModuleNode.new(
             mod_name: mod_info.mod_name,
@@ -136,6 +139,17 @@ module ChaosDetector
             fn_node_count: fn_nodes.length
           )
         end
+
+        mod_nodes.uniq!
+
+        @mod_rel_graph.nodes.each do |rel_node|
+          n = mod_nodes.index(rel_node)
+          if n.nil?
+            mod_nodes << rel_node
+          end
+        end
+
+        @module_nodes = mod_nodes.uniq
       end
 
       def infer_edges

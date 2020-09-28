@@ -1,12 +1,16 @@
 require 'ruby-graphviz'
-
 require 'chaos_detector/utils/str_util'
-
 require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module Graphing
     class Directed
+      attr_reader :root_graph
+      attr_reader :node_hash
+      attr_reader :cluster_node_hash
+      attr_reader :render_path
+      attr_reader :edges
+
       EDGE_MIN = 0.5
       EDGE_BASELINE = 7.5
 
@@ -72,6 +76,7 @@ module ChaosDetector
         @root_graph = nil
         @node_hash = {}
         @cluster_node_hash = {}
+        @edges = Set.new
         @render_path = render_path
       end
 
@@ -125,7 +130,7 @@ module ChaosDetector
         end
       end
 
-      def add_edges(edges)
+      def add_edges(edges, calc_weight:false, arrow_style: 'normal')
         assert_graph_state
 
         # @node_hash.each do |k, v|
@@ -140,8 +145,15 @@ module ChaosDetector
           dep = find_graph_node(e.dep_node)
           # log("DOMAIN EDGE: #{src} -> #{dep}")
           norm_reduce_cnt = e.reduce_cnt / max_reduce
-          weight = edge_weight(norm_reduce_cnt)
-          @root_graph.add_edges(src, dep) # , {label: e.reduce_cnt, penwidth: weight})
+          weight = calc_weight ? edge_weight(norm_reduce_cnt) : 1.0
+          @edges << [src, dep]
+          @root_graph.add_edges(
+            src,
+            dep,
+            arrowhead: arrow_style,
+            arrowsize: 2.0,
+            penwidth: weight
+          ) # , {label: e.reduce_cnt, penwidth: weight})
         end
       end
 

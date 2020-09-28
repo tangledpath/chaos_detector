@@ -6,7 +6,7 @@ require 'chaos_detector/stacker/fn_info'
 module ChaosDetector
   module Stacker
     class Frame
-      attr_reader :event # 'call', 'return', 'superclass', 'ancestor'
+      attr_reader :event # :call, :return, :superclass, :association, :class_association
       attr_reader :mod_info
       attr_reader :fn_info
       attr_reader :caller_info
@@ -19,11 +19,15 @@ module ChaosDetector
         @mod_info = mod_info
         @fn_info = fn_info
         @caller_info = caller_info
-        @event = event
+        @event = event.to_sym
       end
 
       def to_s
-        "{#{@mod_info}} {#{@fn_info}}"
+        ChaosUtils.decorate_tuple(
+          [event, mod_info, fn_info, caller_info],
+          join_str: ' ',
+          clamp: :bracket
+        )
       end
     end
   end

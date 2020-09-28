@@ -20,18 +20,20 @@ module ChaosDetector
       end
 
       def playback
-        fn_graph = @navigator.playback
-        @chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(fn_graph)
+        fn_graph, mod_graph = @navigator.playback
+        @chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(fn_graph, mod_graph)
         @chaos_graph.infer_all
       end
 
-      def render_fn_dep
+      def render_fn_dep(graph_name='fn-dep')
         fn_graph = chaos_graph.function_graph
-        build_dgraph('fn-dep', fn_graph.nodes, fn_graph.edges)
+        build_dgraph(graph_name, fn_graph.nodes, fn_graph.edges)
       end
 
-      def render_mod_dep
-        build_dgraph('module-dep', chaos_graph.module_nodes, chaos_graph.module_edges)
+      def render_mod_dep(graph_name='module-dep')
+        dgraph = build_dgraph(graph_name, chaos_graph.module_nodes, chaos_graph.module_edges)
+        # TODO: Add dependent relation edges from @chaos_graph.mod_rel_graph:
+        # dgraph.add_edges
       end
 
       def build_dgraph(label, nodes, edges)
@@ -48,6 +50,7 @@ module ChaosDetector
         dgraph.append_nodes(nodes)
         dgraph.add_edges(edges)
         dgraph.render_graph
+        dgraph
       end
     end
   end

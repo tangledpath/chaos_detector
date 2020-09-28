@@ -17,7 +17,7 @@ module ChaosDetector
       end
 
       def to_s
-        format('(%s) %s - %s', mod_type.to_s[0].upcase, ChaosDetector::Utils::StrUtil.humanize_module(mod_name, sep_token: '::'), ChaosDetector::Utils::StrUtil.humanize_module(mod_path, sep_token: '/'))
+        format('(%s) %s - %s', mod_type, ChaosDetector::Utils::StrUtil.humanize_module(mod_name, sep_token: '::'), ChaosDetector::Utils::StrUtil.humanize_module(mod_path, sep_token: '/'))
       end
     end
   end

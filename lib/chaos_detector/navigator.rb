@@ -23,6 +23,9 @@ module ChaosDetector
     attr_reader :nodes
     attr_reader :edges
 
+    attr_reader :mod_nodes
+    attr_reader :mod_edges
+
     def initialize(options:)
       raise ArgumentError, '#initialize requires options' if options.nil?
 
@@ -36,6 +39,8 @@ module ChaosDetector
       @nodes = Set.new
       @edges_call = Set.new
       @edges_ret = Set.new
+      @mod_nodes = Set.new
+      @mod_edges = Set.new
 
       @walkman.playback do |_rownum, frame|
         perform_node_action(frame)
@@ -43,14 +48,26 @@ module ChaosDetector
       log('Found nodes.', object: @nodes.length)
 
       @walkman.playback do |_rownum, frame|
-        perform_edge_action(frame)
+        if [:call, :return].include?(frame.event)
+          perform_edge_action(frame)
+        else
+          perform_mod_edge_action(frame)
+        end
       end
 
-      @graph = ChaosDetector::GraphTheory::Graph.new(
+      @mod_graph = ChaosDetector::GraphTheory::Graph.new(
+        root_node: ChaosDetector::ChaosGraphs::ModuleNode.root_node(force_new: true),
+        nodes: @mod_nodes.to_a,
+        edges: @mod_edges.to_a
+      )
+
+      @fn_graph = ChaosDetector::GraphTheory::Graph.new(
         root_node: ChaosDetector::ChaosGraphs::FunctionNode.root_node(force_new: true),
         nodes: @nodes.to_a,
         edges: merge_edges.to_a
       )
+
+      [@fn_graph, @mod_graph]
     end
 
   private
@@ -90,7 +107,7 @@ module ChaosDetector
       c.union(r)
     end
 
-    def node_for(fn_info)
+    def fn_node_for(fn_info)
       return nil unless fn_info&.fn_name
 
       @nodes.find do |n|
@@ -99,12 +116,21 @@ module ChaosDetector
       end
     end
 
-    # @return Node matching given frame or create a new one.
-    def node_for_frame(frame)
-      # log("Calling node_for_frame", object: frame)
-      node = node_for(frame.fn_info)
+    def mod_node_for(mod_info)
+      return nil unless mod_info&.mod_name
 
-      if node.nil? && frame.event == 'call'
+      @mod_nodes.find do |n|
+        n.mod_name == mod_info.mod_name &&
+          n.mod_path == mod_info.mod_path
+      end
+    end
+
+    # @return Node matching given frame or create a new one.
+    def fn_node_for_frame(frame)
+      # log("Calling fn_node_for_frame", object: frame)
+      node = fn_node_for(frame.fn_info)
+
+      if node.nil? && frame.event == :call
         node = @nodes << ChaosDetector::ChaosGraphs::FunctionNode.new(
           fn_name: frame.fn_info.fn_name,
           fn_path: frame.fn_info.fn_path,
@@ -117,20 +143,36 @@ module ChaosDetector
       node
     end
 
-    def edge_for_nodes(src_node, dep_node, event:)
-      edges = event == 'return' ? @edges_ret : @edges_call
+    def mod_node_from_info(mod_info)
+      # log("Calling fn_node_for_frame", object: frame)
+      node = mod_node_for(mod_info)
+
+      if node.nil? #&& frame.event == :call
+        node = @mod_nodes << ChaosDetector::ChaosGraphs::ModuleNode.new(
+          mod_name: mod_info.mod_name,
+          mod_path: mod_info.mod_path,
+          mod_type: mod_info.mod_type,
+          domain_name: domain_from_path(local_path: mod_info.mod_path)
+        )
+      end
+
+      node
+    end
+
+    def edge_for_nodes(src_node, dep_node, edges:, edge_type: :dependent)
       edge = edges.find do |e|
         e.src_node == src_node && e.dep_node == dep_node
       end
 
-      edge = edges << ChaosDetector::GraphTheory::Edge.new(src_node, dep_node) if edge.nil?
+      edge = edges << ChaosDetector::GraphTheory::Edge.new(src_node, dep_node, edge_type: edge_type) if edge.nil?
       edge
     end
 
     def perform_node_action(frame)
-      node = node_for_frame(frame)
+      return unless [:call, :return].include?(frame.event)
+      node = fn_node_for_frame(frame)
 
-      ChaosUtils.with(node && frame.event == 'return' && frame.fn_info.fn_line) do |fn_line|
+      ChaosUtils.with(node && frame.event == :return && frame.fn_info.fn_line) do |fn_line|
         if !node.fn_line_end.nil? && node.fn_line_end != fn_line
           puts "WTF: (node.fn_line_end) != (fn_line) (#{fn_line}) != (#{fn_line})"
         end
@@ -141,10 +183,10 @@ module ChaosDetector
     def perform_edge_action(frame)
       return unless frame.fn_info # && frame.caller_info
 
-      dest_node = node_for(frame.fn_info)
+      dest_node = fn_node_for(frame.fn_info)
       raise "Couldn't find destination node" if dest_node.nil?
 
-      caller_node = node_for(frame.caller_info)
+      caller_node = fn_node_for(frame.caller_info)
       if caller_node.nil?
         caller_node = ChaosDetector::ChaosGraphs::FunctionNode.root_node
         raise 'Caller node is required (falls back to root).' if caller_node.nil?
@@ -153,7 +195,17 @@ module ChaosDetector
         @nodes << caller_node
       end
 
-      edge_for_nodes(caller_node, dest_node, event: frame.event)
+      edges = frame.event == :return ? @edges_ret : @edges_call
+      edge_for_nodes(caller_node, dest_node, edges: edges)
+    end
+
+    def perform_mod_edge_action(frame)
+      return unless frame.mod_info && frame.caller_info
+
+      caller_node = mod_node_from_info(frame.caller_info)
+      dest_node = mod_node_from_info(frame.mod_info)
+
+      edge_for_nodes(caller_node, dest_node, edges: @mod_edges, edge_type: frame.event)
     end
 
     def domain_from_path(local_path:)

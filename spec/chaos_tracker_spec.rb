@@ -1,7 +1,7 @@
 require 'chaos_detector/tracker'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_utils'
-
+require 'chaos_detector/stacker/frame'
 require 'fixtures/foobar'
 require 'fixtures/fubarm'
 require 'fixtures/fixture_mixed_in'
@@ -60,13 +60,14 @@ describe 'Tracker' do
       expect(csv_content).to_not be_nil
       expect(csv_content).to_not be_empty
       csv_lines = csv_content.split
+      # walkman.playback { |r,f| puts("#{r}: #{f}") }
       expect(csv_lines.length).to eq(13)
     end
   end
 
   describe 'Metaprogramming' do
     describe 'mixins' do
-      it 'should record mixed-in module' do
+      it 'record mixed-in module' do
         chaos_tracker.record
         mixed = FixtureMixedIn.new
         mixed.mixed_foo(2112)
@@ -83,19 +84,60 @@ describe 'Tracker' do
         expect(foo_frame.mod_info.mod_path).to eq('fixtures/fixture_mixed_in.rb')
         expect(foo_frame.mod_info.mod_type).to eq('module')
       end
+
+      it 'find relationship' do
+        chaos_tracker.record
+        mixed = FixtureMixedIn.new
+        mixed.do_foo(2112)
+        chaos_tracker.stop
+
+        relation_frame = chaos_walkman.frames_within.find{|f| f.event==:association}
+        expect(relation_frame).to_not be_nil
+        expect(relation_frame.event).to eq(:association)
+        expect(relation_frame.caller_info).to_not be_nil
+        expect(relation_frame.caller_info.mod_name).to eq('FixtureModule')
+        expect(relation_frame.caller_info.class).to eq(ChaosDetector::Stacker::ModInfo)
+      end
     end
 
     describe 'inheritance relationships' do
       it 'is discovered' do
-
         chaos_tracker.record
         fracker = DerivedFracker.new
         fracker.frack
         chaos_tracker.stop
 
-        puts ['FFFFRAME', chaos_walkman.frame_at(row_index: 0)]
+        super_event = chaos_walkman.frames_within.find{|f| f.event==:superclass}
+        expect(super_event).to_not be_nil
+        expect(super_event.event).to eq(:superclass)
+        expect(super_event.caller_info).to_not be_nil
+        expect(super_event.caller_info.mod_name).to eq('SuperFracker')
+        expect(super_event.caller_info.class).to eq(ChaosDetector::Stacker::ModInfo)
+
+
+        ab_frame = chaos_walkman.frames_within.find do |f|
+          f.caller_info&.mod_name == 'MixinAB' rescue nil
+        end
+
+        cd_frame = chaos_walkman.frames_within.find do |f|
+          f.caller_info&.mod_name == 'MixinCD' rescue nil
+        end
+
+        ad_frame = chaos_walkman.frames_within.find do |f|
+          f.caller_info&.mod_name == 'MixinAD' rescue nil
+        end
+
+        expect(ab_frame).to_not be_nil
+        expect(ad_frame).to_not be_nil
+        expect(cd_frame).to_not be_nil
+
+        expect(ab_frame.event).to eq(:association)
+        expect(ad_frame.event).to eq(:association)
+        expect(cd_frame.event).to eq(:class_association)
+
+        # puts 'TOTAL FRAMES: %d' % chaos_walkman.count
+        # chaos_walkman.playback { |r,f| puts("#{r}: #{f}") }
       end
     end
-
   end
 end

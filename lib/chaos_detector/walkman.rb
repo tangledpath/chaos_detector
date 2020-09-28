@@ -180,15 +180,15 @@ module ChaosDetector
           )
         else
           ChaosDetector::Stacker::ModInfo.new(
-            mod_name: sv_row_val(row, :caller_name),
-            mod_path: csv_row_val(row, :caller_info),
-            mod_type: csv_row_val(row, :caller_path)
+            mod_name: csv_row_val(row, :caller_name),
+            mod_path: csv_row_val(row, :caller_path),
+            mod_type: csv_row_val(row, :caller_info)
           )
         end
       end
 
       ChaosDetector::Stacker::Frame.new(
-        event: event,
+        event: event.to_sym,
         mod_info: mod_info,
         fn_info: fn_info,
         caller_info: caller_info
