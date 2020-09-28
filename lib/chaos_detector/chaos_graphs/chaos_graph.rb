@@ -121,7 +121,6 @@ module ChaosDetector
       end
 
       def infer_module_nodes
-        puts "INFERRING!!!"
         assert_state
 
         grouped_nodes = @function_graph.nodes.group_by(&:mod_info_prime)
@@ -144,9 +143,7 @@ module ChaosDetector
 
         @mod_rel_graph.nodes.each do |rel_node|
           n = mod_nodes.index(rel_node)
-          if n.nil?
-            mod_nodes << rel_node
-          end
+          mod_nodes << rel_node if n.nil?
         end
 
         @module_nodes = mod_nodes.uniq
@@ -157,7 +154,18 @@ module ChaosDetector
 
         edges = @function_graph.edges
         @domain_edges = group_edges_by(edges, :domain, :domain)
-        @module_edges = group_edges_by(edges, :module, :module)
+        mod_edges = group_edges_by(edges, :module, :module)
+
+        @mod_rel_graph.edges.each do |rel_edge|
+          n = mod_edges.index(rel_edge)
+          if n.nil?
+            mod_edges << rel_edge
+          else
+            mod_edges[n].edge_type = rel_edge.edge_type
+          end
+        end
+
+        @module_edges = mod_edges
       end
 
       def group_edges_by(edges, src, dep)

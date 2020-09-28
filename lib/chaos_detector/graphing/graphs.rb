@@ -31,9 +31,7 @@ module ChaosDetector
       end
 
       def render_mod_dep(graph_name='module-dep')
-        dgraph = build_dgraph(graph_name, chaos_graph.module_nodes, chaos_graph.module_edges)
-        # TODO: Add dependent relation edges from @chaos_graph.mod_rel_graph:
-        # dgraph.add_edges
+        build_dgraph(graph_name, chaos_graph.module_nodes, chaos_graph.module_edges)
       end
 
       def build_dgraph(label, nodes, edges)

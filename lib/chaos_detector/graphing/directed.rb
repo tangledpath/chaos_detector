@@ -130,27 +130,28 @@ module ChaosDetector
         end
       end
 
-      def add_edges(edges, calc_weight:false, arrow_style: 'normal')
+      def add_edges(edges, calc_weight:false)
         assert_graph_state
 
         # @node_hash.each do |k, v|
         #   log("NODE_HASH: Has value for #{ChaosUtils.decorate(k)} => #{ChaosUtils.decorate(v)}")
         # end
 
-        max_reduce = edges.map(&:reduce_cnt).max
+        max_reduce  = edges.map(&:reduce_cnt).max
 
         edges.each do |e|
-          # log("DDDDDOMAIN EDGE: #{e}")
           src = find_graph_node(e.src_node)
           dep = find_graph_node(e.dep_node)
-          # log("DOMAIN EDGE: #{src} -> #{dep}")
           norm_reduce_cnt = e.reduce_cnt / max_reduce
           weight = calc_weight ? edge_weight(norm_reduce_cnt) : 1.0
           @edges << [src, dep]
+
+          # Add dependent relation edges for edge_type:
+          arrow_type = arrow_type_for(e)
           @root_graph.add_edges(
             src,
             dep,
-            arrowhead: arrow_style,
+            arrowhead: arrow_type,
             arrowsize: 2.0,
             penwidth: weight
           ) # , {label: e.reduce_cnt, penwidth: weight})
@@ -167,6 +168,19 @@ module ChaosDetector
       end
 
     private
+
+      def arrow_type_for(edge)
+        case edge.edge_type
+          when :superclass
+            'empty'
+          when :association
+            'diamond'
+          when :class_association
+            'ediamond'
+          else
+            'open'
+        end
+      end
 
       def find_graph_node(node)
         assert_graph_state

@@ -131,13 +131,14 @@ module ChaosDetector
       node = fn_node_for(frame.fn_info)
 
       if node.nil? && frame.event == :call
-        node = @nodes << ChaosDetector::ChaosGraphs::FunctionNode.new(
+        node = ChaosDetector::ChaosGraphs::FunctionNode.new(
           fn_name: frame.fn_info.fn_name,
           fn_path: frame.fn_info.fn_path,
           fn_line: frame.fn_info.fn_line,
           domain_name: domain_from_path(local_path: frame.fn_info.fn_path),
           mod_info: frame.mod_info
         )
+        @nodes << node
       end
 
       node
@@ -148,12 +149,14 @@ module ChaosDetector
       node = mod_node_for(mod_info)
 
       if node.nil? #&& frame.event == :call
-        node = @mod_nodes << ChaosDetector::ChaosGraphs::ModuleNode.new(
+        node = ChaosDetector::ChaosGraphs::ModuleNode.new(
           mod_name: mod_info.mod_name,
           mod_path: mod_info.mod_path,
           mod_type: mod_info.mod_type,
           domain_name: domain_from_path(local_path: mod_info.mod_path)
         )
+
+        @mod_nodes << node
       end
 
       node
@@ -163,8 +166,10 @@ module ChaosDetector
       edge = edges.find do |e|
         e.src_node == src_node && e.dep_node == dep_node
       end
-
-      edge = edges << ChaosDetector::GraphTheory::Edge.new(src_node, dep_node, edge_type: edge_type) if edge.nil?
+      if edge.nil?
+        edge = ChaosDetector::GraphTheory::Edge.new(src_node, dep_node, edge_type: edge_type)
+        edges << edge
+      end
       edge
     end
 
@@ -174,7 +179,6 @@ module ChaosDetector
 
       ChaosUtils.with(node && frame.event == :return && frame.fn_info.fn_line) do |fn_line|
         if !node.fn_line_end.nil? && node.fn_line_end != fn_line
-          puts "WTF: (node.fn_line_end) != (fn_line) (#{fn_line}) != (#{fn_line})"
         end
         node.fn_line_end = [fn_line, node.fn_line_end.to_i].max
       end
@@ -204,8 +208,7 @@ module ChaosDetector
 
       caller_node = mod_node_from_info(frame.caller_info)
       dest_node = mod_node_from_info(frame.mod_info)
-
-      edge_for_nodes(caller_node, dest_node, edges: @mod_edges, edge_type: frame.event)
+      edge_for_nodes(dest_node, caller_node, edges: @mod_edges, edge_type: frame.event)
     end
 
     def domain_from_path(local_path:)
