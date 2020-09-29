@@ -50,7 +50,7 @@ module ChaosDetector
       end
 
       def to_k
-        [mod_name, @mod_type, @mod_path].join('_')
+        [mod_name, @mod_type, @mod_path].compact.join('_').gsub('/', '_').gsub('.', '_').gsub(':', '_').gsub(' ', '_')
       end
 
       def to_s

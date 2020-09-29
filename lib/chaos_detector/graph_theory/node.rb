@@ -25,7 +25,7 @@ module ChaosDetector
 
       # Should be a reusable unique hash key for node:
       def to_k
-        name
+        name.gsub('/', '_').gsub('.', '_').gsub(':', '_').gsub(' ', '_')
       end
 
       def to_s(_scope=nil)

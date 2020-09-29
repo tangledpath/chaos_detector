@@ -31,10 +31,10 @@ module ChaosDetector
       end
 
       def render_mod_dep(graph_name='module-dep')
-        build_dgraph(graph_name, chaos_graph.module_nodes, chaos_graph.module_edges)
+        build_dgraph(graph_name, chaos_graph.module_nodes, chaos_graph.module_edges, as_cluster: true)
       end
 
-      def build_dgraph(label, nodes, edges)
+      def build_dgraph(label, nodes, edges, as_cluster: false)
         # nodes.each do |n|
         #   p("#{label} Nodes: #{ChaosUtils.decorate(n.label)}")
         # end
@@ -45,7 +45,7 @@ module ChaosDetector
 
         dgraph = ChaosDetector::Graphing::Directed.new(render_path: @render_path)
         dgraph.create_directed_graph(label)
-        dgraph.append_nodes(nodes)
+        dgraph.append_nodes(nodes, as_cluster: as_cluster)
         dgraph.add_edges(edges)
         dgraph.render_graph
         dgraph

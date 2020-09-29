@@ -32,6 +32,7 @@ module ChaosDetector
         type: :digraph,
         bgcolor: CLR_SLATE,
         center: 'true',
+        clusterrank: 'local',
         color: CLR_WHITE,
         compound: 'true',
         # # concentrate: 'true',
@@ -41,24 +42,26 @@ module ChaosDetector
         fontsize: '48',
         labelloc: 't',
         pencolor: CLR_WHITE,
+        outputorder: 'nodesfirst',
         # ordering: 'out',
         # outputorder: 'nodesfirst',
         nodesep: '0.25',
-        # newrank: 'true',
+        newrank: 'false',
         # rankdir: 'LR',
         ranksep: '1.0',
         # size: '10,8',
-        # splines: 'spline',
-        strict: 'true'
+        splines: 'spline',
+        # strict: 'true'
       }.freeze
 
       SUBDOMAIN_ATTRS = {
         bgcolor: CLR_NICEGREY,
+        # fillcolor: CLR_ORANGE,
         fontsize: '16',
         rank: 'same',
         fontname: 'Verdana',
         labelloc: 't',
-        pencolor: CLR_GREY,
+        # pencolor: CLR_GREY,
         penwidth: '2'
       }.freeze
 
@@ -70,6 +73,17 @@ module ChaosDetector
         fontcolor: CLR_WHITE,
         color: CLR_WHITE
       }.freeze
+
+      EDGE_ATTR = {
+        color:CLR_BLACK,
+        fontname:'Verdana',
+        fontcolor:CLR_WHITE,
+        fontsize:'8',
+        style:'solid',
+        # penwidth:'1.5',
+        constraint:'true',
+        dir:'forward'
+      }
 
       # TODO: integrate options as needed:
       def initialize(render_path: nil)
@@ -97,7 +111,7 @@ module ChaosDetector
         raise 'node is required' unless node
 
         parent_graph = if parent_node
-                         find_graph_node(parent_node).tap do |pnode|
+                         find_graph_node(parent_node).tap do |_cluster, pnode|
                            raise "Couldn't find parent node: #{parent_node}" unless pnode
                          end
                        else
@@ -112,11 +126,21 @@ module ChaosDetector
         raise 'node is required' unless node
 
         parent_graph = graph || @root_graph
+        key = node.to_k
 
         if as_cluster
-          @cluster_node_hash[node.to_k] = parent_graph.add_graph("cluster_#{node.label}", label: node.label, **SUBDOMAIN_ATTRS)
+          # tab good shape
+          subgraph_name = "cluster_#{key}"
+          attrs = {label: node.label}.merge(SUBDOMAIN_ATTRS)
+          # attrs = {}.merge(SUBDOMAIN_ ATTRS)
+          @cluster_node_hash[key] = parent_graph.add_graph(subgraph_name, attrs)
+          @cluster_node_hash[key].add_nodes(node_key(node, cluster: :stub), style: 'invis')
+
+          # @cluster_node_hash[key].attrs(attrs)
+          # puts ("attrs: #{key}: #{attrs}  / #{@cluster_node_hash.length}")
         else
-          @node_hash[node.to_k] = parent_graph.add_nodes(node.label, **NODE_ATTR)
+          attrs = {label: node.label}.merge(NODE_ATTR)
+          @node_hash[key] = parent_graph.add_nodes(key, attrs)
         end
       end
 
@@ -130,6 +154,16 @@ module ChaosDetector
         end
       end
 
+      def node_key(node, cluster: false)
+        if cluster==:stub
+          "cluster_stub_#{node.to_k}"
+        elsif !!cluster
+          "cluster_#{node.to_k}"
+        else
+          node.to_k
+        end
+      end
+
       def add_edges(edges, calc_weight:false)
         assert_graph_state
 
@@ -140,26 +174,39 @@ module ChaosDetector
         max_reduce  = edges.map(&:reduce_cnt).max
 
         edges.each do |e|
-          src = find_graph_node(e.src_node)
-          dep = find_graph_node(e.dep_node)
+          src_clust, src = find_graph_node(e.src_node)
+          dep_clust, dep = find_graph_node(e.dep_node)
+
           norm_reduce_cnt = e.reduce_cnt / max_reduce
           weight = calc_weight ? edge_weight(norm_reduce_cnt) : 1.0
           @edges << [src, dep]
 
+          # puts "SRC NODE IS #{src.inspect}"
           # Add dependent relation edges for edge_type:
           arrow_type = arrow_type_for(e)
+
+          # puts(['WTF', src.name, node_key(e.src_node, cluster: true)].inspect)
+
           @root_graph.add_edges(
-            src,
-            dep,
+            node_key(e.src_node, cluster: src_clust ? :stub : false),
+            node_key(e.dep_node, cluster: dep_clust ? :stub : false),
+            ltail: src_clust ? node_key(e.src_node, cluster: true) : '',
+            lhead: dep_clust ? node_key(e.dep_node, cluster: true) : '',
+            # ltail: src_clust ? src.name : nil,
+            # lhead: dep_clust ? dep.name : nil,
             arrowhead: arrow_type,
-            arrowsize: 2.0,
-            penwidth: weight
+            arrowsize: 1.5,
+            penwidth: weight,
+            **EDGE_ATTR
           ) # , {label: e.reduce_cnt, penwidth: weight})
         end
       end
 
       def render_graph
         assert_graph_state
+
+        puts("Rendering #{@root_graph}")
+
         filename = "#{@label}.png"
         filename = File.join(@render_path, filename).to_s if @render_path
         log("Rendering to #{filename}")
@@ -185,7 +232,12 @@ module ChaosDetector
       def find_graph_node(node)
         assert_graph_state
         # log("NODE_HASH: LOOKING UP #{ChaosUtils.decorate(node)}")
-        @node_hash[node.to_k] || @cluster_node_hash[node.to_k]
+        cnode = @cluster_node_hash[node.to_k]
+        if cnode
+          [true, cnode]
+        else
+          [false, @node_hash[node.to_k]]
+        end
       end
 
       def edge_weight(n, edge_min: EDGE_MIN, edge_baseline: EDGE_BASELINE)
