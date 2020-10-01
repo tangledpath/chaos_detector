@@ -50,6 +50,7 @@ module ChaosDetector
     # yields each row as
     #   frame A Frame object with its attributes contained in the CSV row
     def playback(row_range: nil)
+      started_at = Time.now
       log("Walkman replaying CSV with #{count} lines: #{csv_path}")
       @rownum = 0
       row_cur = nil
@@ -59,7 +60,10 @@ module ChaosDetector
         @rownum += 1
       end
     rescue StandardError => e
+      log("%s:\n%s" % [e.to_s, e.backtrace.join("\n")])
       raise ScriptError, log(format(PLAYBACK_MSG, @rownum, csv_path, row_cur, e.inspect))
+    ensure
+      log('Replayed %d items in %.2f seconds' % [@rownum, Time.now - started_at])
     end
 
     def count
@@ -74,7 +78,7 @@ module ChaosDetector
     end
 
     def csv_path
-      @csv_path ||= @options.path_with_log_root(:frame_csv_path)
+      @csv_path ||= @options.path_with_root(key: :frame_csv_path)
     end
 
     def autosave_csv

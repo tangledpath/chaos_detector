@@ -10,7 +10,7 @@ module ChaosDetector
     package_name 'DetectChaos'
     desc 'playback', 'Loads dependencies saved by a previous test run'
     opts = ChaosDetector::Options.new
-    method_option :opt_frame_csv, type: :string, default: opts.path_with_log_root(:frame_csv_path), required: true
+    method_option :opt_frame_csv, type: :string, default: opts.path_with_root(key: :frame_csv_path), required: true
     method_option :opt_app_root, type: :string, default: opts.app_root_path, required: true
     method_option :opt_module_filter, type: :string, default: 'ChaosDetector', required: true
     # default_task :playback

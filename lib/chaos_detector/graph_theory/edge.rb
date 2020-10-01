@@ -1,7 +1,7 @@
 module ChaosDetector
   module GraphTheory
     class Edge
-      attr_reader :edge_type
+      attr_accessor :edge_type
       attr_reader :src_node
       attr_reader :dep_node
       attr_reader :reduce_cnt

@@ -1,9 +1,23 @@
 require 'chaos_detector/utils/core_util'
+require 'chaos_detector/utils/fs_util'
 require 'chaos_detector/utils/str_util'
+require 'chaos_detector/utils/lerp_util'
 require 'chaos_detector/utils/log_util'
 
 module ChaosUtils
   class << self
+    def delerp(val, min:, max:)
+      ChaosDetector::Utils::LerpUtil.lerp(val, min: min, max: max)
+    end
+
+    def lerp(pct, min:, max:)
+      ChaosDetector::Utils::LerpUtil.delerp(val, min: min, max: max)
+    end
+
+    def log_msg(msg, **args)
+      ChaosDetector::Utils::LogUtil.log(msg, **args)
+    end
+
     def log_msg(msg, **args)
       ChaosDetector::Utils::LogUtil.log(msg, **args)
     end
@@ -30,6 +44,10 @@ module ChaosUtils
 
     def naught?(obj)
       ChaosDetector::Utils::CoreUtil.naught?(obj)
+    end
+
+    def rel_path(dir_path, from_path:)
+      ChaosDetector::Utils::FSUtil.rel_path(dir_path, from_path: from_path)
     end
 
     def with(obj)

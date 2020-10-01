@@ -19,7 +19,6 @@ describe 'Tracker' do
 
   let(:chaos_tracker) { ChaosDetector::Tracker.new(options: chaos_options) }
   let(:chaos_walkman) { ChaosDetector::Walkman.new(options: chaos_options) }
-  # let(:tracked_csv_path) { @options.path_with_log_root(:frame_csv_path) }
 
   describe 'internal' do
     let(:dec1) { '#<Class:Authentication>'}

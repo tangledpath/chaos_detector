@@ -8,7 +8,8 @@ module ChaosDetector
       attr_reader :root_graph
       attr_reader :node_hash
       attr_reader :cluster_node_hash
-      attr_reader :render_path
+      attr_reader :render_folder
+      attr_reader :rendered_path
       attr_reader :edges
 
       EDGE_MIN = 0.5
@@ -47,8 +48,10 @@ module ChaosDetector
         # outputorder: 'nodesfirst',
         nodesep: '0.25',
         newrank: 'false',
-        # rankdir: 'LR',
+        rankdir: 'LR',
         ranksep: '1.0',
+        ratio: 'expand',
+        size: '15, 30',
         # size: '10,8',
         splines: 'spline',
         # strict: 'true'
@@ -86,12 +89,12 @@ module ChaosDetector
       }
 
       # TODO: integrate options as needed:
-      def initialize(render_path: nil)
+      def initialize(render_folder: nil)
         @root_graph = nil
         @node_hash = {}
         @cluster_node_hash = {}
         @edges = Set.new
-        @render_path = render_path
+        @render_folder = render_folder || 'render'
       end
 
       def create_directed_graph(label)
@@ -205,13 +208,13 @@ module ChaosDetector
       def render_graph
         assert_graph_state
 
-        puts("Rendering #{@root_graph}")
-
         filename = "#{@label}.png"
-        filename = File.join(@render_path, filename).to_s if @render_path
-        log("Rendering to #{filename}")
-        @root_graph.output(png: filename)
-        #:path => @render_path,
+        @rendered_path = File.join(@render_folder, filename).to_s
+
+        log("Rendering graph to to #{@rendered_path}")
+        ChaosDetector::Utils::FSUtil.ensure_paths_to_file(@rendered_path)
+        @root_graph.output(png: @rendered_path)
+        self
       end
 
     private

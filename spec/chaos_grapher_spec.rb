@@ -40,6 +40,7 @@ describe 'ChaosGrapher' do
       opts.app_root_path = File.expand_path(__dir__)
       opts.log_root_path = File.join('tmp', 'chaos_logs')
       opts.path_domain_hash = { 'fixtures': 'FuDomain' }
+      opts.graph_render_folder = File.join('render')
     end
   end
 
@@ -73,19 +74,20 @@ describe 'ChaosGrapher' do
   end
 
   it 'domain graphs' do
-    grapher = ChaosDetector::Graphing::Directed.new
-    grapher.create_directed_graph('domain-test')
-
     chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(*graphing)
     chaos_graph.infer_all
+
+    grapher = ChaosDetector::Graphing::Directed.new(render_folder: chaos_options.path_with_root(path: 'render'))
+    grapher.create_directed_graph('domain-test')
+
     grapher.append_nodes(chaos_graph.domain_nodes)
     grapher.add_edges(chaos_graph.domain_edges)
 
     grapher.render_graph
-    graph_fs = `ls domain-test.png`
+    graph_fs = `ls spec/render/domain-test.png`
     p(ChaosUtils.decorate(graph_fs))
     expect(graph_fs).to be
-    expect(graph_fs.split.first).to eq('domain-test.png')
+    expect(graph_fs.split.first).to eq('spec/render/domain-test.png')
   end
 
   describe 'simple traversals' do
@@ -127,67 +129,90 @@ describe 'ChaosGrapher' do
     end
   end
 
-  it 'module graphs' do
-    grapher = ChaosDetector::Graphing::Directed.new
-    grapher.create_directed_graph('module-test')
+  describe 'module graphs' do
+    it 'renders' do
+      chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(*graphing)
+      chaos_graph.infer_all
 
-    chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(*graphing)
-    chaos_graph.infer_all
-    grapher.append_nodes(chaos_graph.module_nodes)
+      grapher = ChaosDetector::Graphing::Directed.new(render_folder: chaos_options.path_with_root(path: 'render'))
+      grapher.create_directed_graph('module-test')
 
-    chaos_graph.module_nodes.each do |n|
-      p("ModNode: #{ChaosUtils.decorate(n.label)}")
+      grapher.append_nodes(chaos_graph.module_nodes)
+
+      chaos_graph.module_nodes.each do |n|
+        p("ModNode: #{ChaosUtils.decorate(n.label)}")
+      end
+
+      chaos_graph.module_edges.each do |e|
+        p("ModEdge: #{ChaosUtils.decorate(e.src_node.class)} -> #{ChaosUtils.decorate(e.dep_node.class)}")
+      end
+      grapher.add_edges(chaos_graph.module_edges)
+
+      grapher.render_graph
+      graph_fs = `ls spec/render/module-test.png`
+      p(ChaosUtils.decorate(graph_fs))
+      expect(graph_fs).to be
+      expect(graph_fs.split.first).to eq('spec/render/module-test.png')
     end
 
-    chaos_graph.module_edges.each do |e|
-      p("ModEdge: #{ChaosUtils.decorate(e.src_node.class)} -> #{ChaosUtils.decorate(e.dep_node.class)}")
+    it 'module deps using graphs' do
+      walkman = simple_tracking
+      expect(walkman).to_not be_nil
+
+      # Playback should graph:
+      graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
+      expect(graphs.navigator).to_not be_nil
+
+      graphs.playback
+      expect(graphs.chaos_graph).to_not be_nil
+
+      graphs.render_mod_dep
+      graph_fs = `ls spec/render/module-dep.png`
+      p(ChaosUtils.decorate(graph_fs))
+      expect(graph_fs).to be
+      expect(graph_fs.split.first).to eq('spec/render/module-dep.png')
     end
-    grapher.add_edges(chaos_graph.module_edges)
 
-    grapher.render_graph
-    graph_fs = `ls module-test.png`
-    p(ChaosUtils.decorate(graph_fs))
-    expect(graph_fs).to be
-    expect(graph_fs.split.first).to eq('module-test.png')
+
+    it 'is discovered' do
+      walkman = associated_tracking
+      expect(walkman).to_not be_nil
+
+      # Playback should graph:
+      graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
+      expect(graphs.navigator).to_not be_nil
+
+      graphs.playback
+      expect(graphs.chaos_graph).to_not be_nil
+
+      graphs.render_mod_dep(graph_name: 'module-rel-dep')
+      graph_fs = `ls spec/render/module-rel-dep.png`
+      p(ChaosUtils.decorate(graph_fs))
+      expect(graph_fs).to be
+      expect(graph_fs.split.first).to eq('spec/render/module-rel-dep.png')
+    end
   end
 
-  it 'module deps using graphs' do
-    walkman = simple_tracking
-    expect(walkman).to_not be_nil
+  describe 'domain dependencies' do
+    it 'domain deps using graphs' do
+      walkman = simple_tracking
+      expect(walkman).to_not be_nil
 
-    # Playback should graph:
-    graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
-    expect(graphs.navigator).to_not be_nil
+      # Playback should graph:
+      graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
+      expect(graphs.navigator).to_not be_nil
 
-    graphs.playback
-    expect(graphs.chaos_graph).to_not be_nil
+      graphs.playback
+      expect(graphs.chaos_graph).to_not be_nil
 
-    graphs.render_mod_dep
-    graph_fs = `ls spec/render/module-dep.png`
-    p(ChaosUtils.decorate(graph_fs))
-    expect(graph_fs).to be
-    expect(graph_fs.split.first).to eq('spec/render/module-dep.png')
-  end
+      graphs.render_domain_dep
+      graph_fs = `ls spec/render/domain-dep.png`
+      p(ChaosUtils.decorate(graph_fs))
+      expect(graph_fs).to be
+      expect(graph_fs.split.first).to eq('spec/render/domain-dep.png')
+    end
 
-  it 'is discovered' do
-    walkman = associated_tracking
-    expect(walkman).to_not be_nil
-
-    # Playback should graph:
-    graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
-    expect(graphs.navigator).to_not be_nil
-
-    graphs.playback
-    expect(graphs.chaos_graph).to_not be_nil
-
-    graphs.render_mod_dep('module-rel-dep')
-    graph_fs = `ls spec/render/module-rel-dep.png`
-    p(ChaosUtils.decorate(graph_fs))
-    expect(graph_fs).to be
-    expect(graph_fs.split.first).to eq('spec/render/module-rel-dep.png')
-
-
-
+    # TODO: maybe extract all unique paths from graph struture?
     # chaos_tracker.record
     # fracker = DerivedFracker.new
     # fracker.frack

@@ -1,10 +1,19 @@
 require 'fileutils'
+require 'pathname'
 require_relative 'core_util'
 
 module ChaosDetector
   module Utils
     module FSUtil
       class << self
+
+        # Relative path:
+        def rel_path(dir_path, from_path:)
+          pathname = Pathname.new(dir_path)
+          base_path = Pathname.new(from_path).cleanpath
+          pathname.relative_path_from(base_path).to_s
+        end
+
         # Ensure directory and all its parents exist, like (mkdir -p):
         def ensure_dirpath(dirpath)
           raise ArgumentError, '#ensure_paths_to_file requires dirpath' if nay? dirpath

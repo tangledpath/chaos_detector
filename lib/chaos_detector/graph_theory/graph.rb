@@ -2,13 +2,21 @@
 module ChaosDetector
   module GraphTheory
     class Graph
-      extend Forwardable
+      # extend Forwardable
       attr_reader :root_node
       attr_reader :nodes
       attr_reader :edges
 
-      def_delegator :@nodes, :length, :node_count
-      def_delegator :@edges, :length, :edge_count
+      # def_delegator :@nodes, :length, :node_count
+      # def_delegator :@edges, :length, :edge_count
+
+      def node_count
+        @nodes.length
+      end
+
+      def edge_count
+        @edges.length
+      end
 
       def initialize(root_node:, nodes: nil, edges: nil)
         raise ArgumentError, 'Root node required.' unless root_node

@@ -28,13 +28,11 @@ module ChaosDetector
     chaos_attr(:frame_csv_path, 'csv/chaos_frames.csv')
     chaos_attr(:walkman_buffer_length, 1000)
 
-    def path_with_root(subpath)
-      File.join(app_root_path, send(subpath))
-    end
+    def path_with_root(key:nil, path:nil)
+      raise ArgumentError, "key: OR path: must be set" if key.nil? && path.nil?
 
-    def path_with_log_root(subpath)
-      logroot = path_with_root(:log_root_path)
-      File.join(logroot, send(subpath))
+      subpath = key ? send(key.to_sym) : path.to_s
+      File.join(app_root_path, subpath)
     end
   end
 end

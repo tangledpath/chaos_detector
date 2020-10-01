@@ -55,6 +55,11 @@ module ChaosDetector
         # @module_graph = build_domain_graph(@module_edges)
       end
 
+      # Lookup domain node by name:
+      def domain_node_for(name:)
+        domain_nodes.find{|node| node.name==domain_nodes}
+      end
+
       ## Derive domain-level graph from function-based graph
       def build_domain_graph(edges)
         assert_state
@@ -229,7 +234,7 @@ module ChaosDetector
           n.nil? ? root_node_module : @module_nodes[n]
         when :domain
           # Look up by Domain name
-          unless node_info.is_a? String
+          unless (node_info.is_a?(String) || node_info.is_a?(Symbol))
             log("NodeInfo is something other than info or string type: class: (#{node_info.class}) = #{node_info.inspect}")
           end
 

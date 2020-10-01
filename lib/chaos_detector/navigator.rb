@@ -1,6 +1,8 @@
 require 'pathname'
 require_relative 'options'
 require_relative 'stacker/mod_info'
+require_relative 'graph_theory/graph'
+require_relative 'chaos_graphs/function_node'
 require_relative 'chaos_graphs/module_node'
 require_relative 'stacker/frame'
 require_relative 'walkman'
@@ -36,11 +38,13 @@ module ChaosDetector
     ### Playback of walkman CSV file:
     def playback
       log('Chaos playing through navigator.  Expected lines: ', object: @walkman.count)
+
       @nodes = Set.new
       @edges_call = Set.new
       @edges_ret = Set.new
       @mod_nodes = Set.new
       @mod_edges = Set.new
+      @err_nodes = Set.new
 
       @walkman.playback do |_rownum, frame|
         perform_node_action(frame)
@@ -55,6 +59,9 @@ module ChaosDetector
         end
       end
 
+      edges = merge_edges.to_a
+      log('Found edges.', object: edges.length)
+
       @mod_graph = ChaosDetector::GraphTheory::Graph.new(
         root_node: ChaosDetector::ChaosGraphs::ModuleNode.root_node(force_new: true),
         nodes: @mod_nodes.to_a,
@@ -64,7 +71,7 @@ module ChaosDetector
       @fn_graph = ChaosDetector::GraphTheory::Graph.new(
         root_node: ChaosDetector::ChaosGraphs::FunctionNode.root_node(force_new: true),
         nodes: @nodes.to_a,
-        edges: merge_edges.to_a
+        edges: edges
       )
 
       [@fn_graph, @mod_graph]
@@ -184,11 +191,18 @@ module ChaosDetector
       end
     end
 
+
     def perform_edge_action(frame)
-      return unless frame.fn_info # && frame.caller_info
+      return unless frame.fn_info && frame.event==:call #&& frame.caller_info
 
       dest_node = fn_node_for(frame.fn_info)
-      raise "Couldn't find destination node" if dest_node.nil?
+      if dest_node.nil?
+        # unless @err_nodes.include?(dest_node)
+        #   log "Couldn't find destination node (of #{@nodes.length} / #{@edges_call.length}) on #{frame}"
+        #   @err_nodes << dest_node
+        # end
+        return
+      end
 
       caller_node = fn_node_for(frame.caller_info)
       if caller_node.nil?

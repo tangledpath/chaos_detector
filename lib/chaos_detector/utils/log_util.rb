@@ -8,7 +8,7 @@ module ChaosDetector
         # Simple logging, more later
         def log(msg, object: nil, subject: nil)
           message = nay?(subject) ? msg : d(msg, prefix: d(subject, clamp: :bracket))
-          message << d(object, clamp: :parens, prefix: ': ')
+          message << d(object, clamp: :bracket, prefix: ': ')
 
           if block_given?
             print_line(d(message, prefix: 'Starting: '))
