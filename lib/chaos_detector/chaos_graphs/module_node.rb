@@ -15,6 +15,7 @@ module ChaosDetector
 
       def initialize(mod_name: nil, mod_path: nil, is_root: false, node_origin: nil, domain_name: nil, mod_type: nil, fn_node_count: nil)
         super(name: mod_name, root: is_root, node_origin: node_origin)
+        @domain_name = domain_name
         @mod_path = mod_path
         @mod_type = mod_type
         @fn_node_count = fn_node_count

@@ -36,7 +36,7 @@ module ChaosDetector
         clusterrank: 'local',
         color: CLR_WHITE,
         compound: 'true',
-        # # concentrate: 'true',
+        concentrate: 'true',
         # engine: 'dot',
         fontcolor: CLR_WHITE,
         fontname: 'Georgia',
@@ -51,7 +51,7 @@ module ChaosDetector
         rankdir: 'LR',
         ranksep: '1.0',
         ratio: 'expand',
-        size: '15, 30',
+        size: '25, 50',
         # size: '10,8',
         splines: 'spline',
         # strict: 'true'
@@ -86,7 +86,7 @@ module ChaosDetector
         # penwidth:'1.5',
         constraint:'true',
         dir:'forward'
-      }
+      }.freeze
 
       # TODO: integrate options as needed:
       def initialize(render_folder: nil)
@@ -114,12 +114,12 @@ module ChaosDetector
         raise 'node is required' unless node
 
         parent_graph = if parent_node
-                         find_graph_node(parent_node).tap do |_cluster, pnode|
-                           raise "Couldn't find parent node: #{parent_node}" unless pnode
-                         end
-                       else
-                         @root_graph
-                       end
+          _clust, p_graph = find_graph_node(parent_node)
+          raise "Couldn't find parent node: #{parent_node}" unless p_graph
+          p_graph
+        else
+          @root_graph
+        end
 
         add_node_to_graph(node, graph: parent_graph, as_cluster: as_cluster)
       end
@@ -134,7 +134,11 @@ module ChaosDetector
         if as_cluster
           # tab good shape
           subgraph_name = "cluster_#{key}"
-          attrs = {label: node.label}.merge(SUBDOMAIN_ATTRS)
+          attrs = {
+            label: node.label,
+            # shape: 'box3d'
+          }
+          attrs.merge!(SUBDOMAIN_ATTRS)
           # attrs = {}.merge(SUBDOMAIN_ ATTRS)
           @cluster_node_hash[key] = parent_graph.add_graph(subgraph_name, attrs)
           @cluster_node_hash[key].add_nodes(node_key(node, cluster: :stub), style: 'invis')
@@ -153,6 +157,7 @@ module ChaosDetector
 
         nodes.each do |node|
           parent_node = block_given? ? yield(node) : nil
+          # puts "gotit #{parent_node}" if parent_node
           add_node_to_parent(node, parent_node: parent_node, as_cluster: as_cluster)
         end
       end
@@ -190,17 +195,27 @@ module ChaosDetector
 
           # puts(['WTF', src.name, node_key(e.src_node, cluster: true)].inspect)
 
+          attrs = EDGE_ATTR.merge(
+            ltail: src_clust ? node_key(e.src_node, cluster: true) : '',
+            lhead: dep_clust ? node_key(e.dep_node, cluster: true) : '',
+            arrowhead: arrow_type,
+            arrowsize: 1.0,
+            penwidth: weight,
+          )
+
+          if e.src_node.domain_name == e.dep_node.domain_name
+            attrs.merge!(
+              color: CLR_WHITE,
+              headport: 'w',
+              tailport: 'e',
+            )
+            # puts "ATTRS: #{attrs}"
+          end
+
           @root_graph.add_edges(
             node_key(e.src_node, cluster: src_clust ? :stub : false),
             node_key(e.dep_node, cluster: dep_clust ? :stub : false),
-            ltail: src_clust ? node_key(e.src_node, cluster: true) : '',
-            lhead: dep_clust ? node_key(e.dep_node, cluster: true) : '',
-            # ltail: src_clust ? src.name : nil,
-            # lhead: dep_clust ? dep.name : nil,
-            arrowhead: arrow_type,
-            arrowsize: 1.5,
-            penwidth: weight,
-            **EDGE_ATTR
+            attrs
           ) # , {label: e.reduce_cnt, penwidth: weight})
         end
       end

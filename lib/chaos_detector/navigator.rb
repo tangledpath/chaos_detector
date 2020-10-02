@@ -36,7 +36,7 @@ module ChaosDetector
     end
 
     ### Playback of walkman CSV file:
-    def playback
+    def playback(row_range: nil)
       log('Chaos playing through navigator.  Expected lines: ', object: @walkman.count)
 
       @nodes = Set.new
@@ -46,12 +46,12 @@ module ChaosDetector
       @mod_edges = Set.new
       @err_nodes = Set.new
 
-      @walkman.playback do |_rownum, frame|
+      @walkman.playback(row_range: row_range) do |_rownum, frame|
         perform_node_action(frame)
       end
       log('Found nodes.', object: @nodes.length)
 
-      @walkman.playback do |_rownum, frame|
+      @walkman.playback(row_range: row_range) do |_rownum, frame|
         if [:call, :return].include?(frame.event)
           perform_edge_action(frame)
         else

@@ -22,20 +22,20 @@ module ChaosDetector
         @navigator = ChaosDetector::Navigator.new(options: @options)
       end
 
-      def playback
-        fn_graph, mod_graph = @navigator.playback
+      def playback(row_range: nil)
+        fn_graph, mod_graph = @navigator.playback(row_range: row_range)
         @chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(fn_graph, mod_graph)
         @chaos_graph.infer_all
       end
 
       def render_domain_dep(graph_name: 'domain-dep')
-        dgraph=build_dgraph(graph_name, chaos_graph.domain_nodes, chaos_graph.domain_edges, as_cluster: true)
+        dgraph=build_dgraph(graph_name, chaos_graph.domain_nodes, chaos_graph.domain_edges, as_cluster: false)
         dgraph.rendered_path
       end
 
       def render_fn_dep(graph_name: 'fn-dep', domains: false)
-        nodes = chaos_graph.function_graph.nodes
-        edges = chaos_graph.function_graph.edges
+        nodes = @chaos_graph.function_graph.nodes
+        edges = @chaos_graph.function_graph.edges
 
         dgraph = if domains
           build_domain_dgraph(graph_name, nodes, edges)
@@ -59,7 +59,7 @@ module ChaosDetector
         dgraph.rendered_path
       end
 
-      def build_dgraph(label, nodes, edges, as_cluster: false)
+      def build_dgraph(label, nodes, edges, as_cluster: false, render: true)
         # nodes.each do |n|
         #   p("#{label} Nodes: #{ChaosUtils.decorate(n.label)}")
         # end
@@ -72,27 +72,27 @@ module ChaosDetector
         dgraph.create_directed_graph(label)
         dgraph.append_nodes(nodes, as_cluster: as_cluster)
         dgraph.add_edges(edges)
-        dgraph.render_graph
+        dgraph.render_graph if render
+        dgraph
       end
 
-      def build_domain_dgraph(graph_name, nodes, edges)
+      def build_domain_dgraph(graph_name, nodes, edges, render: true)
         # Add domains as cluster/subgraph nodes:
-        dgraph = build_dgraph(graph_name, chaos_graph.domain_nodes, chaos_graph.domain_edges, as_cluster: true)
+        dgraph = build_dgraph(graph_name, chaos_graph.domain_nodes, chaos_graph.domain_edges, as_cluster: true, render: false)
 
         # Add nodes to domains:
         dgraph.append_nodes(nodes) do |node|
-          # find parent node
-          ChaosUtils.with(node.domain_name) do |dom_nm|
-            ChaosUtils.aught?(dom_nm) ? chaos_graph.domain_node_for(dom_nm) : nil
-          end
+          # puts "looking up domain name.... #{node.domain_name}: #{chaos_graph.domain_node_for(name: node.domain_name)}"
+          chaos_graph.domain_node_for(name: node.domain_name)
         end
         dgraph.add_edges(edges)
-        dgraph.render_graph
+        dgraph.render_graph if render
+        dgraph
         # dgraph.rendered_path
 
         # fn_nodes = chaos_graph.function_graph.nodes.group_by(&:domain_name)
         # fn_nodes.map do |dom_nm, fn_nodes|
-        #   dom_node = ChaosUtils.aught?(dom_nm) && chaos_graph.domain_node_for(dom_nm)
+        #   dom_node = ChaosUtils.aught?(dom_nm) && chaos_graph.domain_node_for(name: dom_nm)
         #   dgraph.add_node_to_parent(fn_node, dom_node)
         # end
       end

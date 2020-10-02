@@ -7,11 +7,11 @@ require 'chaos_detector/utils/log_util'
 module ChaosUtils
   class << self
     def delerp(val, min:, max:)
-      ChaosDetector::Utils::LerpUtil.lerp(val, min: min, max: max)
+      ChaosDetector::Utils::LerpUtil.delerp(val, min: min, max: max)
     end
 
     def lerp(pct, min:, max:)
-      ChaosDetector::Utils::LerpUtil.delerp(val, min: min, max: max)
+      ChaosDetector::Utils::LerpUtil.lerp(val, min: min, max: max)
     end
 
     def log_msg(msg, **args)

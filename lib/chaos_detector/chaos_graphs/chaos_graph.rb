@@ -57,7 +57,7 @@ module ChaosDetector
 
       # Lookup domain node by name:
       def domain_node_for(name:)
-        domain_nodes.find{|node| node.name==domain_nodes}
+        domain_nodes.find{|node| node.name.to_s == name.to_s}
       end
 
       ## Derive domain-level graph from function-based graph
