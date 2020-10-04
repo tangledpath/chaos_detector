@@ -8,7 +8,6 @@ require 'chaos_detector/options'
 #   #   #   include_paths:, exclude_paths:, include_classes:, exclude_classes:
 #   #   def record(options=nil)#, include_paths:, exclude_paths:, include_classes:, exclude_classes:)
 
-
 #   #     # puts("  Domains #{domain_hash.inspect}")
 #   #     # # options.log_root_path = app_root_path
 #   #     # puts("  log_root_path #{options.log_root_path}")

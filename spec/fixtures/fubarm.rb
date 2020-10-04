@@ -14,9 +14,9 @@ module Fubarm
   class Bazm
     def self.bazm
       # Comment
-      puts "fubar_mod::bazzzzzz"
+      puts 'fubar_mod::bazzzzzz'
       # Stuff
-      puts "again"
+      puts 'again'
     end
 
     def self.nester1(recurse: false)
@@ -32,7 +32,7 @@ module Fubarm
 
     def nest3(recurse: false)
       nest2 if recurse
-      nest4(recurse:recurse)
+      nest4(recurse: recurse)
     end
 
     def nest4(recurse: false)

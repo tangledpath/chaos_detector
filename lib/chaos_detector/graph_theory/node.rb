@@ -2,44 +2,50 @@ require 'chaos_detector/utils/str_util'
 require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
-module GraphTheory
-  class Node
-    ROOT_NODE_NAME = "ROOT".freeze
+  module GraphTheory
+    class Node
+      ROOT_NODE_NAME = 'ROOT'.freeze
 
-    attr_reader :name
-    attr_reader :is_root
-    attr_accessor :node_origin
+      attr_reader :is_root
+      attr_accessor :node_origin
 
-    def initialize(name: nil, root: false, node_origin: nil)
-      unless ChaosUtils.aught?(name) || root
-        raise ArgumentError, "Must have name or be root (name=#{name})"
+      def root?
+        !!is_root
       end
-      @is_root = root
-      @name = @is_root ? ROOT_NODE_NAME : name
-      @node_origin = node_origin
-    end
 
-    def ==(other)
-      name == other.name &&
-        is_root == other.is_root
-    end
+      def initialize(name: nil, root: false, node_origin: nil)
+        raise ArgumentError, "Must have name or be root (name=#{name})" unless ChaosUtils.aught?(name) || root
 
-    # Should be a reusable unique hash key for node:
-    def to_k
-      self.name
-    end
+        @is_root = root
+        @name = @is_root ? ROOT_NODE_NAME : name
+        @node_origin = node_origin
+      end
 
-    def to_s(scope=nil)
-      mod = ChaosDetector::Utils::StrUtil.humanize_module(self.class.name, max_segments:1)
-      ChaosUtils.decorate_pair(mod, name)
-    end
+      def ==(other)
+        name == other.name &&
+          is_root == other.is_root
+      end
 
-    def label
-      nm = name
-      nm ||= ROOT_NODE_NAME if is_root
-      nm
-    end
+      # Should be a reusable unique hash key for node:
+      def to_k
+        ChaosDetector::Utils::StrUtil.snakeize(name)
+      end
 
+      def to_s(_scope=nil)
+        name
+      end
+
+      def name
+        @is_root ? ROOT_NODE_NAME : @name
+      end
+
+      def title
+        name
+      end
+
+      def subtitle
+        nil
+      end
+    end
   end
-end
 end

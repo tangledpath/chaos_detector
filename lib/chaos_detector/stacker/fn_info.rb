@@ -3,12 +3,12 @@ require_relative 'comp_info'
 module ChaosDetector
   module Stacker
     class FnInfo < ChaosDetector::Stacker::CompInfo
-      alias_method :fn_name, :name
-      alias_method :fn_line, :info
-      alias_method :fn_path, :path
+      alias fn_name name
+      alias fn_line info
+      alias fn_path path
 
       def initialize(fn_name:, fn_line: nil, fn_path: nil)
-        super(name:fn_name, path: fn_path, info: fn_line)
+        super(name: fn_name, path: fn_path, info: fn_line)
       end
 
       def ==(other)
@@ -28,7 +28,7 @@ module ChaosDetector
       end
 
       class << self
-        def match?(obj1, obj2, line_matching:false)
+        def match?(obj1, obj2, line_matching: false)
           obj1.fn_path == obj2.fn_path && obj1.fn_name == obj2.fn_name
           # (obj1.fn_name == obj2.fn_name || line_match?(obj1.fn_line, obj2.fn_line))
         end

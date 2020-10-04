@@ -1,39 +1,45 @@
 require 'chaos_detector/graph_theory/node'
-
 # Domain node
 module ChaosDetector
   module ChaosGraphs
     class DomainNode < ChaosDetector::GraphTheory::Node
-      alias_method :domain_name, :name
-      attr_reader :fn_node_count
+      alias domain_name name
+      attr_reader :reduce_count
 
-      def initialize(domain_name:nil, node_origin: nil, is_root: false, fn_node_count: nil)
+      def initialize(domain_name: nil, node_origin: nil, is_root: false, reduce_count: nil)
         super(name: domain_name, root: is_root, node_origin: node_origin)
-        @fn_node_count = fn_node_count
+        @reduce_count = reduce_count
       end
 
       def hash
-        self.domain_name.hash
+        domain_name.hash
       end
 
-      def eql?(other); self == other; end
+      def eql?(other)
+        self == other
+      end
 
       def ==(other)
-        self.domain_name == other&.domain_name
+        domain_name&.to_s == other&.domain_name&.to_s
       end
 
-      def label
-        m = super
+      def title
+        super
       end
 
+      def subtitle
+        "Reduced: #{reduce_count}"
+      end
+
+      # Must be name/domain_name for comparisons:
       def to_s
-        "Domain #{domain_name} [#{@fn_node_count} Fn Nodes]"
+        domain_name
       end
 
       class << self
         attr_reader :root_node
         def root_node(force_new: false)
-          @root_node = self.new(is_root: true) if force_new || @root_node.nil?
+          @root_node = new(is_root: true) if force_new || @root_node.nil?
           @root_node
         end
       end

@@ -11,7 +11,7 @@ module ChaosDetector
       end
 
       def log(msg)
-        ChaosUtils::log_msg(msg, subject: "FrameStack")
+        ChaosUtils.log_msg(msg, subject: 'FrameStack')
       end
 
       def depth
@@ -23,12 +23,12 @@ module ChaosDetector
       end
 
       def pop(frame)
-        raise ArgumentError, "Current Frame is required" if frame.nil?
+        raise ArgumentError, 'Current Frame is required' if frame.nil?
 
         popped_frame, n_frame = @stack.each_with_index.find do |f, n|
-          if f==frame
+          if f == frame
             true
-          elsif n.zero? && frame.fn_name==f.fn_name
+          elsif n.zero? && frame.fn_name == f.fn_name
             # log("Matching #{f} \nto:\n #{frame} as most recent entry in stack.")
             true
           else
@@ -50,15 +50,14 @@ module ChaosDetector
       end
 
       def to_s
-        "Frames: %d" % depth
+        'Frames: %d' % depth
       end
 
       def inspect
-        msg = "#{to_s}\n"
-        msg << ChaosUtils.decorate_tuple(@stack.map{|f| f.to_s}, join_str: " -> \n", indent_length: 2, clamp: :none)
+        msg = "#{self}\n"
+        msg << ChaosUtils.decorate_tuple(@stack.map { |f| f.to_s}, join_str: " -> \n", indent_length: 2, clamp: :none)
         msg
       end
-
     end
   end
 end

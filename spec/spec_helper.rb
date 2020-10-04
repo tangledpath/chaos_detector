@@ -1,5 +1,7 @@
 require 'rspec'
-require 'rspec/autorun'
+# require 'rspec/autorun'
+
+puts "woo hoo!!!!"
 
 def tmp_dirs
   spec_dir = File.expand_path(__dir__)

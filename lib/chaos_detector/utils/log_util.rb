@@ -4,13 +4,11 @@ require_relative 'str_util'
 module ChaosDetector
   module Utils
     module LogUtil
-
       class << self
-
         # Simple logging, more later
         def log(msg, object: nil, subject: nil)
-          message = nay?(subject) ? msg : d(msg, prefix:d(subject, clamp: :bracket))
-          message << d(object, clamp: :parens, prefix: ': ')
+          message = nay?(subject) ? msg : d(msg, prefix: d(subject, clamp: :bracket))
+          message << d(object, clamp: :bracket, prefix: ': ')
 
           if block_given?
             print_line(d(message, prefix: 'Starting: '))
@@ -28,16 +26,15 @@ module ChaosDetector
           Kernel.puts(msg, opts)
         end
 
-        alias_method :pp, :print_line
+        alias pp print_line
 
         def nay?(obj)
-          ChaosDetector::Utils::CoreUtil::naught?(obj)
+          ChaosDetector::Utils::CoreUtil.naught?(obj)
         end
 
         def d(text, *args)
-          ChaosDetector::Utils::StrUtil::decorate(text, *args)
+          ChaosDetector::Utils::StrUtil.decorate(text, *args)
         end
-
       end
     end
   end
