@@ -113,7 +113,7 @@ module ChaosDetector
 
       def adjacency?(node_src, node_dest)
         edge = @graph.edges.find{|e| e.src_node == node_src && e.dep_node == node_dest }
-        edge&.reduce_count.to_i
+        edge&.reduction&.reduction_sum.to_i
       end
 
       #  Coupling: Each node couplet (Example for 100 nodes, we'd have 100 * 99 potential couplets)

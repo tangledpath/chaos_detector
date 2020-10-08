@@ -234,14 +234,15 @@ module ChaosDetector
         #   log("NODE_HASH: Has value for #{ChaosUtils.decorate(k)} => #{ChaosUtils.decorate(v)}")
         # end
 
-        max_reduce  = edges.map(&:reduce_count).max
+        max_reduce  = edges.map(&:weight).max
 
         edges.each do |e|
           src_clust, src = find_graph_node(e.src_node)
           dep_clust, dep = find_graph_node(e.dep_node)
 
-          norm_reduce_count = e.reduce_count / max_reduce
-          weight = calc_weight ? edge_weight(norm_reduce_count) : 1.0
+          # TODO: normalize for genericicity
+          norm_weight = e.weight / max_reduce
+          weight = calc_weight ? edge_weight(norm_weight) : 1.0
           @edges << [src, dep]
 
           # puts "SRC NODE IS #{src.inspect}"
@@ -273,7 +274,7 @@ module ChaosDetector
             node_key(e.src_node, cluster: src_clust ? :stub : false),
             node_key(e.dep_node, cluster: dep_clust ? :stub : false),
             attrs
-          ) # , {label: e.reduce_count, penwidth: weight})
+          ) # , {label: e.reduce_sum, penwidth: weight})
         end
       end
 

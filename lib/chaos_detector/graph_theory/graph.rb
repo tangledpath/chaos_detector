@@ -27,7 +27,7 @@ module ChaosDetector
       end
 
       def traversal
-        to_enum(:traverse).map(&:itself) # {|n| puts "TNode:#{n}"; n.title}
+        to_enum(:traverse).map(&:itself) # {|n| puts "TNode:#{n}"; n.label}
       end
 
       # Possibly useful:
@@ -60,7 +60,7 @@ module ChaosDetector
 
       def children(node)
         @edges.select { |e| e.src_node == node }.map(&:dep_node).inject do |child_nodes|
-          puts "Found children for #{node.title}: #{child_nodes}"
+          puts "Found children for #{node.label}: #{child_nodes}"
         end
       end
 

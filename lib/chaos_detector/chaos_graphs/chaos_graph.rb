@@ -4,6 +4,7 @@ require_relative 'module_node'
 
 require 'chaos_detector/graph_theory/edge'
 require 'chaos_detector/graph_theory/graph'
+require 'chaos_detector/graph_theory/reduction'
 require 'chaos_detector/chaos_utils'
 
 # Encapsulate and aggregates graphs for dependency tracking
@@ -140,12 +141,16 @@ module ChaosDetector
 
         mod_nodes = mod_nodes.map do |mod_info, fn_nodes|
           node_fn = fn_nodes.first
+
+          fn_reductions = fn_nodes.map(&:reduction)
+          mod_reduction = ChaosDetector::GraphTheory::Reduction.combine_all(fn_reductions)
+
           ChaosDetector::ChaosGraphs::ModuleNode.new(
             mod_name: mod_info.mod_name,
             mod_type: mod_info.mod_type,
             mod_path: mod_info.mod_path,
             domain_name: node_fn.domain_name,
-            reduce_count: fn_nodes.length
+            reduction: mod_reduction
           )
         end
 
@@ -163,9 +168,12 @@ module ChaosDetector
         assert_state
 
         @domain_nodes = @module_nodes.group_by(&:domain_name).map do |dom_nm, mod_nodes|
+          mod_reductions = mod_nodes.map(&:reduction)
+          dom_reduction = ChaosDetector::GraphTheory::Reduction.combine_all(mod_reductions)
+
           ChaosDetector::ChaosGraphs::DomainNode.new(
             domain_name: dom_nm,
-            reduce_count: mod_nodes.map{|n| n.reduce_count.to_i}.sum,
+            reduction: dom_reduction,
             is_root: !ChaosUtils.aught?(dom_nm)
           )
         end
@@ -211,7 +219,14 @@ module ChaosDetector
           edge_dep_node = lookup_node_by(node_type: dep, node_info: src_dep_pair.last)
 
           # log("Creating #{src_dep_pair.first.class} edge with #{ChaosUtils.decorate_pair(edge_src_node, edge_dep_node)}")
-          (edge_src_node != edge_dep_node) && ChaosDetector::GraphTheory::Edge.new(edge_src_node, edge_dep_node, reduce_count: g_edges.length)
+          if (edge_src_node != edge_dep_node)
+            cnt = g_edges.length
+            ChaosDetector::GraphTheory::Edge.new(
+              edge_src_node,
+              edge_dep_node,
+              reduction: ChaosDetector::GraphTheory::Reduction.new(count: cnt, sum: cnt)
+            )
+          end
         end
 
         # TODO: Edge reduction method for here and for after adding additional module edges.
@@ -221,7 +236,7 @@ module ChaosDetector
         edges.reduce(Set.new) do |memo, obj|
           existing = memo.find{|m| obj==m}
           if existing
-            existing.reduce(obj)
+            existing.merge!(obj)
           else
             memo << obj
           end

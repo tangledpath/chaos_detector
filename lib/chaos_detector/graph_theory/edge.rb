@@ -4,7 +4,7 @@ module ChaosDetector
       attr_accessor :edge_type
       attr_reader :src_node
       attr_reader :dep_node
-      attr_accessor :reduce_count
+      attr_accessor :reduction
 
       EDGE_TYPES = {
         default: 0,
@@ -13,14 +13,18 @@ module ChaosDetector
         class_association: 3
       }.freeze
 
-      def initialize(src_node, dep_node, edge_type: :default, reduce_count: 1)
+      def initialize(src_node, dep_node, edge_type: :default, reduction: nil)
         raise ArgumentError, 'src_node is required ' unless src_node
         raise ArgumentError, 'dep_node is required ' unless dep_node
 
         @src_node = src_node
         @dep_node = dep_node
-        @reduce_count = reduce_count
+        @reduction = reduction
         @edge_type = edge_type
+      end
+
+      def weight
+        @reduction&.reduction_sum || 1
       end
 
       def hash
@@ -38,18 +42,19 @@ module ChaosDetector
 
       def to_s
         s = format('[%s] -> [%s]', src_node.title, dep_node.title)
-        s << "(#{reduce_count})" if reduce_count > 1
+        s << "(#{reduction.reduction_sum})" if reduction&.reduction_sum > 1
         s
       end
 
-      def reduce(other)
+      # Mutate this Edge; combining attributes from other:
+      def merge!(other)
         if EDGE_TYPES.dig(other.edge_type) > EDGE_TYPES.dig(edge_type)
           @edge_type = other.edge_type
         end
 
-        @reduce_count += other.reduce_count
+        @reduction = ChaosDetector::GraphTheory::Reduction.combine(@reduction, other.reduction)
+        self
       end
-
     end
   end
 end

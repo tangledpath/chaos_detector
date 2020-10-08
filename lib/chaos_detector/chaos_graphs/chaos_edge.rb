@@ -14,7 +14,7 @@ module ChaosDetector
 
       # association
       DEP_TYPES = %i[association generalization aggregation composition].freeze
-      def initialize(src_node, dep_node, reduce_count: 1, dep_type: :association)
+      def initialize(src_node, dep_node, dep_type: :association)
         super
         @dep_type = dep_type
       end

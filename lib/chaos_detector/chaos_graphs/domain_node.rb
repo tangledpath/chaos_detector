@@ -4,11 +4,9 @@ module ChaosDetector
   module ChaosGraphs
     class DomainNode < ChaosDetector::GraphTheory::Node
       alias domain_name name
-      attr_reader :reduce_count
 
-      def initialize(domain_name: nil, node_origin: nil, is_root: false, reduce_count: nil)
-        super(name: domain_name, root: is_root, node_origin: node_origin)
-        @reduce_count = reduce_count
+      def initialize(domain_name: nil, node_origin: nil, is_root: false, reduction: nil)
+        super(name: domain_name, root: is_root, node_origin: node_origin, reduction: reduction)
       end
 
       def hash
@@ -28,7 +26,12 @@ module ChaosDetector
       end
 
       def subtitle
-        "Reduced: #{reduce_count}"
+        if reduction
+          "Reduced: from %d modules and %d functions" % [
+            reduction.reduction_count,
+            reduction.reduction_sum,
+          ]
+        end
       end
 
       # Must be name/domain_name for comparisons:

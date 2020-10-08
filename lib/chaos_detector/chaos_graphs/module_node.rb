@@ -10,15 +10,15 @@ module ChaosDetector
       attr_reader :mod_type # :unknown, :module, :class
       attr_reader :mod_path # :unknown, :module, :class
       attr_reader :domain_name
-      attr_reader :reduce_count
+
       alias mod_name name
 
-      def initialize(mod_name: nil, mod_path: nil, is_root: false, node_origin: nil, domain_name: nil, mod_type: nil, reduce_count: nil)
+      def initialize(mod_name: nil, mod_path: nil, is_root: false, node_origin: nil, domain_name: nil, mod_type: nil, reduction: nil)
         super(name: mod_name, root: is_root, node_origin: node_origin)
         @domain_name = domain_name&.to_s
         @mod_path = mod_path
         @mod_type = mod_type
-        @reduce_count = reduce_count
+        @reduction = reduction
       end
 
       def hash

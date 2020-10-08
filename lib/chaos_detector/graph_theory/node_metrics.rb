@@ -10,7 +10,15 @@ module ChaosDetector
       attr_accessor :circular_routes
       attr_reader :node
 
-      def_delegators :@node, :title, :subtitle, :reduce_count
+      def_delegators :@node, :title, :subtitle
+
+      def reduced_sum
+        @node&.reduction&.reduction_sum
+      end
+
+      def reduction_count
+        @node&.reduction&.reduction_count
+      end
 
       def initialize(node, afference: 0, efference: 0, terminal_routes:, circular_routes:)
         raise ArgumentError("node is required") if node.nil?

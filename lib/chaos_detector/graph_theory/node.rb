@@ -8,17 +8,19 @@ module ChaosDetector
 
       attr_reader :is_root
       attr_accessor :node_origin
+      attr_reader :reduction
 
       def root?
         !!is_root
       end
 
-      def initialize(name: nil, root: false, node_origin: nil)
+      def initialize(name: nil, root: false, node_origin: nil, reduction: nil)
         raise ArgumentError, "Must have name or be root (name=#{name})" unless ChaosUtils.aught?(name) || root
 
         @is_root = root
         @name = @is_root ? ROOT_NODE_NAME : name
         @node_origin = node_origin
+        @reduction = reduction
       end
 
       def ==(other)
@@ -45,6 +47,12 @@ module ChaosDetector
 
       def subtitle
         nil
+      end
+
+      # Mutate this Edge; combining attributes from other:
+      def merge!(other)
+        @reduction = ChaosDetector::GraphTheory::Reduction.combine(@reduction, other.reduction)
+        self
       end
     end
   end
