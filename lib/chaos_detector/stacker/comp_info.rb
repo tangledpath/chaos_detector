@@ -16,9 +16,18 @@ module ChaosDetector
       end
 
       def ==(other)
-        name == other.name &&
+        other &&
+          name == other.name &&
           path == other.path &&
           info == other.info
+      end
+
+      def eql?(other)
+        self == other
+      end
+
+      def hash
+        [path, name, info].hash
       end
 
       def to_s

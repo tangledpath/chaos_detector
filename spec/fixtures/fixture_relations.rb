@@ -27,6 +27,10 @@ class SuperFracker
     @frack_count += 1
   end
 
+  def frack2
+    @frack_count += 1
+  end
+
   def self.frack_it
     SuperFracker.new.frack
   end

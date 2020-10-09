@@ -12,12 +12,12 @@ module ChaosDetector
 
       def_delegators :@node, :title, :subtitle
 
-      def reduced_sum
-        @node&.reduction&.reduction_sum
+      def reduction_sum
+        @node&.reduction&.reduction_sum || 1
       end
 
       def reduction_count
-        @node&.reduction&.reduction_count
+        @node&.reduction&.reduction_count || 1
       end
 
       def initialize(node, afference: 0, efference: 0, terminal_routes:, circular_routes:)

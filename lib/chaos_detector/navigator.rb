@@ -88,6 +88,7 @@ module ChaosDetector
       end
     end
 
+    # We merge/reduce edges elsewhere:
     def merge_edges
       c = Set.new(@edges_call)
       r = Set.new(@edges_ret)

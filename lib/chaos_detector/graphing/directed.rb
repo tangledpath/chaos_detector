@@ -58,11 +58,11 @@ module ChaosDetector
         rankdir: 'LR',
         ranksep: '1.0',
         # ranksep: 'equally',
-        # ratio: 'auto',
+        ratio: 'auto',
         size: '50',
         page: '50',
         # size: '10,8',
-        splines: 'spline',
+        # splines: 'spline',
         # strict: 'true'
       }.freeze
 

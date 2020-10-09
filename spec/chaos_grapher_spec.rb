@@ -209,7 +209,12 @@ describe 'ChaosGrapher' do
 
 
     it 'finds associations' do
-      walkman = associated_tracking
+      chaos_tracker.record
+      fracker = DerivedFracker.new
+      fracker.frack
+      fracker.frack2
+      walkman = chaos_tracker.stop
+
       expect(walkman).to_not be_nil
 
       # Playback should graph:
@@ -220,8 +225,14 @@ describe 'ChaosGrapher' do
       expect(graphs.chaos_graph).to_not be_nil
 
       mod_graph = graphs.chaos_graph.module_graph
-      traversal_str = mod_graph.traversal.map(&:mod_name).join(' -> ')
-      puts "Module traversal string: #{traversal_str}"
+      puts "Module traversal string: #{mod_graph.traversal.map(&:mod_name).join(' -> ')}"
+
+      fn_graph = graphs.chaos_graph.function_graph
+      puts "FN traversal string: #{fn_graph.traversal.map(&:name).join(' -> ')}"
+
+      mod_graph.nodes.each do |n|
+        p("ModNode: #{n.reduction}")
+      end
 
       graphs.render_mod_dep(graph_name: 'module-rel-dep')
       graph_fs = `ls spec/render/module-rel-dep.png`

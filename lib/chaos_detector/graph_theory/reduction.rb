@@ -6,42 +6,35 @@ module ChaosDetector
       attr_reader :reduction_count
       attr_reader :reduction_sum
 
-      def initialize(count:1, sum: 1)
-        @reduction_count = count
-        @reduction_sum = sum
+      def initialize(reduction_count: 1, reduction_sum: 1)
+        @reduction_count = reduction_count
+        @reduction_sum = reduction_sum
       end
 
       def merge!(other)
-        @reduction_sum += (other&.reduction_sum || 1)
-        @reduction_count += (other&.reduction_count || 1)
+        @reduction_sum += (other&.reduction_count || 1)
+        @reduction_count += 1 #(other&.reduction_count || 1)
+        self
+      end
+
+      def to_s
+        'Reduction (count/sum)=(%d, %d)' % [reduction_count, reduction_sum]
       end
 
       class << self
         def combine(primary, secondary)
-          reduction = primary || Reduction.new
-          reduction.merge(secondary)
+          raise ArgumentError, ('Argument #primary should be Reduction object (was %s)' % primary.class) unless primary.is_a?(ChaosDetector::GraphTheory::Reduction)
+          # raise ArgumentError, ('Argument #secondary should be Reduction object (was %s)' % secondary.class) unless secondary.is_a?(ChaosDetector::GraphTheory::Reduction)
+
+          combined = primary ? primary.clone(freeze: false) : ChaosDetector::GraphTheory::Reduction.new
+          combined.merge!(secondary)
         end
 
         def combine_all(reductions)
-          rsum = 0
-          rcnt = 0
-
-
-          reductions.reduce(Set.new) do |memo, r|
-            if r.nil?
-              rsum += 1
-              rcnt += 1
-            else
-              rsum += r.reduction_sum
-              rcnt += r.reduction_count
-            end
-          end
-
-          Reduction.new(sum: rsum, count: rcnt)
+          red_sum = reductions.reduce(0) { |tally, r| tally + (r ? r.reduction_count : 1) }
+          Reduction.new(reduction_count: reductions.count, reduction_sum: red_sum)
         end
       end
-
-
     end
   end
 end

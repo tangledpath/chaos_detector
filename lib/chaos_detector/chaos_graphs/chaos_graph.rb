@@ -135,15 +135,20 @@ module ChaosDetector
         assert_state
 
         grouped_nodes = @function_graph.nodes.group_by(&:mod_info_prime)
-        mod_nodes = grouped_nodes.select do |mod_info, _fn_nodes|
-          ChaosUtils.aught?(mod_info&.mod_name)
-        end
 
-        mod_nodes = mod_nodes.map do |mod_info, fn_nodes|
+        # mod_nodes = grouped_nodes.select do |mod_info, _fn_nodes|
+        #   ChaosUtils.aught?(mod_info&.mod_name)
+        # end
+
+        mod_nodes = grouped_nodes.filter_map do |mod_info, fn_nodes|
+          next unless ChaosUtils.aught?(mod_info&.mod_name)
+
           node_fn = fn_nodes.first
 
           fn_reductions = fn_nodes.map(&:reduction)
+
           mod_reduction = ChaosDetector::GraphTheory::Reduction.combine_all(fn_reductions)
+          # puts ("mod_reduction: %s" % mod_reduction.inspect)
 
           ChaosDetector::ChaosGraphs::ModuleNode.new(
             mod_name: mod_info.mod_name,
@@ -183,15 +188,24 @@ module ChaosDetector
         assert_state
 
         fn_edges = @function_graph.edges
-        dom_edges = group_edges_by(fn_edges, :domain, :domain)
-        puts("dom_edges: #{dom_edges.class} / #{dom_edges.first.class}")
-
         mod_edges = group_edges_by(fn_edges, :module, :module).concat(@mod_rel_graph.edges)
+        check_edges("mod_edges", mod_edges)
+
+        dom_edges = group_edges_by(mod_edges, :domain, :domain)
+        check_edges("dom_edges", dom_edges)
 
         @domain_edges = reduce_edges(dom_edges)
-        puts("domain_edges: #{@domain_edges.class} / #{@domain_edges.first.class}")
+        check_edges("@domain_edges", @domain_edges)
+
         @module_edges = reduce_edges(mod_edges)
-        puts("module_edges: #{@module_edges.class} / #{@module_edges.first.class}")
+        check_edges("@module_edges", @module_edges)
+      end
+
+      def check_edges(name, edges)
+        return
+        edges.each do |edge|
+          puts("#{name} EDGE: #{edge.class} / #{edge.reduction.class} / #{edge}")
+        end
       end
 
       def group_edges_by(edges, src, dep)
@@ -220,11 +234,15 @@ module ChaosDetector
 
           # log("Creating #{src_dep_pair.first.class} edge with #{ChaosUtils.decorate_pair(edge_src_node, edge_dep_node)}")
           if (edge_src_node != edge_dep_node)
-            cnt = g_edges.length
             ChaosDetector::GraphTheory::Edge.new(
               edge_src_node,
               edge_dep_node,
-              reduction: ChaosDetector::GraphTheory::Reduction.new(count: cnt, sum: cnt)
+              reduction: ChaosDetector::GraphTheory::Reduction.new(
+                reduction_count: g_edges.count,
+                reduction_sum: g_edges.reduce(0) do |sum, e|
+                  sum + (e.reduction&.reduction_count || 1)
+                end
+              )
             )
           end
         end

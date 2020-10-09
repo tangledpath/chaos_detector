@@ -42,16 +42,19 @@ module ChaosDetector
 
       def to_s
         s = format('[%s] -> [%s]', src_node.title, dep_node.title)
-        s << "(#{reduction.reduction_sum})" if reduction&.reduction_sum > 1
+        s << "(#{reduction.reduction_sum})" if reduction&.reduction_sum.to_i > 1
         s
       end
 
       # Mutate this Edge; combining attributes from other:
       def merge!(other)
+        raise ArgumentError, ('Argument other should be Edge object (was %s)' % other.class) unless other.is_a?(Edge)
+
         if EDGE_TYPES.dig(other.edge_type) > EDGE_TYPES.dig(edge_type)
           @edge_type = other.edge_type
         end
 
+        # puts("EDGE REDUCTION: #{@reduction.class} -- #{other.class}  // #{other.reduction.class}")
         @reduction = ChaosDetector::GraphTheory::Reduction.combine(@reduction, other.reduction)
         self
       end

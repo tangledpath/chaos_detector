@@ -14,11 +14,10 @@ module ChaosDetector
       alias mod_name name
 
       def initialize(mod_name: nil, mod_path: nil, is_root: false, node_origin: nil, domain_name: nil, mod_type: nil, reduction: nil)
-        super(name: mod_name, root: is_root, node_origin: node_origin)
+        super(name: mod_name, root: is_root, node_origin: node_origin, reduction: reduction)
         @domain_name = domain_name&.to_s
         @mod_path = mod_path
         @mod_type = mod_type
-        @reduction = reduction
       end
 
       def hash

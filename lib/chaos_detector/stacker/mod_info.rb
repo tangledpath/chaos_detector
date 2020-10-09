@@ -12,11 +12,6 @@ module ChaosDetector
         super(name: mod_name, path: mod_path, info: mod_type)
       end
 
-      def ==(other)
-        super(other)
-      end
-
-
       def component_type
         :module
       end

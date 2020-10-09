@@ -26,9 +26,10 @@ module ChaosDetector
         fn_line: nil,
         domain_name: nil,
         is_root: false,
-        mod_info: nil
+        mod_info: nil,
+        reduction: nil
       )
-        super(name: fn_name, root: is_root)
+        super(name: fn_name, root: is_root, reduction: reduction)
 
         @domain_name = domain_name&.to_s
         @fn_path = fn_path
