@@ -23,22 +23,11 @@ module ChaosDetector
         @navigator = ChaosDetector::Navigator.new(options: @options)
       end
 
+
       def playback(row_range: nil)
         fn_graph, mod_graph = @navigator.playback(row_range: row_range)
         @chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(fn_graph, mod_graph)
         @chaos_graph.infer_all
-      end
-
-      def domain_appraisal
-        @domain_appraisal ||= appraise(@chaos_graph.domain_graph)
-      end
-
-      def module_appraisal
-        @module_graph ||= appraise(@chaos_graph.module_graph)
-      end
-
-      def function_appraisal
-        @function_appraisal ||= appraise(@chaos_graph.function_graph)
       end
 
       def render_domain_dep(graph_name: 'domain-dep')
@@ -84,12 +73,6 @@ module ChaosDetector
       end
 
       private
-
-        def appraise(graph)
-          appraiser = ChaosDetector::GraphTheory::Appraiser.new(graph)
-          appraiser.appraise
-          appraiser
-        end
 
         def build_dgraph(label, nodes, edges, as_cluster: false, render: true, graph_attrs: nil)
           # nodes.each do |n|

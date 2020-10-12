@@ -57,13 +57,6 @@ describe 'ChaosGrapher' do
     chaos_tracker.stop
   end
 
-  let(:simple_tracking) do
-    chaos_tracker.record
-    Foo.foo
-    Fubarm::Foom.foom
-    chaos_tracker.stop
-  end
-
   let(:associated_tracking) do
     chaos_tracker.record
     fracker = DerivedFracker.new
@@ -152,6 +145,26 @@ describe 'ChaosGrapher' do
     end
   end
 
+  describe 'function graphs' do
+    it 'arranges' do
+      walkman = simple_tracking
+      expect(walkman).to_not be_nil
+      graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
+      graphs.playback
+      chaos_graph = graphs.chaos_graph
+      expect(chaos_graph).to_not be_nil
+      fn_graph = graphs.chaos_graph.function_graph
+
+      top_size = 6
+      expect(fn_graph.nodes).to_not be_nil
+      expect(fn_graph.nodes.length).to be >= top_size+1
+
+      arranged_graph = chaos_graph.arrange_graph(graph_type: :function, top: top_size)
+      expect(arranged_graph.nodes).to_not be_nil
+      expect(arranged_graph.nodes.length).to eq(top_size)
+    end
+  end
+
   describe 'module graphs' do
     EXPECTED_TRAVERSAL_STR = 'ROOT -> DerivedFracker -> SuperFracker -> MixinAB -> MixinAD -> MixinCD -> SuperFracker'
 
@@ -208,39 +221,43 @@ describe 'ChaosGrapher' do
     end
 
 
-    it 'finds associations' do
-      chaos_tracker.record
-      fracker = DerivedFracker.new
-      fracker.frack
-      fracker.frack2
-      walkman = chaos_tracker.stop
-
-      expect(walkman).to_not be_nil
-
-      # Playback should graph:
-      graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
-      expect(graphs.navigator).to_not be_nil
-
-      graphs.playback
-      expect(graphs.chaos_graph).to_not be_nil
-
-      mod_graph = graphs.chaos_graph.module_graph
-      puts "Module traversal string: #{mod_graph.traversal.map(&:mod_name).join(' -> ')}"
-
-      fn_graph = graphs.chaos_graph.function_graph
-      puts "FN traversal string: #{fn_graph.traversal.map(&:name).join(' -> ')}"
-
-      mod_graph.nodes.each do |n|
-        p("ModNode: #{n.reduction}")
+    context 'double frack' do
+      let(:frack_tracking) do
+        chaos_tracker.record
+        fracker = DerivedFracker.new
+        fracker.frack
+        fracker.frack2
+        chaos_tracker.stop
       end
 
-      graphs.render_mod_dep(graph_name: 'module-rel-dep')
-      graph_fs = `ls spec/render/module-rel-dep.png`
-      p(ChaosUtils.decorate(graph_fs))
-      expect(graph_fs).to be
-      expect(graph_fs.split.first).to eq('spec/render/module-rel-dep.png')
-    end
+      it 'finds associations' do
+        walkman = frack_tracking
+        expect(walkman).to_not be_nil
 
+        # Playback should graph:
+        graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
+        expect(graphs.navigator).to_not be_nil
+
+        graphs.playback
+        expect(graphs.chaos_graph).to_not be_nil
+
+        mod_graph = graphs.chaos_graph.module_graph
+        puts "Module traversal string: #{mod_graph.traversal.map(&:mod_name).join(' -> ')}"
+
+        fn_graph = graphs.chaos_graph.function_graph
+        puts "FN traversal string: #{fn_graph.traversal.map(&:name).join(' -> ')}"
+
+        mod_graph.nodes.each do |n|
+          p("ModNode: #{n.reduction}")
+        end
+
+        graphs.render_mod_dep(graph_name: 'module-rel-dep')
+        graph_fs = `ls spec/render/module-rel-dep.png`
+        p(ChaosUtils.decorate(graph_fs))
+        expect(graph_fs).to be
+        expect(graph_fs.split.first).to eq('spec/render/module-rel-dep.png')
+      end
+    end
   end
 
   describe 'domain dependencies' do

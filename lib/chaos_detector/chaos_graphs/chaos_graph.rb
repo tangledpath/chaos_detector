@@ -2,10 +2,11 @@ require_relative 'function_node'
 require_relative 'domain_node'
 require_relative 'module_node'
 
+require 'chaos_detector/chaos_utils'
+require 'chaos_detector/graph_theory/appraiser'
 require 'chaos_detector/graph_theory/edge'
 require 'chaos_detector/graph_theory/graph'
 require 'chaos_detector/graph_theory/reduction'
-require 'chaos_detector/chaos_utils'
 
 # Encapsulate and aggregates graphs for dependency tracking
 #   * Function directed graph
@@ -22,6 +23,9 @@ module ChaosDetector
       attr_reader :domain_nodes
       attr_reader :module_nodes
 
+      attr_reader :domain_appraisal
+      attr_reader :function_appraisal
+      attr_reader :module_appraisal
       attr_reader :domain_edges
       attr_reader :module_edges
       attr_reader :module_domain_edges
@@ -41,8 +45,6 @@ module ChaosDetector
         @domain_module_edges = nil
         @function_domain_edges = nil
         @domain_function_edges = nil
-        # @module_graph = nil
-        # @domain_graph = nil
       end
 
       def infer_all
@@ -53,9 +55,28 @@ module ChaosDetector
 
         # Now infer all edges:
         infer_edges
+
+        # Graph theory appraisal
+        appraise_all
         self
         # @domain_graph = build_domain_graph(@domain_edges)
         # @module_graph = build_domain_graph(@module_edges)
+      end
+
+      # ChaosDetector::ChaosGraphs::ChaosGraph.NODE_TYPES
+      def arrange_graph(graph_type:, sort_col: :total_couplings, sort_desc: true, top: nil)
+        sortcol = sort_col || :total_couplings
+        graph, appraisal = graph_data_by(graph_type: graph_type)
+
+        nodes = graph.nodes
+        node_metrics = nodes.map{|node| appraisal.metrics_for(node: node)}
+
+        n_sort = node_metrics.map{|m| m.send(sortcol)}.map.with_index.sort.map(&:last)
+        n_sort.reverse! if sort_desc
+        n_sort = n_sort.take(top) if top
+
+        new_nodes = n_sort.map{|i| nodes[i]}
+        graph.arrange_with(nodes: new_nodes)
       end
 
       def domain_graph
@@ -87,6 +108,20 @@ module ChaosDetector
       end
 
     private
+
+      # Graph theory appraisal
+      def appraise_all
+        @domain_appraisal = appraise_graph(domain_graph)
+        @module_appraisal = appraise_graph(module_graph)
+        @function_appraisal = appraise_graph(function_graph)
+      end
+
+      # Use Graph theory to appraise_graph given graph:
+      def appraise_graph(graph, sort_col: :total_couplings, sort_desc: true, top: nil)
+        appraiser = ChaosDetector::GraphTheory::Appraiser.new(graph)
+        appraiser.appraise
+        appraiser
+      end
 
       def assert_state(state = nil)
         raise "function_graph.nodes isn't set!" unless function_graph&.nodes
@@ -275,6 +310,21 @@ module ChaosDetector
         when :domain
           node.domain_name
         end
+      end
+
+      def graph_data_by(graph_type:)
+        assert_state
+
+        case graph_type
+          when :function
+            [function_graph, function_appraisal]
+          when :module
+            [module_graph, module_appraisal]
+          when :domain
+            [domain_graph, domain_appraisal]
+          else
+            raise "graph_type should be one of #{NODE_TYPES.inspect}, actual value: #{ChaosUtils.decorate(graph_type)}"
+          end
       end
 
       def lookup_node_by(node_type:, node_info:)

@@ -26,6 +26,21 @@ module ChaosDetector
         @edges = edges || []
       end
 
+      # Return a new Graph object that only includes the given nodes and matching edges:
+      def arrange_with(nodes:)
+        gnodes = nodes.map(&:clone)
+        gnodes << root_node unless(gnodes.include?(root_node))
+        gedges = edges.filter do |edge|
+          gnodes.any?{|node| edge.src_node==node || edge.dep_node==node }
+        end
+
+        ChaosDetector::GraphTheory::Graph.new(
+          root_node: root_node,
+          nodes: gnodes,
+          edges: gedges
+        )
+      end
+
       def traversal
         to_enum(:traverse).map(&:itself) # {|n| puts "TNode:#{n}"; n.label}
       end
@@ -72,6 +87,12 @@ module ChaosDetector
           @nodes[node_n]
         else
           yield.tap { |n| @nodes << n }
+        end
+      end
+
+      def edges_for_node(node)
+        edges.filter do |e|
+          e.src_node == node || e.dep_node == node
         end
       end
 

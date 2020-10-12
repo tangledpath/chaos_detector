@@ -12,12 +12,12 @@ module ChaosDetector
         @graph = graph
         @adjacency_matrix = nil
         @cyclomatic_complexity = nil
-        @node_metrics = {}
+        @nodes_appraised = {}
       end
 
       def appraise
         log('Appraising nodes.')
-        @node_metrics = appraise_nodes
+        @nodes_appraised = appraise_nodes
         @adjacency_matrix = build_adjacency_matrix
 
         # log('Measuring cyclomatic complexity.')
@@ -26,17 +26,10 @@ module ChaosDetector
         log("Performed appraisal: %s" % to_s)
       end
 
-      def node_metrics(sort_col: :total_couplings, sort_desc: true)
-        sortcol = sort_col || :total_couplings
-        metrics = @node_metrics.sort_by{|node, metrics| metrics.send(sortcol)}
-        metrics.reverse! if sort_desc
-        metrics.to_h
-      end
-
       def metrics_for(node:)
         raise ArgumentError('Node is required') if node.nil?
-        raise ArgumentError('Node [%s] has no metrics' % node) if !@node_metrics&.include?(node)
-        @node_metrics[node]
+        raise ArgumentError('Node [%s] has no metrics' % node) if !@nodes_appraised&.include?(node)
+        @nodes_appraised[node]
       end
 
       def to_s
@@ -53,7 +46,7 @@ module ChaosDetector
 
         # Gather nodes:
         buffy << 'Nodes:'
-        buffy.concat(@node_metrics.map { |n, m| "  (#{n.title})[#{n.subtitle}]: #{m}" })
+        buffy.concat(@nodes_appraised.map { |n, m| "  (#{n.title})[#{n.subtitle}]: #{m}" })
 
         buffy.join("\n")
       end
@@ -61,7 +54,7 @@ module ChaosDetector
     private
 
       def appraise_nodes
-        @node_metrics = @graph.nodes.map do |node|
+        @nodes_appraised = @graph.nodes.map do |node|
           [node, appraise_node(node)]
         end.to_h
       end

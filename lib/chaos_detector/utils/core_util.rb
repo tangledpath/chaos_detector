@@ -46,10 +46,10 @@ module ChaosDetector
           !naught?(obj)
         end
 
-        def with(obj)
+        def with(obj, aught:false)
           raise ArgumentError('with requires block') unless block_given?
 
-          yield obj if obj
+          yield obj if (aught ? aught?(obj) : !!obj)
         end
 
         def assert(expected_result=true, msg=nil, &block)
