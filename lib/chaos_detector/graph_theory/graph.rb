@@ -31,7 +31,7 @@ module ChaosDetector
         gnodes = nodes.map(&:clone)
         gnodes << root_node unless(gnodes.include?(root_node))
         gedges = edges.filter do |edge|
-          gnodes.any?{|node| edge.src_node==node || edge.dep_node==node }
+          gnodes.include?(edge.src_node) && gnodes.include?(edge.dep_node)
         end
 
         ChaosDetector::GraphTheory::Graph.new(

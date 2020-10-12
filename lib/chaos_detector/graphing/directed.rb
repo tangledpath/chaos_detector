@@ -58,9 +58,9 @@ module ChaosDetector
         rankdir: 'LR',
         ranksep: '1.0',
         # ranksep: 'equally',
-        ratio: 'auto',
-        size: '50',
-        page: '50',
+        # ratio: 'auto',
+        # size: '50',
+        # page: '50',
         # size: '10,8',
         # splines: 'spline',
         # strict: 'true'
@@ -71,7 +71,7 @@ module ChaosDetector
         bgcolor: CLR_NICEGREY,
         fillcolor: CLR_NICEGREY,
         fontsize: '24',
-        # rank: 'same',
+        rank: 'same',
         fontname: 'Verdana',
         labelloc: 't',
         margin: '32,32',
@@ -227,7 +227,7 @@ module ChaosDetector
         end
       end
 
-      def add_edges(edges, calc_weight:false)
+      def add_edges(edges, calc_weight:true)
         assert_graph_state
 
         # @node_hash.each do |k, v|
@@ -259,13 +259,15 @@ module ChaosDetector
             penwidth: weight,
           )
 
+          attrs[:headlabel] = "%d" % [e.weight] if calc_weight
+
           if e.src_node.domain_name == e.dep_node.domain_name
             attrs.merge!(
               style: 'dotted',
               color: CLR_ORANGE,
               constraint: 'true',
-              headport: 'w',
-              tailport: 'e',
+              # headport: 'w',
+              # tailport: 'e',
             )
             # puts "ATTRS: #{attrs}"
           end

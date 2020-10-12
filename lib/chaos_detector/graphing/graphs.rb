@@ -38,7 +38,7 @@ module ChaosDetector
 
         },
         module: {
-
+          packmode: 'clust'
         },
       }
 
@@ -50,7 +50,7 @@ module ChaosDetector
         graph_attrs = GRAPH_TYPE_ATTRS[graph_type]
 
         dgraph = if domains #&& graph_type != :cluster
-          build_domain_dgraph(graph_name, rgraph.nodes, rgraph.edges, as_cluster: as_cluster, graph_attrs: graph_attrs)
+          build_domain_dgraph(graph_name, rgraph.nodes, rgraph.edges, graph_attrs: graph_attrs)
         else
           build_dgraph(graph_name, rgraph.nodes, rgraph.edges, as_cluster: as_cluster, graph_attrs: graph_attrs)
         end
@@ -58,49 +58,16 @@ module ChaosDetector
         dgraph.rendered_path
       end
 
-      def render_domain_dep(graph_name: 'domain-dep')
-        graph_attrs = {
-          ratio: 'auto',
-          size: '8, 8',
-        }
-        dgraph = build_dgraph(graph_name, chaos_graph.domain_nodes, chaos_graph.domain_edges, as_cluster: true, graph_attrs: graph_attrs)
-        dgraph.rendered_path
+      def render_domain_dep(graph_name: 'domain-dep', domain_graph: nil)
+        render_dep_graph(:domain, as_cluster: true, graph: domain_graph, name: graph_name)
       end
 
       def render_fn_dep(graph_name: 'fn-dep', function_graph: nil, domains: false)
-        fn_graph = function_graph ? function_graph : chaos_graph.function_graph
-        nodes = fn_graph.nodes
-        edges = fn_graph.edges
-
-        dgraph = if domains
-          build_domain_dgraph(graph_name, nodes, edges, as_cluster: as_cluster)
-        else
-          build_dgraph(graph_name, nodes, edges)
-        end
-
-        dgraph.rendered_path
+        render_dep_graph(:function, as_cluster: true, graph: function_graph, domains: domains, name: graph_name)
       end
 
       def render_mod_dep(graph_name: 'module-dep', module_graph: nil, domains: false)
-        graph_attrs = {
-          # ratio: 'auto',
-          # size: '50, 50',
-          # newrank: 'false',
-          # ranksep: '1.0',
-          splines: 'ortho',
-        }
-
-        mod_graph = module_graph ? module_graph : chaos_graph.module_graph
-        nodes = mod_graph.nodes
-        edges = mod_graph.edges
-
-        dgraph = if domains
-          build_domain_dgraph(graph_name, nodes, edges, graph_attrs: graph_attrs)
-        else
-          build_dgraph(graph_name, nodes, edges, graph_attrs: graph_attrs)
-        end
-
-        dgraph.rendered_path
+        render_dep_graph(:module, graph: module_graph, domains: domains, name: graph_name)
       end
 
       private
