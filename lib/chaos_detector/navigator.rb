@@ -37,7 +37,7 @@ module ChaosDetector
 
     ### Playback of walkman CSV file:
     def playback(row_range: nil)
-      log('Chaos playing through navigator.  Expected lines: ', object: @walkman.count)
+      log('Chaos playing through navigator.  Total lines: ', object: @walkman.count)
 
       @nodes = Set.new
       @edges_call = Set.new

@@ -66,14 +66,16 @@ module ChaosDetector
       # ChaosDetector::ChaosGraphs::ChaosGraph.NODE_TYPES
       def arrange_graph(graph_type:, sort_col: :total_couplings, sort_desc: true, top: nil)
         sortcol = sort_col || :total_couplings
-        graph, appraisal = graph_data_by(graph_type: graph_type)
+        graph, appraisal = graph_data_for(graph_type: graph_type)
 
         nodes = graph.nodes
         node_metrics = nodes.map{|node| appraisal.metrics_for(node: node)}
 
         n_sort = node_metrics.map{|m| m.send(sortcol)}.map.with_index.sort.map(&:last)
         n_sort.reverse! if sort_desc
-        n_sort = n_sort.take(top) if top
+        ChaosUtils.with(top.to_i) do |t|
+          n_sort = n_sort.take(t)
+        end
 
         new_nodes = n_sort.map{|i| nodes[i]}
         graph.arrange_with(nodes: new_nodes)
@@ -107,10 +109,27 @@ module ChaosDetector
         ChaosDetector::GraphTheory::Graph.new(root_node: root_node_module, nodes: @module_nodes, edges: edges)
       end
 
+      ## Return [graph, appraisal] for given type:
+      def graph_data_for(graph_type:)
+        assert_state(:inferred)
+
+        case graph_type
+          when :function
+            [function_graph, function_appraisal]
+          when :module
+            [module_graph, module_appraisal]
+          when :domain
+            [domain_graph, domain_appraisal]
+          else
+            raise "graph_type should be one of #{NODE_TYPES.inspect}, actual value: #{ChaosUtils.decorate(graph_type)}"
+          end
+      end
+
     private
 
       # Graph theory appraisal
       def appraise_all
+        log("Appraising graphs")
         @domain_appraisal = appraise_graph(domain_graph)
         @module_appraisal = appraise_graph(module_graph)
         @function_appraisal = appraise_graph(function_graph)
@@ -310,21 +329,6 @@ module ChaosDetector
         when :domain
           node.domain_name
         end
-      end
-
-      def graph_data_by(graph_type:)
-        assert_state
-
-        case graph_type
-          when :function
-            [function_graph, function_appraisal]
-          when :module
-            [module_graph, module_appraisal]
-          when :domain
-            [domain_graph, domain_appraisal]
-          else
-            raise "graph_type should be one of #{NODE_TYPES.inspect}, actual value: #{ChaosUtils.decorate(graph_type)}"
-          end
       end
 
       def lookup_node_by(node_type:, node_info:)

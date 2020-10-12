@@ -51,7 +51,17 @@ module ChaosDetector
     #   frame A Frame object with its attributes contained in the CSV row
     def playback(row_range: nil)
       started_at = Time.now
-      log("Walkman replaying CSV with #{count} lines: #{csv_path}")
+
+      if row_range
+        log('Walkman replaying CSV with (row_range) %d/%d lines: %s' % [
+          [count, row_range.max].min,
+          count,
+          csv_path
+        ])
+      else
+        log("Walkman replaying CSV with #{count} lines: #{csv_path}")
+      end
+
       @rownum = 0
       row_cur = nil
       CSV.foreach(csv_path, headers: true) do |row|

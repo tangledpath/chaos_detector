@@ -42,7 +42,7 @@ module ChaosDetector
         end
 
         def squish(str)
-          str.strip.split.map(&:strip).join(SPACE)
+          str.to_s.strip.split.map(&:strip).join(SPACE)
         end
 
         def titleize(obj)

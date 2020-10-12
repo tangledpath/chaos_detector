@@ -23,11 +23,39 @@ module ChaosDetector
         @navigator = ChaosDetector::Navigator.new(options: @options)
       end
 
-
       def playback(row_range: nil)
         fn_graph, mod_graph = @navigator.playback(row_range: row_range)
         @chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(fn_graph, mod_graph)
         @chaos_graph.infer_all
+      end
+
+      GRAPH_TYPE_ATTRS = {
+        domain: {
+          ratio: 'auto',
+          size: '8, 8',
+        },
+        function: {
+
+        },
+        module: {
+
+        },
+      }
+
+      def render_dep_graph(graph_type, graph:nil, as_cluster: false, domains: false, name: nil)
+        g, _appraiser = chaos_graph.graph_data_for(graph_type: graph_type)
+        rgraph = graph ? graph : g
+        graph_name = name ? name : "#{graph_type}-dep"
+
+        graph_attrs = GRAPH_TYPE_ATTRS[graph_type]
+
+        dgraph = if domains #&& graph_type != :cluster
+          build_domain_dgraph(graph_name, rgraph.nodes, rgraph.edges, as_cluster: as_cluster, graph_attrs: graph_attrs)
+        else
+          build_dgraph(graph_name, rgraph.nodes, rgraph.edges, as_cluster: as_cluster, graph_attrs: graph_attrs)
+        end
+
+        dgraph.rendered_path
       end
 
       def render_domain_dep(graph_name: 'domain-dep')
@@ -39,12 +67,13 @@ module ChaosDetector
         dgraph.rendered_path
       end
 
-      def render_fn_dep(graph_name: 'fn-dep', domains: false)
-        nodes = @chaos_graph.function_graph.nodes
-        edges = @chaos_graph.function_graph.edges
+      def render_fn_dep(graph_name: 'fn-dep', function_graph: nil, domains: false)
+        fn_graph = function_graph ? function_graph : chaos_graph.function_graph
+        nodes = fn_graph.nodes
+        edges = fn_graph.edges
 
         dgraph = if domains
-          build_domain_dgraph(graph_name, nodes, edges)
+          build_domain_dgraph(graph_name, nodes, edges, as_cluster: as_cluster)
         else
           build_dgraph(graph_name, nodes, edges)
         end
@@ -52,7 +81,7 @@ module ChaosDetector
         dgraph.rendered_path
       end
 
-      def render_mod_dep(graph_name: 'module-dep', domains: false)
+      def render_mod_dep(graph_name: 'module-dep', module_graph: nil, domains: false)
         graph_attrs = {
           # ratio: 'auto',
           # size: '50, 50',
@@ -60,8 +89,10 @@ module ChaosDetector
           # ranksep: '1.0',
           splines: 'ortho',
         }
-        nodes = chaos_graph.module_nodes
-        edges = chaos_graph.module_edges
+
+        mod_graph = module_graph ? module_graph : chaos_graph.module_graph
+        nodes = mod_graph.nodes
+        edges = mod_graph.edges
 
         dgraph = if domains
           build_domain_dgraph(graph_name, nodes, edges, graph_attrs: graph_attrs)
@@ -93,7 +124,8 @@ module ChaosDetector
 
         def build_domain_dgraph(graph_name, nodes, edges, render: true, graph_attrs: nil)
           # Add domains as cluster/subgraph nodes:
-          dgraph = build_dgraph(graph_name, chaos_graph.domain_nodes, [], as_cluster: true, render: false, graph_attrs: graph_attrs)
+          domain_nodes = nodes.map{|node| chaos_graph.domain_node_for(name: node.domain_name) }
+          dgraph = build_dgraph(graph_name, domain_nodes, [], as_cluster: true, render: false, graph_attrs: graph_attrs)
 
           # Add nodes to domains:
           dgraph.append_nodes(nodes) do |node|
