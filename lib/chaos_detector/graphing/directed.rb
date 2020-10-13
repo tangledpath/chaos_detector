@@ -12,6 +12,8 @@ module ChaosDetector
       attr_reader :rendered_path
       attr_reader :edges
 
+      BR = '<BR/>'
+      LF = "\r"
       EDGE_MIN = 0.5
       EDGE_BASELINE = 7.5
 
@@ -118,23 +120,13 @@ module ChaosDetector
 
       TBL_HTML = <<~HTML
         <TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4'>
-          %<rows>s
+          %s
         </TABLE>
       HTML
 
-      TBL_ROW_HTML = <<~HTML
-        <TR BGCOLOR='%<color>s'>
-          %<cells>s
-        </TR>
-      HTML
-
-      TBL_CELL_HTML = <<~HTML
-        <TD BGCOLOR='%<color>'>
-          %<cell>s
-        </TR>
-      HTML
-
-      BOLD_HTML = '<BOLD>%s</BOLD>'
+      TBL_ROW_HTML = %(<TR BGCOLOR="%<color>s">%<cells>s</TR>)
+      TBL_CELL_HTML = %(<TD>%s</TD>)
+      BOLD_HTML = %(<BOLD>%s</BOLD>)
 
       # TODO: integrate options as needed:
       def initialize(render_folder: nil)
@@ -152,17 +144,10 @@ module ChaosDetector
         @cluster_node_hash.clear
         @cluster_node_hash.clear
 
-        graph_lbl = "<b>#{@title}</b>"
-
-        subtitle = graph_attrs&.dig(:subtitle)
-        if subtitle
-          graph_lbl += "<br/><FONT POINT-SIZE='32'>#{subtitle}</FONT><br/>"
-          # Fake out some padding:
-          graph_lbl += "<br/><FONT POINT-SIZE='20'> </FONT><br/>"
-        end
+        lbl = title_html(@title, subtitle: graph_attrs&.dig(:subtitle))
 
         attrs = {
-          label: "<#{graph_lbl}>",
+          label: "<#{lbl}>",
           **GRAPH_ATTR,
         }
         attrs.merge(graph_attrs) if graph_attrs&.any?
@@ -172,47 +157,66 @@ module ChaosDetector
       end
 
       def node_label(node, metrics_table: true)
-        buffy = [title_html(node.title, subtitle: node.subtitle)]
-        buffy << html_tbl_from(hash: node.graph_props) if metrics_table
-        '<%s>' % buffy.join("\n")
+        if metrics_table
+          tbl_hash = {title: node.title,  subtitle: node.subtitle,  **node.graph_props}
+          html = html_tbl_from(hash: tbl_hash) do |k, v|
+            if k==:title
+              [in_font(k, font_size: 24), in_font(v, font_size: 16)]#[BOLD_HTML % k, BOLD_HTML % v]
+            else
+              [k, v]
+            end
+          end
+        else
+          html = title_html(node.title, subtitle: node.subtitle)
+        end
+        html.strip!
+        # puts '_' * 50
+        # puts "html: #{html}"
+        '<%s>' % html
       end
 
       # HTML Label with subtitle:
-      def title_html(title, subtitle:nil, font_size:24)
-        graph_lbl = "<FONT POINT-SIZE='#{font_size}'>#{title}</FONT>"
+      def title_html(title, subtitle:nil, font_size:24, subtitle_fontsize:nil)
+        lbl_buf = [in_font(title, font_size: font_size)]
 
+        sub_fontsize = subtitle_fontsize || 3 * font_size / 4
         if ChaosUtils.aught?(subtitle)
-          graph_lbl += "<br/><FONT POINT-SIZE='#{3 * font_size / 4}'>#{subtitle}</FONT><br/>"
-          # Fake out some padding:
-          graph_lbl += "<br/><FONT POINT-SIZE='20'> </FONT><br/>"
+          lbl_buf << in_font(subtitle, font_size: sub_fontsize)
         end
 
-        "#{graph_lbl}"
+        # Fake out some padding:
+        lbl_buf << in_font(' ', font_size: sub_fontsize)
+
+        lbl_buf.join(BR)
+      end
+
+      def in_font(str, font_size:12)
+        "<FONT POINT-SIZE='#{font_size}'>#{str}</FONT>"
       end
 
       def html_tbl_from(hash:)
         trs = hash.map.with_index do |h, n|
           k, v = h
-          key_td = TBL_CELL_HTML % { cell: BOLD_HTML % k }
-          val_td = TBL_CELL_HTML % { cell: v }
-          TBL_ROW_HTML % {
+          key_content, val_content = yield(k, v) if block_given?
+          key_td = TBL_CELL_HTML % (key_content || k)
+          val_td = TBL_CELL_HTML % (val_content || v)
+          td_html = [key_td, val_td].join
+          html = format(TBL_ROW_HTML, {
             color: n.even? ? 'blue' : 'white',
-            cells: [key_td, val_td].join(' ')
-          }
+            cells: td_html.strip
+          })
+          html.strip
         end
 
-        TBL_HTML % trs.join('\n')
+        TBL_HTML % trs.join().strip
       end
-
-
-
 
       def assert_graph_state
         raise '@root_graph is not set yet.  Call create_directed_graph.' unless @root_graph
       end
 
       # Add node to given parent_node, assuming parent_node is a subgraph
-      def add_node_to_parent(node, parent_node:, as_cluster: false)
+      def add_node_to_parent(node, parent_node:, as_cluster: false, metrics_table:false)
         assert_graph_state
         raise 'node is required' unless node
 
@@ -224,17 +228,17 @@ module ChaosDetector
           @root_graph
         end
 
-        add_node_to_graph(node, graph: parent_graph, as_cluster: as_cluster)
+        add_node_to_graph(node, graph: parent_graph, as_cluster: as_cluster, metrics_table: metrics_table)
       end
 
-      def add_node_to_graph(node, graph: nil, as_cluster: false)
+      def add_node_to_graph(node, graph: nil, as_cluster: false, metrics_table:false)
         assert_graph_state
         raise 'node is required' unless node
 
         parent_graph = graph || @root_graph
         key = node.to_k
 
-        attrs = { label: node_label(node) }
+        attrs = { label: node_label(node, metrics_table: metrics_table) }
 
         if as_cluster
           # tab good shape
@@ -253,7 +257,7 @@ module ChaosDetector
         end
       end
 
-      def append_nodes(nodes, as_cluster: false)
+      def append_nodes(nodes, as_cluster: false, metrics_table: false)
         assert_graph_state
         return unless nodes
         # raise 'node is required' unless nodes
@@ -261,7 +265,7 @@ module ChaosDetector
         nodes.each do |node|
           parent_node = block_given? ? yield(node) : nil
           # puts "gotit #{parent_node}" if parent_node
-          add_node_to_parent(node, parent_node: parent_node, as_cluster: as_cluster)
+          add_node_to_parent(node, parent_node: parent_node, as_cluster: as_cluster, metrics_table: metrics_table)
         end
       end
 

@@ -50,6 +50,10 @@ module ChaosUtils
       ChaosDetector::Utils::FSUtil.rel_path(dir_path, from_path: from_path)
     end
 
+    def squish(str)
+      ChaosDetector::Utils::StrUtil.squish(str)
+    end
+
     def with(obj)
       ChaosDetector::Utils::CoreUtil.with(obj) {yield obj}
     end

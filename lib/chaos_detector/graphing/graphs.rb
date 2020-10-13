@@ -7,6 +7,7 @@ require 'chaos_detector/graphing/directed'
 require 'chaos_detector/chaos_graphs/chaos_graph'
 require 'chaos_detector/utils/str_util'
 require 'chaos_detector/chaos_utils'
+require 'rubyvis'
 
 module ChaosDetector
   module Graphing
@@ -43,7 +44,40 @@ module ChaosDetector
         },
       }
 
-      def render_dep_graph(graph_type, graph:nil, as_cluster: false, domains: false, name: nil, root: true)
+      def adjacency_graph(graph_type, graph:nil, name: nil)
+        rgraph = graph || chaos_graph
+        g, appraiser = rgraph.graph_data_for(graph_type: graph_type)
+        # rgraph = graph ? graph : g
+        # graph_name = name ? name : "#{graph_type}-dep"
+
+        # graph_attrs = GRAPH_TYPE_ATTRS[graph_type]
+        matrix = appraiser.adjacency_matrix.to_a
+        puts "MATRIX COUNT: #{matrix.count} / #{matrix.length}"
+        w = Math.sqrt(matrix.count)
+        h = w
+
+        vis = pv.Panel.new()
+          .width(w)
+          .height(h)
+          .bottom(0)
+          .left(0)
+          .right(0)
+          .top(0)
+
+          vis.add(Rubyvis::Layout::Grid).rows(matrix.to_a).
+            cell.add(Rubyvis::Bar).
+            fill_style(Rubyvis.ramp("white", "black")).anchor("center").
+            add(Rubyvis::Label).
+            text_style(Rubyvis.ramp("black","white")).
+            text(lambda{|v| "%0.2f" % v })
+
+        vis.render();
+        svg = vis.to_svg()
+        File.write("foo.svg", svg)
+      end
+
+
+      def render_dep_graph(graph_type, graph:nil, as_cluster: false, domains: false, name: nil, root: true, metrics_table: true)
         g, _appraiser = chaos_graph.graph_data_for(graph_type: graph_type)
         rgraph = graph ? graph : g
         graph_name = name ? name : "#{graph_type}-dep"
@@ -51,9 +85,9 @@ module ChaosDetector
         graph_attrs = GRAPH_TYPE_ATTRS[graph_type]
 
         dgraph = if domains #&& graph_type != :cluster
-          build_domain_dgraph(graph_name, rgraph.nodes, rgraph.edges, graph_attrs: graph_attrs)
+          build_domain_dgraph(graph_name, rgraph.nodes, rgraph.edges, graph_attrs: graph_attrs, metrics_table: metrics_table)
         else
-          build_dgraph(graph_name, rgraph.nodes, rgraph.edges, as_cluster: as_cluster, graph_attrs: graph_attrs)
+          build_dgraph(graph_name, rgraph.nodes, rgraph.edges, as_cluster: as_cluster, graph_attrs: graph_attrs, metrics_table: metrics_table)
         end
 
         dgraph.rendered_path
@@ -73,7 +107,7 @@ module ChaosDetector
 
       private
 
-        def build_dgraph(label, nodes, edges, as_cluster: false, render: true, graph_attrs: nil)
+        def build_dgraph(label, nodes, edges, as_cluster: false, render: true, graph_attrs: nil, metrics_table: false)
           # nodes.each do |n|
           #   p("#{label} Nodes: #{ChaosUtils.decorate(n.title)}")
           # end
@@ -84,19 +118,19 @@ module ChaosDetector
 
           dgraph = ChaosDetector::Graphing::Directed.new(render_folder: @render_folder)
           dgraph.create_directed_graph(label, graph_attrs: graph_attrs)
-          dgraph.append_nodes(nodes, as_cluster: as_cluster)
+          dgraph.append_nodes(nodes, as_cluster: as_cluster, metrics_table: metrics_table)
           dgraph.add_edges(edges)
           dgraph.render_graph if render
           dgraph
         end
 
-        def build_domain_dgraph(graph_name, nodes, edges, render: true, graph_attrs: nil)
+        def build_domain_dgraph(graph_name, nodes, edges, render: true, graph_attrs: nil, metrics_table: false)
           # Add domains as cluster/subgraph nodes:
           domain_nodes = nodes.map{|node| chaos_graph.domain_node_for(name: node.domain_name) }
-          dgraph = build_dgraph(graph_name, domain_nodes, [], as_cluster: true, render: false, graph_attrs: graph_attrs)
+          dgraph = build_dgraph(graph_name, domain_nodes, [], as_cluster: true, render: false, graph_attrs: graph_attrs, metrics_table: metrics_table)
 
           # Add nodes to domains:
-          dgraph.append_nodes(nodes) do |node|
+          dgraph.append_nodes(nodes, metrics_table: false) do |node|
             chaos_graph.domain_node_for(name: node.domain_name)
           end
           dgraph.add_edges(edges)

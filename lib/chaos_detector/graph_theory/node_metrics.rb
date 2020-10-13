@@ -3,7 +3,7 @@ require 'forwardable'
 module ChaosDetector
   module GraphTheory
     class NodeMetrics
-      GRAPH_PROPERTIES = %i[ total_couplings afference efference instability].freeze
+      GRAPH_PROPERTIES = %i[ total_couplings afference efference instability ].freeze
 
       extend Forwardable
       attr_accessor :afference
@@ -52,7 +52,12 @@ module ChaosDetector
       end
 
       def to_h
-        GRAPH_PROPERTIES.map{ |prop| [prop, self.send(prop)] }.to_h
+        {
+          afference: afference,
+          efference: efference,
+          instability: instability.round(2),
+          total_couplings: total_couplings
+        }
       end
 
       def to_s
