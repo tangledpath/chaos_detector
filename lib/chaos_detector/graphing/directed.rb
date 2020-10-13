@@ -136,20 +136,6 @@ module ChaosDetector
 
       BOLD_HTML = '<BOLD>%s</BOLD>'
 
-      def hash_to_table(hash)
-        trs = hash.map.with_index do |h, n|
-          k, v = h
-          key_td = TBL_CELL_HTML % { cell: BOLD_HTML % k }
-          val_td = TBL_CELL_HTML % { cell: v }
-          TBL_ROW_HTML % {
-            color: n.even? ? 'blue' : 'white',
-            cells: [key_td, val_td].join(' ')
-          }
-        end
-
-        TBL_HTML % trs.join('\n')
-      end
-
       # TODO: integrate options as needed:
       def initialize(render_folder: nil)
         @root_graph = nil
@@ -185,18 +171,41 @@ module ChaosDetector
         @root_graph = GraphViz.digraph(:G, attrs)
       end
 
-      # HTML Label with subtitle:
-      def html_label(node, subtitle:nil, font_size:24)
-        graph_lbl = "<FONT POINT-SIZE='#{font_size}'>#{node.title}</FONT>"
+      def node_label(node, metrics_table: true)
+        buffy = [title_html(node.title, subtitle: node.subtitle)]
+        buffy << html_tbl_from(hash: node.graph_props) if metrics_table
+        '<%s>' % buffy.join("\n")
+      end
 
-        if ChaosUtils.aught?(node.subtitle)
-          graph_lbl += "<br/><FONT POINT-SIZE='#{3 * font_size / 4}'>#{node.subtitle}</FONT><br/>"
+      # HTML Label with subtitle:
+      def title_html(title, subtitle:nil, font_size:24)
+        graph_lbl = "<FONT POINT-SIZE='#{font_size}'>#{title}</FONT>"
+
+        if ChaosUtils.aught?(subtitle)
+          graph_lbl += "<br/><FONT POINT-SIZE='#{3 * font_size / 4}'>#{subtitle}</FONT><br/>"
           # Fake out some padding:
           graph_lbl += "<br/><FONT POINT-SIZE='20'> </FONT><br/>"
         end
 
-        "<#{graph_lbl}>"
+        "#{graph_lbl}"
       end
+
+      def html_tbl_from(hash:)
+        trs = hash.map.with_index do |h, n|
+          k, v = h
+          key_td = TBL_CELL_HTML % { cell: BOLD_HTML % k }
+          val_td = TBL_CELL_HTML % { cell: v }
+          TBL_ROW_HTML % {
+            color: n.even? ? 'blue' : 'white',
+            cells: [key_td, val_td].join(' ')
+          }
+        end
+
+        TBL_HTML % trs.join('\n')
+      end
+
+
+
 
       def assert_graph_state
         raise '@root_graph is not set yet.  Call create_directed_graph.' unless @root_graph
@@ -225,7 +234,7 @@ module ChaosDetector
         parent_graph = graph || @root_graph
         key = node.to_k
 
-        attrs = { label: html_label(node) }
+        attrs = { label: node_label(node) }
 
         if as_cluster
           # tab good shape
@@ -300,7 +309,7 @@ module ChaosDetector
 
           if calc_weight
             attrs[:headlabel] = "%d" % [e.weight]
-            attrs[:labeldistance] = ".0012" # points
+            # attrs[:labeldistance] = ".00012" # points
           end
 
           if e.src_node.domain_name == e.dep_node.domain_name
