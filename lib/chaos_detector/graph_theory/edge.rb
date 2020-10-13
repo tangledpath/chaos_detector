@@ -4,6 +4,7 @@ module ChaosDetector
       attr_accessor :edge_type
       attr_reader :src_node
       attr_reader :dep_node
+      attr_accessor :graph_props
       attr_accessor :reduction
 
       EDGE_TYPES = {
@@ -21,6 +22,7 @@ module ChaosDetector
         @dep_node = dep_node
         @reduction = reduction
         @edge_type = edge_type
+        @graph_props = nil
       end
 
       def weight

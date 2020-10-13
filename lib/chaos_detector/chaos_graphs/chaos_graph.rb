@@ -64,7 +64,7 @@ module ChaosDetector
       end
 
       # ChaosDetector::ChaosGraphs::ChaosGraph.NODE_TYPES
-      def arrange_graph(graph_type:, sort_col: :total_couplings, sort_desc: true, top: nil)
+      def arrange_graph(graph_type:, sort_col: :total_couplings, root: true, sort_desc: true, top: nil)
         sortcol = sort_col || :total_couplings
         graph, appraisal = graph_data_for(graph_type: graph_type)
 
@@ -78,7 +78,7 @@ module ChaosDetector
         end
 
         new_nodes = n_sort.map{|i| nodes[i]}
-        graph.arrange_with(nodes: new_nodes)
+        graph.arrange_with(nodes: new_nodes, include_root: root)
       end
 
       def domain_graph
@@ -300,8 +300,6 @@ module ChaosDetector
             )
           end
         end
-
-        # TODO: Edge reduction method for here and for after adding additional module edges.
       end
 
       def reduce_edges(edges)

@@ -38,11 +38,12 @@ module ChaosDetector
 
         },
         module: {
+          rankdir: 'TB',
           packmode: 'clust'
         },
       }
 
-      def render_dep_graph(graph_type, graph:nil, as_cluster: false, domains: false, name: nil)
+      def render_dep_graph(graph_type, graph:nil, as_cluster: false, domains: false, name: nil, root: true)
         g, _appraiser = chaos_graph.graph_data_for(graph_type: graph_type)
         rgraph = graph ? graph : g
         graph_name = name ? name : "#{graph_type}-dep"

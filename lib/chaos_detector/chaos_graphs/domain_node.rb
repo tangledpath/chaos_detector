@@ -26,12 +26,18 @@ module ChaosDetector
       end
 
       def subtitle
+        root? ? 'Root Node' : ''
+      end
+
+      def graph_props
+        domain_props = {}
         if reduction
-          "Reduced: from %d modules and %d functions" % [
-            reduction.reduction_count,
-            reduction.reduction_sum,
-          ]
+          domain_props.merge!(
+            cardinality_modules: reduction.reduction_count,
+            cardinality_functions: reduction.reduction_sum
+          )
         end
+        super.merge(domain_props)
       end
 
       # Must be name/domain_name for comparisons:

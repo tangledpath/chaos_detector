@@ -98,8 +98,8 @@ module ChaosDetector
         constraint: 'true',
         dir:'forward',
         fontname:'Verdana',
-        fontcolor:CLR_WHITE,
-        fontsize:'8',
+        fontcolor:CLR_ORANGE,
+        fontsize:'12',
         minlen: '3.0',
         style:'solid',
         # penwidth:'1.5',
@@ -110,6 +110,45 @@ module ChaosDetector
         size: '0.5, 0.5',
         style: 'invis',
       }
+
+      # Status messages:
+      PRE_STATUS_MSG = %(
+        Will update %<count>d record types from [%<from_type>s] to [%<to_type>s]'
+      ).freeze
+
+      TBL_HTML = <<~HTML
+        <TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4'>
+          %<rows>s
+        </TABLE>
+      HTML
+
+      TBL_ROW_HTML = <<~HTML
+        <TR BGCOLOR='%<color>s'>
+          %<cells>s
+        </TR>
+      HTML
+
+      TBL_CELL_HTML = <<~HTML
+        <TD BGCOLOR='%<color>'>
+          %<cell>s
+        </TR>
+      HTML
+
+      BOLD_HTML = '<BOLD>%s</BOLD>'
+
+      def hash_to_table(hash)
+        trs = hash.map.with_index do |h, n|
+          k, v = h
+          key_td = TBL_CELL_HTML % { cell: BOLD_HTML % k }
+          val_td = TBL_CELL_HTML % { cell: v }
+          TBL_ROW_HTML % {
+            color: n.even? ? 'blue' : 'white',
+            cells: [key_td, val_td].join(' ')
+          }
+        end
+
+        TBL_HTML % trs.join('\n')
+      end
 
       # TODO: integrate options as needed:
       def initialize(render_folder: nil)
@@ -259,7 +298,10 @@ module ChaosDetector
             penwidth: weight,
           )
 
-          attrs[:headlabel] = "%d" % [e.weight] if calc_weight
+          if calc_weight
+            attrs[:headlabel] = "%d" % [e.weight]
+            attrs[:labeldistance] = ".0012" # points
+          end
 
           if e.src_node.domain_name == e.dep_node.domain_name
             attrs.merge!(

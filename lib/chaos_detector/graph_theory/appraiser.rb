@@ -15,9 +15,9 @@ module ChaosDetector
         @nodes_appraised = {}
       end
 
-      def appraise
+      def appraise(update_nodes:true)
         log('Appraising nodes.')
-        @nodes_appraised = appraise_nodes
+        @nodes_appraised = appraise_nodes!(update_nodes: update_nodes)
         @adjacency_matrix = build_adjacency_matrix
 
         # log('Measuring cyclomatic complexity.')
@@ -51,13 +51,24 @@ module ChaosDetector
         buffy.join("\n")
       end
 
-    private
-
-      def appraise_nodes
-        @nodes_appraised = @graph.nodes.map do |node|
-          [node, appraise_node(node)]
+      # Returns Hash<Node, NodeMetrics>
+      #   update_nodes: Updates all nodes' :graph_props to appraisal metrics hash:
+      def appraise_nodes!(update_nodes: true)
+        node_metrics = @graph.nodes.map do |node|
+          metrics = appraise_node(node)
+          [node, metrics]
         end.to_h
+
+        if update_nodes
+          node_metrics.each do |node, metrics|
+            node.graph_props = metrics.to_h
+          end
+        end
+
+        node_metrics
       end
+
+    private
 
       # For each node, measure fan-in(Ca) and fan-out(Ce)
       def appraise_node(node)

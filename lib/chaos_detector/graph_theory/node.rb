@@ -9,6 +9,7 @@ module ChaosDetector
       attr_reader :is_root
       attr_accessor :node_origin
       attr_reader :reduction
+      attr_accessor :graph_props
 
       def root?
         !!is_root
@@ -21,6 +22,7 @@ module ChaosDetector
         @name = @is_root ? ROOT_NODE_NAME : name
         @node_origin = node_origin
         @reduction = reduction
+        @graph_props = {}
       end
 
       def ==(other)
@@ -48,6 +50,11 @@ module ChaosDetector
       def subtitle
         nil
       end
+
+      def root?
+        !!is_root
+      end
+
 
       # Mutate this Edge; combining attributes from other:
       def merge!(other)

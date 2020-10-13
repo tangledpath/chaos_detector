@@ -3,6 +3,8 @@ require 'forwardable'
 module ChaosDetector
   module GraphTheory
     class NodeMetrics
+      GRAPH_PROPERTIES = %i[ total_couplings afference efference instability].freeze
+
       extend Forwardable
       attr_accessor :afference
       attr_accessor :efference
@@ -47,6 +49,10 @@ module ChaosDetector
 
       def summary
         'I = Ce / (Ce + Ca)'
+      end
+
+      def to_h
+        GRAPH_PROPERTIES.map{ |prop| [prop, self.send(prop)] }.to_h
       end
 
       def to_s

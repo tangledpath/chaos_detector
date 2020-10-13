@@ -42,6 +42,16 @@ module ChaosDetector
         '%s: (%s)' % [mod_type, domain_name]
       end
 
+      def graph_props
+        domain_props = {}
+        if reduction
+          domain_props.merge!(
+            cardinality_functions: reduction.reduction_count
+          )
+        end
+        super.merge(domain_props)
+      end
+
       def short_path
         ChaosDetector::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
       end

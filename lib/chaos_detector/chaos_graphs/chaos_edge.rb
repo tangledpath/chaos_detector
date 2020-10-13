@@ -24,6 +24,10 @@ module ChaosDetector
         m << ChaosUtils.decorate(@dep_type, clamp: :parens)
       end
 
+      def graph_props
+
+      end
+
       def log(msg)
         ChaosUtils.log_msg(msg, subject: 'ChaosEdge')
       end

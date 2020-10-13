@@ -60,7 +60,7 @@ module ChaosDetector
           end
         end
 
-        # @return subset of given properties not contained withing given object
+        # @return subset of given properties not contained within given object
         def properties_complement(props, obj:)
           return props if obj.nil?
           raise ArgumentError, 'props is required.' unless props

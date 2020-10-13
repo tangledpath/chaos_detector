@@ -27,9 +27,14 @@ module ChaosDetector
       end
 
       # Return a new Graph object that only includes the given nodes and matching edges:
-      def arrange_with(nodes:)
+      def arrange_with(nodes:, include_root: true)
         gnodes = nodes.map(&:clone)
-        gnodes << root_node unless(gnodes.include?(root_node))
+        if include_root
+          gnodes << root_node unless(gnodes.include?(root_node))
+        else
+          gnodes.delete(root_node)
+        end
+
         gedges = edges.filter do |edge|
           gnodes.include?(edge.src_node) && gnodes.include?(edge.dep_node)
         end
