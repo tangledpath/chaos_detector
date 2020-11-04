@@ -2,13 +2,8 @@
 module ChaosDetector
   module GraphTheory
     class Graph
-      # extend Forwardable
       attr_reader :root_node
-      attr_reader :nodes
       attr_reader :edges
-
-      # def_delegator :@nodes, :length, :node_count
-      # def_delegator :@edges, :length, :edge_count
 
       def node_count
         @nodes.length
@@ -19,31 +14,43 @@ module ChaosDetector
       end
 
       def initialize(root_node:, nodes: nil, edges: nil)
-        raise ArgumentError, 'Root node required.' unless root_node
+        # raise ArgumentError, 'Root node required.' unless root_node
 
         @root_node = root_node
         @nodes = nodes || []
         @edges = edges || []
       end
 
+      def nodes(include_root: true)
+        include_root ? @nodes : @nodes.reject(&:root?)
+      end
+
       # Return a new Graph object that only includes the given nodes and matching edges:
-      def arrange_with(nodes:, include_root: true)
-        gnodes = nodes.map(&:clone)
-        if include_root
-          gnodes << root_node unless(gnodes.include?(root_node))
-        else
-          gnodes.delete(root_node)
-        end
+#       def arrange_with(nodes:, include_root: true)
+#         gnodes = nodes.map(&:clone)
+#         if include_root
+#           gnodes << root_node unless(gnodes.include?(root_node))
+#         else
+#           gnodes.delete(root_node)
+#         end
+#
+#         gedges = edges.filter do |edge|
+#           gnodes.include?(edge.src_node) && gnodes.include?(edge.dep_node)
+#         end
+#
+#         ChaosDetector::GraphTheory::Graph.new(
+#           root_node: root_node,
+#           nodes: gnodes,
+#           edges: gedges
+#         ).tap do |graph|
+#           graph.whack_node(root_node) unless include_root
+#         end
+#       end
 
-        gedges = edges.filter do |edge|
-          gnodes.include?(edge.src_node) && gnodes.include?(edge.dep_node)
-        end
-
-        ChaosDetector::GraphTheory::Graph.new(
-          root_node: root_node,
-          nodes: gnodes,
-          edges: gedges
-        )
+      # Remove node and src and dep edges:
+      def whack_node(node)
+        @edges.delete_if { |e| e.src_node == node || e.dep_node == node }
+        @nodes.delete(node)
       end
 
       def traversal

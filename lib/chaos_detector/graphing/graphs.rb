@@ -3,11 +3,13 @@ require 'chaos_detector/navigator'
 require 'chaos_detector/stacker/frame'
 require 'chaos_detector/graph_theory/appraiser'
 require 'chaos_detector/graph_theory/graph'
-require 'chaos_detector/graphing/directed'
+require 'chaos_detector/graphing/directed_graphs'
 require 'chaos_detector/chaos_graphs/chaos_graph'
 require 'chaos_detector/utils/str_util'
 require 'chaos_detector/chaos_utils'
-require 'rubyvis'
+
+require_relative 'directed_graphs'
+require_relative 'matrix_graphs'
 
 module ChaosDetector
   module Graphing
@@ -32,52 +34,29 @@ module ChaosDetector
 
       GRAPH_TYPE_ATTRS = {
         domain: {
-          ratio: 'auto',
-          size: '8, 8',
+          # ratio: 'auto',
+          # size: '8, 8',
+          # rankdir: 'TB',
+          # packmode: 'clust'
         },
         function: {
 
         },
         module: {
           rankdir: 'TB',
-          packmode: 'clust'
+          packmode: 'clust',
+          ranksep: '1.5',
         },
       }
 
-      def adjacency_graph(graph_type, graph:nil, name: nil)
-        rgraph = graph || chaos_graph
-        g, appraiser = rgraph.graph_data_for(graph_type: graph_type)
-        # rgraph = graph ? graph : g
-        # graph_name = name ? name : "#{graph_type}-dep"
-
-        # graph_attrs = GRAPH_TYPE_ATTRS[graph_type]
-        matrix = appraiser.adjacency_matrix.to_a
-        puts "MATRIX COUNT: #{matrix.count} / #{matrix.length}"
-        w = Math.sqrt(matrix.count)
-        h = w
-
-        vis = pv.Panel.new()
-          .width(w)
-          .height(h)
-          .bottom(0)
-          .left(0)
-          .right(0)
-          .top(0)
-
-          vis.add(Rubyvis::Layout::Grid).rows(matrix.to_a).
-            cell.add(Rubyvis::Bar).
-            fill_style(Rubyvis.ramp("white", "black")).anchor("center").
-            add(Rubyvis::Label).
-            text_style(Rubyvis.ramp("black","white")).
-            text(lambda{|v| "%0.2f" % v })
-
-        vis.render();
-        svg = vis.to_svg()
-        File.write("foo.svg", svg)
+      def adjacency_graph(graph_type, graph: nil, graph_name: 'adj-matrix')
+        the_matrix = ChaosDetector::Graphing::MatrixGraphs.new(chaos_graph, render_folder: @render_folder)
+        graph, appraiser = @chaos_graph.graph_data_for(graph_type: graph_type)
+        matrix = appraiser.adjacency_matrix
+        the_matrix.render_adjacency(matrix, graph_name: graph_name)
       end
 
-
-      def render_dep_graph(graph_type, graph:nil, as_cluster: false, domains: false, name: nil, root: true, metrics_table: true)
+      def render_dep_graph(graph_type, graph: nil, as_cluster: false, domains: false, name: nil, root: true, metrics_table: false)
         g, _appraiser = chaos_graph.graph_data_for(graph_type: graph_type)
         rgraph = graph ? graph : g
         graph_name = name ? name : "#{graph_type}-dep"
@@ -93,16 +72,16 @@ module ChaosDetector
         dgraph.rendered_path
       end
 
-      def render_domain_dep(graph_name: 'domain-dep', domain_graph: nil)
-        render_dep_graph(:domain, as_cluster: true, graph: domain_graph, name: graph_name)
+      def render_domain_dep(graph_name: 'domain-dep', domain_graph: nil, metrics_table: false)
+        render_dep_graph(:domain, as_cluster: true, graph: domain_graph, name: graph_name, metrics_table: metrics_table)
       end
 
-      def render_fn_dep(graph_name: 'fn-dep', function_graph: nil, domains: false)
-        render_dep_graph(:function, as_cluster: true, graph: function_graph, domains: domains, name: graph_name)
+      def render_fn_dep(graph_name: 'fn-dep', function_graph: nil, domains: false, metrics_table: false)
+        render_dep_graph(:function, as_cluster: true, graph: function_graph, domains: domains, name: graph_name, metrics_table: metrics_table)
       end
 
-      def render_mod_dep(graph_name: 'module-dep', module_graph: nil, domains: false)
-        render_dep_graph(:module, graph: module_graph, domains: domains, name: graph_name)
+      def render_mod_dep(graph_name: 'module-dep', module_graph: nil, domains: false, metrics_table: false)
+        render_dep_graph(:module, graph: module_graph, domains: domains, name: graph_name, metrics_table: metrics_table)
       end
 
       private
@@ -115,8 +94,8 @@ module ChaosDetector
           # edges.each do |e|
           #   p("#{label} Edges: #{ChaosUtils.decorate(e.src_node.title)} -> #{ChaosUtils.decorate(e.dep_node.title)}")
           # end
-
-          dgraph = ChaosDetector::Graphing::Directed.new(render_folder: @render_folder)
+          puts("Building #{label} with as_cluster: #{as_cluster}")
+          dgraph = ChaosDetector::Graphing::DirectedGraphs.new(render_folder: @render_folder)
           dgraph.create_directed_graph(label, graph_attrs: graph_attrs)
           dgraph.append_nodes(nodes, as_cluster: as_cluster, metrics_table: metrics_table)
           dgraph.add_edges(edges)

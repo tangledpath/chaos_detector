@@ -1,3 +1,4 @@
+require 'bundler/gem_tasks'
 require 'rake'
 require 'rake/extensiontask'
 require 'rspec/core/rake_task'
@@ -19,6 +20,7 @@ gemspec = Gem::Specification.new do |s|
   s.add_development_dependency('rake-compiler', ['~> 1.1'])
   s.add_development_dependency('rspec', ['~> 3.9'])
   s.add_dependency('ruby-graphviz', ['~> 1.2.5'])
+  s.add_dependency('rubyvis', ['~> 0.7.0'])
   s.add_dependency('thor', ['~> 0.20.3'])
   s.version = File.read('VERSION')
   s.files = gemfiles # `git ls-files`.split

@@ -4,7 +4,7 @@ require 'chaos_detector/chaos_utils'
 
 module ChaosDetector
   module Graphing
-    class Directed
+    class DirectedGraphs
       attr_reader :root_graph
       attr_reader :node_hash
       attr_reader :cluster_node_hash
@@ -14,8 +14,8 @@ module ChaosDetector
 
       BR = '<BR/>'
       LF = "\r"
-      EDGE_MIN = 0.5
-      EDGE_BASELINE = 7.5
+      EDGE_MIN = 0.75
+      EDGE_BASELINE = 10.5
 
       CLR_BLACK = 'black'.freeze
       CLR_DARKRED = 'red4'.freeze
@@ -30,8 +30,9 @@ module ChaosDetector
       CLR_PURPLE = '#662D91'.freeze
       CLR_SLATE = '#778899'.freeze
       CLR_WHITE = 'white'.freeze
+      CLR_BLUE = 'darkblue'.freeze
 
-      GRAPH_ATTR = {
+      GRAPH_ATTRS = {
         type: :digraph,
         bgcolor: CLR_SLATE,
         center: 'false',
@@ -45,25 +46,25 @@ module ChaosDetector
         fontsize: '48',
         labelloc: 't',
         labeljust: 'l',
-        mindist: '3.5',
+        # mindist: '0.5',
         # nojustify: 'true',
-        pad: '1.0',
+        pad: '0.5',
         # pack: 'true',
         # packmode: 'graph',
         pencolor: CLR_WHITE,
         # outputorder: 'edgesfirst',
         # ordering: 'out',
         outputorder: 'nodesfirst',
-        nodesep: '0.75',
-        sep: '1.0',
+        nodesep: '0.5',
+        # sep: '0.5',
         newrank: 'false',
         rankdir: 'LR',
-        ranksep: '1.0',
+        ranksep: '1.5',
         # ranksep: 'equally',
-        # ratio: 'auto',
+        ratio: 'auto',
         # size: '50',
         # page: '50',
-        # size: '10,8',
+        size: '34,44',
         # splines: 'spline',
         # strict: 'true'
       }.freeze
@@ -82,7 +83,7 @@ module ChaosDetector
         style: 'rounded'
       }.freeze
 
-      NODE_ATTR = {
+      NODE_ATTRS = {
         color: CLR_WHITE,
         fontname: 'Verdana',
         fontsize: '12',
@@ -95,16 +96,16 @@ module ChaosDetector
         shape: 'egg',
       }.freeze
 
-      EDGE_ATTR = {
+      EDGE_ATTRS = {
         color:CLR_WHITE,
         constraint: 'true',
         dir:'forward',
         fontname:'Verdana',
         fontcolor:CLR_ORANGE,
-        fontsize:'12',
-        minlen: '3.0',
+        fontsize:'16',
+        # minlen: '3.0',
         style:'solid',
-        # penwidth:'1.5',
+        penwidth:'1.0',
       }.freeze
 
       STUB_NODE_ATTRS = {
@@ -148,7 +149,7 @@ module ChaosDetector
 
         attrs = {
           label: "<#{lbl}>",
-          **GRAPH_ATTR,
+          **GRAPH_ATTRS,
         }
         attrs.merge(graph_attrs) if graph_attrs&.any?
         attrs.delete(:subtitle)
@@ -156,7 +157,7 @@ module ChaosDetector
         @root_graph = GraphViz.digraph(:G, attrs)
       end
 
-      def node_label(node, metrics_table: true)
+      def node_label(node, metrics_table: false)
         if metrics_table
           tbl_hash = {title: node.title,  subtitle: node.subtitle,  **node.graph_props}
           html = html_tbl_from(hash: tbl_hash) do |k, v|
@@ -252,7 +253,7 @@ module ChaosDetector
           # @cluster_node_hash[key].attrs(attrs)
           # puts ("attrs: #{key}: #{attrs}  / #{@cluster_node_hash.length}")
         else
-          attrs = attrs.merge!(NODE_ATTR)
+          attrs = attrs.merge!(NODE_ATTRS)
           @node_hash[key] = parent_graph.add_nodes(key, attrs)
         end
       end
@@ -279,58 +280,27 @@ module ChaosDetector
         end
       end
 
-      def add_edges(edges, calc_weight:true)
+      def add_edges(edges, calc_weight:true, node_safe:true)
         assert_graph_state
 
         # @node_hash.each do |k, v|
         #   log("NODE_HASH: Has value for #{ChaosUtils.decorate(k)} => #{ChaosUtils.decorate(v)}")
         # end
 
-        max_reduce  = edges.map(&:weight).max
+        weight_max  = edges.map(&:weight).max
 
-        edges.each do |e|
-          src_clust, src = find_graph_node(e.src_node)
-          dep_clust, dep = find_graph_node(e.dep_node)
+        edges.each do |edge|
+          src_clust, src = find_graph_node(edge.src_node)
+          dep_clust, dep = find_graph_node(edge.dep_node)
+          next unless !node_safe || (src && dep)
 
-          # TODO: normalize for genericicity
-          norm_weight = e.weight / max_reduce
-          weight = calc_weight ? edge_weight(norm_weight) : 1.0
-          @edges << [src, dep]
-
-          # puts "SRC NODE IS #{src.inspect}"
-          # Add dependent relation edges for edge_type:
-          arrow_type = arrow_type_for(e)
-
-          # puts(['WTF', src.name, node_key(e.src_node, cluster: true)].inspect)
-
-          attrs = EDGE_ATTR.merge(
-            ltail: src_clust ? node_key(e.src_node, cluster: true) : '',
-            lhead: dep_clust ? node_key(e.dep_node, cluster: true) : '',
-            arrowhead: arrow_type,
-            arrowsize: 1.0,
-            penwidth: weight,
-          )
-
-          if calc_weight
-            attrs[:headlabel] = "%d" % [e.weight]
-            # attrs[:labeldistance] = ".00012" # points
-          end
-
-          if e.src_node.domain_name == e.dep_node.domain_name
-            attrs.merge!(
-              style: 'dotted',
-              color: CLR_ORANGE,
-              constraint: 'true',
-              # headport: 'w',
-              # tailport: 'e',
-            )
-            # puts "ATTRS: #{attrs}"
-          end
-
+          @edges << [src, dep]          
+          edge_attrs = build_edge_attrs(edge, calc_weight: calc_weight, max_weight: weight_max, src_clust: src_clust, dep_clust: dep_clust)
+          
           @root_graph.add_edges(
-            node_key(e.src_node, cluster: src_clust ? :stub : false),
-            node_key(e.dep_node, cluster: dep_clust ? :stub : false),
-            attrs
+            node_key(edge.src_node, cluster: src_clust ? :stub : false),
+            node_key(edge.dep_node, cluster: dep_clust ? :stub : false),
+            edge_attrs
           ) # , {label: e.reduce_sum, penwidth: weight})
         end
       end
@@ -349,17 +319,58 @@ module ChaosDetector
 
     private
 
-      def arrow_type_for(edge)
-        case edge.edge_type
-          when :superclass
-            'empty'
-          when :association
-            'diamond'
-          when :class_association
-            'ediamond'
-          else
-            'open'
+      def build_edge_attrs(edge, calc_weight: true, max_weight: nil, src_clust: nil, dep_clust: nil)        
+        edge_attrs = EDGE_ATTRS.dup
+        
+        # Edge attaches to cluster if possible:
+        edge_attrs[:ltail] = node_key(edge.src_node, cluster: true) if src_clust
+        edge_attrs[:lhead] = node_key(edge.dep_node, cluster: true) if dep_clust
+
+        # Proportional edge weight:
+        if calc_weight && max_weight
+          edge_attrs.merge!(
+            label: edge.weight,
+            penwidth: edge_weight(edge.weight / max_weight)
+          )          
         end
+ 
+        # Intra-domain:
+        if edge.src_node.domain_name == edge.dep_node.domain_name
+          edge_attrs.merge!(
+            style: 'dotted',
+            color: CLR_ORANGE,
+            constraint: 'true',
+          )
+        end
+        
+        # Props for edge_type:
+        edge_attrs.merge!(       
+          case edge.edge_type
+            when :superclass
+              {
+                arrowhead: 'empty',
+                arrowsize: 1.0,
+                color: CLR_BLUE
+              }
+            when :association
+              {
+                arrowhead: 'diamond',
+                arrowsize: 1.0,
+                color: CLR_ORANGE
+              }
+            when :class_association
+              {
+                arrowhead: 'diamond',
+                arrowsize: 1.0,
+                color: CLR_PINK
+              }
+            else
+              {
+                arrowhead: 'open',
+                arrowsize: 1.0
+              }
+          end
+        )
       end
 
       def find_graph_node(node)
@@ -377,8 +388,8 @@ module ChaosDetector
         edge_min + n * edge_baseline
       end
 
-      def log(msg)
-        ChaosUtils.log_msg(msg, subject: 'Grapher')
+      def log(msg, **opts)
+        ChaosUtils.log_msg(msg, subject: 'DGraphDiagram', **opts)
       end
     end
   end

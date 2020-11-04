@@ -1,5 +1,5 @@
 require 'chaos_detector/navigator'
-require 'chaos_detector/graphing/directed'
+require 'chaos_detector/graphing/directed_graphs'
 require 'chaos_detector/options'
 
 # module ChaosDetector

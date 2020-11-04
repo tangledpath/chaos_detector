@@ -10,8 +10,8 @@ module ChaosDetector
         @modules = []
       end
 
-      def log(msg)
-        ChaosUtils.log_msg(msg, subject: 'FrameStack')
+      def log(msg, **opts)
+        ChaosUtils.log_msg(msg, subject: 'FrameStack', **opts)
       end
 
       def depth

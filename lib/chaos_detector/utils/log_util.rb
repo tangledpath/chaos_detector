@@ -7,8 +7,12 @@ module ChaosDetector
       class << self
         # Simple logging, more later
         def log(msg, object: nil, subject: nil)
-          message = nay?(subject) ? msg : d(msg, prefix: d(subject, clamp: :bracket))
-          message << d(object, clamp: :bracket, prefix: ': ')
+          # raise ArgumentError, "no message to log" if nay?(msg)
+          return if nay?(msg)
+
+          subj = d(subject, clamp: :brace)
+          obj = d(object, clamp: :bracket, prefix: ': ')
+          message = d(msg, prefix: subj, suffix: obj)
 
           if block_given?
             print_line(d(message, prefix: 'Starting: '))

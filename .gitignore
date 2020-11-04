@@ -4,6 +4,7 @@
 ## 3rdparty:
 *.png
 .vscode
+gems
 
 ## PROJECT::GENERAL
 log

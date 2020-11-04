@@ -18,7 +18,9 @@ module ChaosDetector
       def appraise(update_nodes:true)
         log('Appraising nodes.')
         @nodes_appraised = appraise_nodes!(update_nodes: update_nodes)
-        @adjacency_matrix = build_adjacency_matrix
+        
+        # TODO: Store adjacency (to each other node) as a node metric?
+        @adjacency_matrix = build_adjacency_matrix(@graph.nodes)
 
         # log('Measuring cyclomatic complexity.')
         # measure_cyclomatic_complexity
@@ -27,8 +29,9 @@ module ChaosDetector
       end
 
       def metrics_for(node:)
-        raise ArgumentError('Node is required') if node.nil?
-        raise ArgumentError('Node [%s] has no metrics' % node) if !@nodes_appraised&.include?(node)
+        raise ArgumentError, 'Node is required' if node.nil?
+        raise ArgumentError, ('Node [%s] has no metrics' % node) if !@nodes_appraised&.include?(node)
+        log('has no metrics', object: node) if !@nodes_appraised&.include?(node)
         @nodes_appraised[node]
       end
 
@@ -61,11 +64,23 @@ module ChaosDetector
 
         if update_nodes
           node_metrics.each do |node, metrics|
-            node.graph_props = metrics.to_h
+            node.graph_props.merge!(metrics.to_h)
           end
         end
 
         node_metrics
+      end
+
+      def build_adjacency_matrix(nodes)
+        matrix_dim = nodes.size
+        # nodes = @graph.nodes
+        Matrix.build(matrix_dim) do |row, col|
+          node_src = nodes[row]
+          node_dep = nodes[col]
+          # puts "Adjacency found for #{node_src}, #{node_dep}: #{edge&.reduction}  / #{edge&.reduction&.reduction_sum.to_i}"          
+          # puts "Adjacency found for #{row}:#{col} -> #{node_src}, #{node_dep}: #{adjacency?(node_src, node_dep)}"          
+          adjacency?(node_src, node_dep)
+        end
       end
 
     private
@@ -82,8 +97,8 @@ module ChaosDetector
         )
       end
 
-      def log(msg)
-        ChaosUtils.log_msg(msg, subject: 'GraphTheory')
+      def log(msg, **opts)
+        ChaosUtils.log_msg(msg, subject: 'Appraiser', **opts)
       end
 
       def fan_out_edges(node)
@@ -107,14 +122,6 @@ module ChaosDetector
         [terminal_routes, circular_routes]
       end
 
-      def build_adjacency_matrix
-        Matrix.build(@graph.nodes.length) do |row, col|
-          node_src = @graph.nodes[row]
-          node_dep = @graph.nodes[col]
-          adjacency?(node_src, node_dep)
-        end
-      end
-
       def adjacency?(node_src, node_dest)
         edge = @graph.edges.find{|e| e.src_node == node_src && e.dep_node == node_dest }
         edge&.reduction&.reduction_sum.to_i
@@ -123,6 +130,7 @@ module ChaosDetector
       #  Coupling: Each node couplet (Example for 100 nodes, we'd have 100 * 99 potential couplets)
       #  Capture how many other nodes depend upon both nodes in couplet [directly, indirectly]
       #  Capture how many other nodes from other domains depend upon both [directly, indirectly]
+      # TODO??  
       def node_matrix
         node_matrix = Matrix.build(@graph.nodes.length) do |row, col|
         end

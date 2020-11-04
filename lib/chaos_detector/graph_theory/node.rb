@@ -6,10 +6,10 @@ module ChaosDetector
     class Node
       ROOT_NODE_NAME = 'ROOT'.freeze
 
+      attr_writer :graph_props
       attr_reader :is_root
       attr_accessor :node_origin
       attr_reader :reduction
-      attr_accessor :graph_props
 
       def root?
         !!is_root
@@ -55,6 +55,10 @@ module ChaosDetector
         !!is_root
       end
 
+      # Default behavior is accessor for @graph_props
+      def graph_props
+        @graph_props
+      end
 
       # Mutate this Edge; combining attributes from other:
       def merge!(other)

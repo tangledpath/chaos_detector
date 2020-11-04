@@ -1,7 +1,7 @@
 require 'chaos_detector/navigator'
 require 'chaos_detector/tracker'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/graphing/directed'
+require 'chaos_detector/graphing/directed_graphs'
 require 'chaos_detector/graphing/graphs'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_graphs/chaos_graph'

@@ -1,4 +1,5 @@
 require 'chaos_detector/chaos_utils'
+require 'chaos_detector/graph_theory/node'
 
 module ChaosDetector
   class Options
@@ -33,6 +34,18 @@ module ChaosDetector
 
       subpath = key ? send(key.to_sym) : path.to_s
       File.join(app_root_path, subpath)
+    end
+
+    def domain_from_path(local_path)
+    #   dpath = Pathname.new(path.to_s).cleanpath.to_s
+    #   @domain_hash[dpath] = group
+    # 
+    
+    # @domain_hash = {}
+    # @options.path_domain_hash && options.path_domain_hash.each do |path, group|
+    # 
+      key = path_domain_hash.keys.find { |k| local_path.start_with?(k.to_s) }
+      key ? path_domain_hash[key] : ChaosDetector::GraphTheory::Node::ROOT_NODE_NAME
     end
   end
 end

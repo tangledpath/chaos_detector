@@ -49,7 +49,7 @@ module ChaosDetector
       @walkman.playback(row_range: row_range) do |_rownum, frame|
         perform_node_action(frame)
       end
-      log('Found nodes.', object: @nodes.length)
+      # log('Found nodes.', object: @nodes.length)
 
       @walkman.playback(row_range: row_range) do |_rownum, frame|
         if [:call, :return].include?(frame.event)
@@ -60,7 +60,7 @@ module ChaosDetector
       end
 
       edges = merge_edges.to_a
-      log('Found edges.', object: edges.length)
+      # log('Found edges.', object: edges.length)
 
       @mod_graph = ChaosDetector::GraphTheory::Graph.new(
         root_node: ChaosDetector::ChaosGraphs::ModuleNode.root_node(force_new: true),
@@ -82,10 +82,10 @@ module ChaosDetector
     def apply_options
       @walkman = ChaosDetector::Walkman.new(options: @options)
       @domain_hash = {}
-      @options.path_domain_hash && options.path_domain_hash.each do |path, group|
-        dpath = Pathname.new(path.to_s).cleanpath.to_s
-        @domain_hash[dpath] = group
-      end
+      # @options.path_domain_hash && options.path_domain_hash.each do |path, group|
+      #   dpath = Pathname.new(path.to_s).cleanpath.to_s
+      #   @domain_hash[dpath] = group
+      # end
     end
 
     # We merge/reduce edges elsewhere:
@@ -99,10 +99,8 @@ module ChaosDetector
       raise 'Call Edges should be unique' unless @edges_call.uniq.length == @edges_call.length
       raise 'Call Edges should be unique' unless @edges_ret.uniq.length == @edges_ret.length
 
-      # log("FFF", object: (@edges_call + @edges_ret).uniq.length)
-      # log("GGG", object: (c + r).uniq.length)
-      log('Unique edges in call (n/total)', object: [(c - r).length, c.length])
-      log('Unique edges in return (n/total)', object: [(r - c).length, r.length])
+      # log('Unique edges in call (n/total)', object: [(c - r).length, c.length])
+      # log('Unique edges in return (n/total)', object: [(r - c).length, r.length])
 
       # @edges_call.each do |e|
       #   log("edges_call", object: e)
@@ -139,11 +137,12 @@ module ChaosDetector
       node = fn_node_for(frame.fn_info)
 
       if node.nil? && frame.event == :call
+        fn_info = frame.fn_info
         node = ChaosDetector::ChaosGraphs::FunctionNode.new(
-          fn_name: frame.fn_info.fn_name,
-          fn_path: frame.fn_info.fn_path,
-          fn_line: frame.fn_info.fn_line,
-          domain_name: domain_from_path(local_path: frame.fn_info.fn_path),
+          fn_name: fn_info.fn_name,
+          fn_path: fn_info.fn_path,
+          fn_line: fn_info.fn_line,
+          domain_name: options.domain_from_path(fn_info.fn_path),
           mod_info: frame.mod_info
         )
         @nodes << node
@@ -161,7 +160,7 @@ module ChaosDetector
           mod_name: mod_info.mod_name,
           mod_path: mod_info.mod_path,
           mod_type: mod_info.mod_type,
-          domain_name: domain_from_path(local_path: mod_info.mod_path)
+          domain_name: options.domain_from_path(mod_info.mod_path)
         )
 
         @mod_nodes << node

@@ -2,6 +2,7 @@ module ChaosDetector
   module Utils
     module LerpUtil
       class << self
+
         def delerp(val, min:, max:)
           return 0.0 if min==max
           (val - min).to_f / (max - min)

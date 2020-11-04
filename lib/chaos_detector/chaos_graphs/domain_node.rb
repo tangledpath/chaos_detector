@@ -30,14 +30,14 @@ module ChaosDetector
       end
 
       def graph_props
-        domain_props = {}
+        props = super
         if reduction
-          domain_props.merge!(
+          props.merge!(
             cardinality_modules: reduction.reduction_count,
             cardinality_functions: reduction.reduction_sum
           )
         end
-        super.merge(domain_props)
+        super.merge(props)
       end
 
       # Must be name/domain_name for comparisons:

@@ -100,7 +100,8 @@ module ChaosDetector
           next if FileTest.exist?(p)
 
           log("Autosaving #{csvp} to #{p}")
-          log(`cp #{csvp} #{p}`)
+          cp_result = `cp #{csvp} #{p}`
+          log(cp_result)
           break
         end
       end
@@ -113,8 +114,8 @@ module ChaosDetector
       end
     end
 
-    def log(msg)
-      ChaosUtils.log_msg(msg, subject: 'Walkman')
+    def log(msg, **opts)
+      ChaosUtils.log_msg(msg, subject: 'Walkman', **opts)
     end
 
     def flush_csv

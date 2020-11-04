@@ -1,7 +1,7 @@
 require 'chaos_detector/navigator'
 require 'chaos_detector/tracker'
 require 'chaos_detector/stacker/frame'
-require 'chaos_detector/graphing/directed'
+require 'chaos_detector/graphing/directed_graphs'
 require 'chaos_detector/graphing/graphs'
 require 'chaos_detector/options'
 require 'chaos_detector/chaos_graphs/chaos_graph'
@@ -73,7 +73,7 @@ describe 'ChaosGrapher' do
     chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(*graphing)
     chaos_graph.infer_all
 
-    grapher = ChaosDetector::Graphing::Directed.new(render_folder: chaos_options.path_with_root(path: 'render'))
+    grapher = ChaosDetector::Graphing::DirectedGraphs.new(render_folder: chaos_options.path_with_root(path: 'render'))
     grapher.create_directed_graph('domain-test')
 
     grapher.append_nodes(chaos_graph.domain_nodes)
@@ -159,7 +159,7 @@ describe 'ChaosGrapher' do
       expect(fn_graph.nodes).to_not be_nil
       expect(fn_graph.nodes.length).to be >= top_size+1
 
-      arranged_graph = chaos_graph.arrange_graph(graph_type: :function, top: top_size)
+      arranged_graph = chaos_graph.derive_graph(graph_type: :function, top: top_size)
       expect(arranged_graph.nodes).to_not be_nil
       expect(arranged_graph.nodes.length).to eq(top_size)
     end
@@ -181,7 +181,7 @@ describe 'ChaosGrapher' do
       chaos_graph = ChaosDetector::ChaosGraphs::ChaosGraph.new(*graphing)
       chaos_graph.infer_all
 
-      grapher = ChaosDetector::Graphing::Directed.new(render_folder: chaos_options.path_with_root(path: 'render'))
+      grapher = ChaosDetector::Graphing::DirectedGraphs.new(render_folder: chaos_options.path_with_root(path: 'render'))
       grapher.create_directed_graph('module-test')
 
       grapher.append_nodes(chaos_graph.module_nodes)

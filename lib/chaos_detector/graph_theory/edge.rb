@@ -2,9 +2,9 @@ module ChaosDetector
   module GraphTheory
     class Edge
       attr_accessor :edge_type
-      attr_reader :src_node
-      attr_reader :dep_node
-      attr_accessor :graph_props
+      attr_writer :graph_props
+      attr_accessor :src_node
+      attr_accessor :dep_node
       attr_accessor :reduction
 
       EDGE_TYPES = {
@@ -22,7 +22,11 @@ module ChaosDetector
         @dep_node = dep_node
         @reduction = reduction
         @edge_type = edge_type
-        @graph_props = nil
+        @graph_props = {}
+      end
+
+      def edge_rank
+        EDGE_TYPES.fetch(@edge_type, 0)
       end
 
       def weight
@@ -36,6 +40,13 @@ module ChaosDetector
       def eql?(other)
         self == other
       end
+
+      # Default behavior is accessor for @graph_props
+      def graph_props
+        @graph_props
+      end
+
+
 
       def ==(other)
         # puts "Checking src and dep"

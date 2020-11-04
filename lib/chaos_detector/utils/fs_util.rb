@@ -21,6 +21,15 @@ module ChaosDetector
           FileUtils.mkdir_p(dirpath)
         end
 
+        # Ensure file's directory and all its parents exist, then write given string to it:
+        def safe_file_write(filepath, content: nil)
+          raise ArgumentError, '#write_to_file requires filepath' if nay? filepath
+
+          ensure_paths_to_file(filepath)
+          File.write(filepath, content)
+          filepath
+        end
+
         # Ensure file's directory and all its parents exist, like (mkdir -p):
         def ensure_paths_to_file(filepath)
           raise ArgumentError, '#ensure_paths_to_file requires filepath' if nay? filepath

@@ -18,10 +18,6 @@ module ChaosUtils
       ChaosDetector::Utils::LogUtil.log(msg, **args)
     end
 
-    def log_msg(msg, **args)
-      ChaosDetector::Utils::LogUtil.log(msg, **args)
-    end
-
     def decorate(text, **args)
       ChaosDetector::Utils::StrUtil.decorate(text, **args)
     end

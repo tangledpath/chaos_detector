@@ -22,6 +22,7 @@ module ChaosDetector
 
       def hash
         [mod_name, mod_type, mod_path].hash
+        # [mod_name, mod_type, domain_name].hash
       end
 
       def eql?(other)
@@ -29,6 +30,7 @@ module ChaosDetector
       end
 
       def ==(other)
+        # TODO? Checking domain name vs path name due to mixins/metacoding:
         mod_name == other.mod_name &&
           mod_type == other.mod_type &&
           mod_path == other.mod_path
@@ -39,19 +41,23 @@ module ChaosDetector
       end
 
       def subtitle
-        '%s: (%s)' % [mod_type, domain_name]
+        '%s[%s]' % [short_mod_type, domain_name]
       end
-
+      
       def graph_props
-        domain_props = {}
+        props = super
         if reduction
-          domain_props.merge!(
+          props.merge!(
             cardinality_functions: reduction.reduction_count
           )
         end
-        super.merge(domain_props)
+        super.merge(props)
       end
 
+      def short_mod_type
+        mod_type && "(#{mod_type[0]})"
+      end
+      
       def short_path
         ChaosDetector::Utils::StrUtil.humanize_module(@mod_path, sep_token: '/')
       end

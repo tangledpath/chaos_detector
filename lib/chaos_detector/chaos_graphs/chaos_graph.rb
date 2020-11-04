@@ -6,6 +6,7 @@ require 'chaos_detector/chaos_utils'
 require 'chaos_detector/graph_theory/appraiser'
 require 'chaos_detector/graph_theory/edge'
 require 'chaos_detector/graph_theory/graph'
+require 'chaos_detector/graph_theory/node'
 require 'chaos_detector/graph_theory/reduction'
 
 # Encapsulate and aggregates graphs for dependency tracking
@@ -64,21 +65,45 @@ module ChaosDetector
       end
 
       # ChaosDetector::ChaosGraphs::ChaosGraph.NODE_TYPES
-      def arrange_graph(graph_type:, sort_col: :total_couplings, root: true, sort_desc: true, top: nil)
+      def derive_graph(graph_type:, sort_col: :total_couplings, include_root: true, sort: :desc, top: nil)
         sortcol = sort_col || :total_couplings
         graph, appraisal = graph_data_for(graph_type: graph_type)
 
-        nodes = graph.nodes
-        node_metrics = nodes.map{|node| appraisal.metrics_for(node: node)}
+        nodes = graph.nodes(include_root: false)
+        # nodes.filter!{ |node| yield(node) } if block_given?
 
+        # Use appraisal metrics for sorting:
+        node_metrics = nodes.map{|node| appraisal.metrics_for(node: node)}
         n_sort = node_metrics.map{|m| m.send(sortcol)}.map.with_index.sort.map(&:last)
-        n_sort.reverse! if sort_desc
-        ChaosUtils.with(top.to_i) do |t|
-          n_sort = n_sort.take(t)
+        n_sort.reverse! if sort == :desc
+
+        # Limit:
+        if top
+          ChaosUtils.with(top.to_i) do |t|
+            n_sort = n_sort.take(t) if t.positive?
+          end
         end
 
-        new_nodes = n_sort.map{|i| nodes[i]}
-        graph.arrange_with(nodes: new_nodes, include_root: root)
+
+        gnodes = n_sort.map{|i| nodes[i].clone }
+
+        # gnodes = new_nodes.map(&:clone)
+        gedges = graph.edges.filter_map do |edge|
+          src_node = gnodes.find{ |node| node == edge.src_node }
+          dep_node = gnodes.find{ |node| node == edge.dep_node }
+          if src_node && dep_node
+            edge.dup.tap do |gedge|
+              gedge.src_node = src_node
+              gedge.dep_node = dep_node
+            end
+          end
+        end
+
+        ChaosDetector::GraphTheory::Graph.new(
+          root_node: include_root ? gnodes.find(&:is_root)&.dup : nil,
+          nodes: gnodes,
+          edges: gedges
+        )
       end
 
       def domain_graph
@@ -125,6 +150,14 @@ module ChaosDetector
           end
       end
 
+      # Use Graph theory to appraise given graph:
+      def appraise_graph(graph, sort_col: :total_couplings, sort_desc: true, top: nil)
+        appraiser = ChaosDetector::GraphTheory::Appraiser.new(graph)
+        appraiser.appraise
+        appraiser
+      end
+
+
     private
 
       # Graph theory appraisal
@@ -133,13 +166,6 @@ module ChaosDetector
         @domain_appraisal = appraise_graph(domain_graph)
         @module_appraisal = appraise_graph(module_graph)
         @function_appraisal = appraise_graph(function_graph)
-      end
-
-      # Use Graph theory to appraise_graph given graph:
-      def appraise_graph(graph, sort_col: :total_couplings, sort_desc: true, top: nil)
-        appraiser = ChaosDetector::GraphTheory::Appraiser.new(graph)
-        appraiser.appraise
-        appraiser
       end
 
       def assert_state(state = nil)
@@ -229,11 +255,10 @@ module ChaosDetector
         @domain_nodes = @module_nodes.group_by(&:domain_name).map do |dom_nm, mod_nodes|
           mod_reductions = mod_nodes.map(&:reduction)
           dom_reduction = ChaosDetector::GraphTheory::Reduction.combine_all(mod_reductions)
-
           ChaosDetector::ChaosGraphs::DomainNode.new(
             domain_name: dom_nm,
             reduction: dom_reduction,
-            is_root: !ChaosUtils.aught?(dom_nm)
+            is_root: dom_nm==ChaosDetector::GraphTheory::Node::ROOT_NODE_NAME || !ChaosUtils.aught?(dom_nm)
           )
         end
       end
@@ -341,7 +366,7 @@ module ChaosDetector
           n = node_info && @function_graph.nodes.index(node_info)
           n.nil? ? root_node_function : @function_graph.nodes[n]
         when :module
-          # Look up my module info
+          # Look up by module info
           n = node_info && @module_nodes.index(node_info)
           n.nil? ? root_node_module : @module_nodes[n]
         when :domain
@@ -356,8 +381,8 @@ module ChaosDetector
         end
       end
 
-      def log(msg)
-        ChaosUtils.log_msg(msg, subject: 'ChaosGraph')
+      def log(msg, **opts)
+        ChaosUtils.log_msg(msg, subject: 'ChaosGraph', **opts)
       end
     end
   end
