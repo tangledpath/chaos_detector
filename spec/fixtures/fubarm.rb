@@ -14,9 +14,8 @@ module Fubarm
   class Bazm
     def self.bazm
       # Comment
-      puts 'fubar_mod::bazzzzzz'
+      puts 'Fubarm::Bazm.bazm'
       # Stuff
-      puts 'again'
     end
 
     def self.nester1(recurse: false)
