@@ -1,14 +1,14 @@
 # -*- encoding: utf-8 -*-
-# stub: chaos_detector 0.4.9 ruby lib
+# stub: chaos_detector 0.5.0 ruby lib
 
 Gem::Specification.new do |s|
   s.name = "chaos_detector".freeze
-  s.version = "0.4.9"
+  s.version = "0.5.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib".freeze]
   s.authors = ["Steven Miers".freeze]
-  s.date = "2020-11-04"
+  s.date = "2020-11-09"
   s.description = "Discover and graph dependencies for ruby and RoR apps".freeze
   s.email = "steven.miers@gmail.com".freeze
   s.executables = ["detect_chaos".freeze]
