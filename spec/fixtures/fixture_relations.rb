@@ -1,21 +1,16 @@
 module MixinAB
   def mix_a; end
-
   def mix_b; end
 end
 
 module MixinAD
   def mix_a; end
-
   def mix_d; end
 end
 
 module MixinCD
-  # class << self
   def mix_c; end
-
   def mix_d; end
-  # end
 end
 
 class SuperFracker
