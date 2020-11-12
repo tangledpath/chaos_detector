@@ -68,16 +68,15 @@ module ChaosDetector
           caller_info = extract_caller(caller_locations: caller_locations, fn_info: fn_info)
           write_event_frame(tp_event, fn_info: fn_info, mod_info: mod_info, caller_info: caller_info)
 
-          if tp_event==:call
-            puts('<' * 50)
-            puts("Binding:  #{binding_info}")
-            puts("Module:   #{mod_info}")
-            puts("Function: #{fn_info}")
-            puts("Caller:   #{caller_info.inspect}") if caller_info
-            puts('>' * 50)
-            puts            
-          end
-
+          # if tp_event==:call
+          #   puts('<' * 50)
+          #   puts("Binding:  #{binding_info}")
+          #   puts("Module:   #{mod_info}")
+          #   puts("Function: #{fn_info}")
+          #   puts("Caller:   #{caller_info.inspect}") if caller_info
+          #   puts('>' * 50)
+          #   puts
+          # end
 
           # Detect superclass association:
           ChaosUtils.with(superclass_mod_info(tp_class)) do |super_mod_info|
