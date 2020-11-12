@@ -20,6 +20,7 @@ scratch.*
 ## PROJECT::SPECIFIC
 chaos_detector.dump
 lib/*.bundle
+*.gem
 
 ## Notebooks
 *.ipynb

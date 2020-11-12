@@ -45,19 +45,39 @@ module ChaosDetector
         tp_path = tracepoint.path
         next if full_path_skip?(tp_path)
 
+        # puts("Tracepoint: #{tracepoint.inspect}")
+        # log_mod_details(tracepoint)
+
         tp_class = tracepoint.defined_class
+        tp_event = tracepoint.event
+
+        fn_name = tracepoint.callee_id.to_s
+        fn_line = tracepoint.lineno
+        fn_path = localize_path(tp_path)
+        binding_info = tracepoint.self.send(:class)&.name
+        caller_locations = tracepoint.self.send(:caller_locations)
 
         # trace_mod_details(tracepoint)
-        mod_info = mod_info_at(tp_class, mod_full_path: tp_path)
-        # puts "mod_info: #{mod_info} #{tp_class.respond_to?(:superclass) && tp_class.superclass}"
-        next unless mod_info
+        tracepoint.disable do
+          mod_info = mod_info_at(tp_class, mod_full_path: tp_path)
+          # puts "mod_info: #{mod_info} #{tp_class.respond_to?(:superclass) && tp_class.superclass}"
+          next unless mod_info
 
-        fn_info = fn_info_at(tracepoint)
-        e = tracepoint.event
-        @trace.disable do
           @total_traces += 1
-          caller_info = extract_caller(tracepoint, fn_info)
-          write_event_frame(e, fn_info: fn_info, mod_info: mod_info, caller_info: caller_info)
+          fn_info = fn_info_at(fn_name, fn_line: fn_line, fn_path: fn_path)
+          caller_info = extract_caller(caller_locations: caller_locations, fn_info: fn_info)
+          write_event_frame(tp_event, fn_info: fn_info, mod_info: mod_info, caller_info: caller_info)
+
+          if tp_event==:call
+            puts('<' * 50)
+            puts("Binding:  #{binding_info}")
+            puts("Module:   #{mod_info}")
+            puts("Function: #{fn_info}")
+            puts("Caller:   #{caller_info.inspect}") if caller_info
+            puts('>' * 50)
+            puts            
+          end
+
 
           # Detect superclass association:
           ChaosUtils.with(superclass_mod_info(tp_class)) do |super_mod_info|
@@ -139,9 +159,8 @@ module ChaosDetector
       @app_root_path = ChaosUtils.with(@options.app_root_path) { |p| Pathname.new(p)&.to_s}
     end
 
-    def extract_caller(tracepoint, fn_info)
-      callers = tracepoint.self.send(:caller_locations)
-      callers = callers.select do |bt|
+    def extract_caller(caller_locations:, fn_info:)
+      callers = caller_locations.select do |bt|
         !full_path_skip?(bt.absolute_path) &&
           ChaosUtils.aught?(bt.base_label) &&
           !bt.base_label.start_with?('<')
@@ -195,8 +214,12 @@ module ChaosDetector
       end
     end
 
-    def fn_info_at(tracepoint)
-      ChaosDetector::Stacker::FnInfo.new(fn_name: tracepoint.callee_id.to_s, fn_line: tracepoint.lineno, fn_path: localize_path(tracepoint.path))
+    def fn_info_at(fn_name, fn_line:, fn_path:)
+      ChaosDetector::Stacker::FnInfo.new(
+        fn_name: fn_name,
+        fn_line: fn_line,
+        fn_path: fn_path,
+      )
     end
 
     # TODO: MAKE more LIKE module_skip below:

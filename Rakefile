@@ -5,13 +5,15 @@ require 'rspec/core/rake_task'
 require 'rubygems'
 
 NAME = 'chaos_detector'.freeze
-DESCRIPTION = 'Discover and graph dependencies for ruby and RoR apps'.freeze
+SUMMARY = 'Discover and graph dependencies for ruby and RoR apps'.freeze
+DESCRIPTION = 'Infer and discover and graph dependencies for ruby and RoR apps during EXECUTION'.freeze
 gemfiles = FileList['lib/**/*.rb']
+
 gemspec = Gem::Specification.new do |s|
   # s.extensions = FileList["ext/**/extconf.rb"]
   s.name = NAME
-  s.summary = DESCRIPTION
   s.description = DESCRIPTION
+  s.summary = SUMMARY
   s.email = 'steven.miers@gmail.com'
   s.homepage = 'http://github.com/tangledpath/chaos_detector'
   s.authors = ['Steven Miers']

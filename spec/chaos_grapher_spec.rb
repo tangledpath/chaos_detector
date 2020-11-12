@@ -32,7 +32,10 @@ shared_examples_for 'PlaybackTraversal' do |expected_traversal_str, graph_name=:
     chaos_graph.infer_all
 
     traversal_str = chaos_graph.send(graph_name).traversal.map(&:name).join(' -> ')
-    puts "Found traversal string: #{traversal_str}"
+    if graph_name == :module_graph
+      fn_trav = chaos_graph.send(:function_graph).traversal.map(&:name).join(' -> ')
+    end
+    # puts "Found traversal string: #{traversal_str}"
     expect(traversal_str).to eq(expected_traversal_str)
   end
 end
@@ -86,42 +89,58 @@ describe 'ChaosGrapher' do
     expect(graph_fs.split.first).to eq('spec/render/domain-test.png')
   end
 
-  describe 'function graphs' do
-    it_should_behave_like 'PlaybackTraversal', 'ROOT -> foo -> bar -> baz -> foom -> barm -> bazm' do
-      let(:fn_calls) do
-        Foo.foo
-        Fubarm::Foom.foom
-      end
-    end
-    it_should_behave_like 'PlaybackTraversal', 'ROOT -> foom -> barm -> bazm -> foo -> bar -> baz' do
-      let(:fn_calls) do
-        Fubarm::Foom.foom
-        Foo.foo
-      end
-    end
-
-    describe 'Associations' do
-      EXPECTED_TRAVERSAL_STR = 'ROOT -> initialize -> initialize -> frack'
-      context 'Simple' do
-        it_should_behave_like 'PlaybackTraversal', EXPECTED_TRAVERSAL_STR, graph_name=:function_graph do
-          let(:fn_calls) do
-            chaos_tracker.record
-            fracker = DerivedFracker.new
-            fracker.frack
-            chaos_tracker.stop
-          end
+  describe 'graphs routes' do
+    context 'fn traversal' do
+      trav = 'ROOT -> foo -> bar -> baz -> foom -> barm -> bazm'
+      it_should_behave_like 'PlaybackTraversal', trav  do
+        let(:fn_calls) do
+          Foo.foo
+          Fubarm::Foom.foom
         end
       end
+    end
+    context 'mod traversal'  do
+      trav =  'ROOT -> Fubarm::Foom -> Fubarm::Barm -> Fubarm::Bazm -> Foo -> Bar -> Baz'
+      it_should_behave_like 'PlaybackTraversal', trav, graph_name=:module_graph do
+        let(:fn_calls) do
+          Fubarm::Foom.foom
+          Foo.foo
+        end
+      end
+    end
+    context 'fmode_calls'  do
+      trav =  'ROOT -> foom -> barm -> bazm -> foo -> bar -> baz'
+      it_should_behave_like 'PlaybackTraversal', trav  do
+        let(:fn_calls) do
+          Fubarm::Foom.foom
+          Foo.foo
+        end
+      end
+    end
+  end
 
-      context 'Dupes' do
-        it_should_behave_like 'PlaybackTraversal', EXPECTED_TRAVERSAL_STR, graph_name=:function_graph do
-          let(:fn_calls) do
-            chaos_tracker.record
-            fracker = DerivedFracker.new
-            fracker.frack
-            fracker.frack
-            chaos_tracker.stop
-          end
+
+  describe 'Associations' do
+    EXPECTED_TRAVERSAL_STR = 'ROOT -> initialize -> initialize -> frack'
+    context 'Simple' do
+      it_should_behave_like 'PlaybackTraversal', EXPECTED_TRAVERSAL_STR, graph_name=:function_graph do
+        let(:fn_calls) do
+          chaos_tracker.record
+          fracker = DerivedFracker.new
+          fracker.frack
+          chaos_tracker.stop
+        end
+      end
+    end
+
+    context 'Dupes' do
+      it_should_behave_like 'PlaybackTraversal', EXPECTED_TRAVERSAL_STR, graph_name=:function_graph do
+        let(:fn_calls) do
+          chaos_tracker.record
+          fracker = DerivedFracker.new
+          fracker.frack
+          fracker.frack
+          chaos_tracker.stop
         end
       end
     end
@@ -220,7 +239,6 @@ describe 'ChaosGrapher' do
       expect(graph_fs.split.first).to eq('spec/render/module-dep.png')
     end
 
-
     context 'double frack' do
       let(:frack_tracking) do
         chaos_tracker.record
@@ -242,10 +260,10 @@ describe 'ChaosGrapher' do
         expect(graphs.chaos_graph).to_not be_nil
 
         mod_graph = graphs.chaos_graph.module_graph
-        puts "Module traversal string: #{mod_graph.traversal.map(&:mod_name).join(' -> ')}"
+        # puts "Module traversal string: #{mod_graph.traversal.map(&:mod_name).join(' -> ')}"
 
         fn_graph = graphs.chaos_graph.function_graph
-        puts "FN traversal string: #{fn_graph.traversal.map(&:name).join(' -> ')}"
+        # puts "FN traversal string: #{fn_graph.traversal.map(&:name).join(' -> ')}"
 
         mod_graph.nodes.each do |n|
           p("ModNode: #{n.reduction}")
@@ -257,6 +275,35 @@ describe 'ChaosGrapher' do
         expect(graph_fs).to be
         expect(graph_fs.split.first).to eq('spec/render/module-rel-dep.png')
       end
+
+      context 'module frack traversal'  do
+        trav =  'ROOT -> DerivedFracker -> SuperFracker -> MixinAB -> MixinAD -> MixinAD -> MixinCD -> SuperFracker -> MixinAB'
+        it_should_behave_like 'PlaybackTraversal', trav, graph_name=:module_graph do
+          let(:fn_calls) do
+            chaos_tracker.record
+            fracker = DerivedFracker.new
+            fracker.frack
+            fracker.mix_a
+            fracker.frack2
+            chaos_tracker.stop
+
+            # Playback should graph:
+            graphs = ChaosDetector::Graphing::Graphs.new(options: chaos_options)
+            expect(graphs.navigator).to_not be_nil
+
+            graphs.playback
+            expect(graphs.chaos_graph).to_not be_nil
+
+            graphs.render_mod_dep(graph_name: 'module-traversal')
+            graph_fs = `ls spec/render/module-traversal.png`
+            p(ChaosUtils.decorate(graph_fs))
+            expect(graph_fs).to be
+            expect(graph_fs.split.first).to eq('spec/render/module-traversal.png')
+
+          end
+        end
+      end
+
     end
   end
 
@@ -278,6 +325,8 @@ describe 'ChaosGrapher' do
       expect(graph_fs).to be
       expect(graph_fs.split.first).to eq('spec/render/domain-dep.png')
     end
+  end
+end
 
     # TODO: maybe extract all unique paths from graph struture?
     # chaos_tracker.record
@@ -315,6 +364,6 @@ describe 'ChaosGrapher' do
 
     # puts 'TOTAL FRAMES: %d' % chaos_walkman.count
     # chaos_walkman.playback { |r,f| puts("#{r}: #{f}") }
-
-  end
-end
+#   end
+#   end
+# end

@@ -1,11 +1,15 @@
 module MixinAB
-  def mix_a; end
+  def mix_a
+    mix_aa
+  end
   def mix_b; end
 end
 
 module MixinAD
-  def mix_a; end
-  def mix_d; end
+  def mix_aa
+    mix_ad
+  end
+  def mix_ad; end
 end
 
 module MixinCD

@@ -1,15 +1,15 @@
 # -*- encoding: utf-8 -*-
-# stub: chaos_detector 0.5.0 ruby lib
+# stub: chaos_detector 0.5.1 ruby lib
 
 Gem::Specification.new do |s|
   s.name = "chaos_detector".freeze
-  s.version = "0.5.0"
+  s.version = "0.5.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0".freeze) if s.respond_to? :required_rubygems_version=
   s.require_paths = ["lib".freeze]
   s.authors = ["Steven Miers".freeze]
-  s.date = "2020-11-09"
-  s.description = "Discover and graph dependencies for ruby and RoR apps".freeze
+  s.date = "2020-11-12"
+  s.description = "Infer and discover and graph dependencies for ruby and RoR apps during EXECUTION".freeze
   s.email = "steven.miers@gmail.com".freeze
   s.executables = ["detect_chaos".freeze]
   s.files = ["bin/detect_chaos".freeze, "lib/chaos_detector.rb".freeze, "lib/chaos_detector/chaos_graphs/chaos_edge.rb".freeze, "lib/chaos_detector/chaos_graphs/chaos_graph.rb".freeze, "lib/chaos_detector/chaos_graphs/domain_metrics.rb".freeze, "lib/chaos_detector/chaos_graphs/domain_node.rb".freeze, "lib/chaos_detector/chaos_graphs/function_node.rb".freeze, "lib/chaos_detector/chaos_graphs/module_node.rb".freeze, "lib/chaos_detector/chaos_utils.rb".freeze, "lib/chaos_detector/graph_theory/appraiser.rb".freeze, "lib/chaos_detector/graph_theory/edge.rb".freeze, "lib/chaos_detector/graph_theory/graph.rb".freeze, "lib/chaos_detector/graph_theory/loop_detector.rb".freeze, "lib/chaos_detector/graph_theory/node.rb".freeze, "lib/chaos_detector/graph_theory/node_metrics.rb".freeze, "lib/chaos_detector/graph_theory/reduction.rb".freeze, "lib/chaos_detector/graphing/directed_graphs.rb".freeze, "lib/chaos_detector/graphing/graphs.rb".freeze, "lib/chaos_detector/graphing/matrix_graphs.rb".freeze, "lib/chaos_detector/navigator.rb".freeze, "lib/chaos_detector/options.rb".freeze, "lib/chaos_detector/stacker/comp_info.rb".freeze, "lib/chaos_detector/stacker/fn_info.rb".freeze, "lib/chaos_detector/stacker/frame.rb".freeze, "lib/chaos_detector/stacker/frame_stack.rb".freeze, "lib/chaos_detector/stacker/mod_info.rb".freeze, "lib/chaos_detector/tracker.rb".freeze, "lib/chaos_detector/utils/core_util.rb".freeze, "lib/chaos_detector/utils/fs_util.rb".freeze, "lib/chaos_detector/utils/lerp_util.rb".freeze, "lib/chaos_detector/utils/log_util.rb".freeze, "lib/chaos_detector/utils/str_util.rb".freeze, "lib/chaos_detector/utils/tensor_util.rb".freeze, "lib/chaos_detector/walkman.rb".freeze]
